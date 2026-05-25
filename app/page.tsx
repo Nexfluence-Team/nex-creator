@@ -1,65 +1,164 @@
-import Image from "next/image";
+'use client'
+
+import Link from 'next/link'
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#0a0612',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: "'Rubik', sans-serif",
+        padding: '24px',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Ambient glows */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: `
+            radial-gradient(ellipse 70% 55% at 50% 40%, rgba(128,97,255,0.15) 0%, transparent 60%),
+            radial-gradient(ellipse 40% 40% at 20% 80%, rgba(255,51,188,0.08) 0%, transparent 55%)
+          `,
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Grid texture */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          opacity: 0.025,
+          backgroundImage: `
+            linear-gradient(rgba(128,97,255,1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(128,97,255,1) 1px, transparent 1px)
+          `,
+          backgroundSize: '48px 48px',
+          pointerEvents: 'none',
+        }}
+      />
+
+      <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: 420, width: '100%' }}>
+
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 48 }}>
+          <div
+            style={{
+              width: 48, height: 48,
+              borderRadius: 14,
+              background: 'linear-gradient(135deg, #ff33bc, #8061ff)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 24px rgba(128,97,255,0.45)',
+              flexShrink: 0,
+            }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <span style={{ color: '#fff', fontWeight: 900, fontSize: 22, letterSpacing: '-0.03em' }}>N</span>
+          </div>
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ color: '#fff', fontWeight: 700, fontSize: 20, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+              Creator Nexus
+            </div>
+            <div style={{ color: '#ff7ac3', fontWeight: 500, fontSize: 13 }}>
+              by Nexfluence
+            </div>
+          </div>
         </div>
-      </main>
+
+        {/* Headline */}
+        <h1
+          style={{
+            color: '#ffffff',
+            fontWeight: 900,
+            fontSize: 36,
+            letterSpacing: '-0.035em',
+            lineHeight: 1.1,
+            marginBottom: 14,
+          }}
+        >
+          Your creator portfolio,{' '}
+          <span style={{ color: '#8061ff' }}>ready in minutes</span>
+        </h1>
+
+        <p
+          style={{
+            color: 'rgba(255,255,255,0.50)',
+            fontSize: 15,
+            lineHeight: 1.75,
+            marginBottom: 40,
+          }}
+        >
+          Bringing impactful creators across the Baltics under one roof.
+        </p>
+
+        {/* CTAs */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Link
+            href="/onboarding"
+            className="btn-apply"
+            style={{ textDecoration: 'none', display: 'block' }}
+          >
+            Create my portfolio →
+          </Link>
+
+          <Link
+            href="/login"
+            style={{
+              display: 'block',
+              width: '100%',
+              padding: '14px 24px',
+              borderRadius: 8,
+              background: 'transparent',
+              color: 'rgba(255,255,255,0.75)',
+              fontFamily: "'Rubik', sans-serif",
+              fontSize: 15,
+              fontWeight: 700,
+              letterSpacing: '0.04em',
+              textAlign: 'center',
+              border: '1px solid rgba(128,97,255,0.35)',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              transition: 'border-color 0.2s ease, color 0.2s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'rgba(128,97,255,0.75)'
+              e.currentTarget.style.color = '#ffffff'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(128,97,255,0.35)'
+              e.currentTarget.style.color = 'rgba(255,255,255,0.75)'
+            }}
+          >
+            Sign in
+          </Link>
+        </div>
+
+        {/* Live count */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            marginTop: 32,
+          }}
+        >
+          <span className="dot-live" />
+          <span style={{ color: 'rgba(255,255,255,0.30)', fontSize: 12, letterSpacing: '0.04em' }}>
+            3,412+ creators already joined
+          </span>
+        </div>
+
+      </div>
     </div>
-  );
+  )
 }
