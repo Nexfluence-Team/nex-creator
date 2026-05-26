@@ -15,12 +15,24 @@ function useBreakpoint() {
 }
 
 /* ─── Types ───────────────────────────────────────────────────────── */
-type Tab = 'header' | 'media' | 'rates' | 'cases' | 'testimonials' | 'links' | 'design'
+type Tab = 'header' | 'media' | 'rates' | 'cases' | 'testimonials' | 'links' | 'design' | 'inbox'
 
 interface Video   { id: string; title: string; url: string; platform: string; category: string; views: string }
 interface Rate    { id: string; title: string; price: string; turnaround: string; description: string; includes: string[] }
 interface Case    { id: string; brand: string; description: string; period: string; metrics: { label: string; value: string }[] }
 interface Testi   { id: string; name: string; role: string; company: string; quote: string; rating: number }
+
+interface InboxMsg {
+  id: string
+  type: 'message' | 'inquiry'
+  read: boolean
+  name: string
+  company: string
+  email: string
+  message: string
+  budget?: string
+  receivedAt: string   // human-readable relative time
+}
 
 interface Profile {
   name: string; bio: string; location: string; profilePic: string | null
@@ -53,7 +65,7 @@ const SOCIAL_FIELDS = [
   { id:'website',   icon:'🌐', label:'Website',   ph:'yourwebsite.com' },
   { id:'email',     icon:'✉️', label:'Email',     ph:'you@email.com' },
 ]
-const NAV: { id: Tab; icon: string; label: string }[] = [
+const NAV: { id: Tab; icon: string; label: string; badge?: number }[] = [
   { id:'header',       icon:'👤', label:'Header' },
   { id:'media',        icon:'🎬', label:'Media' },
   { id:'rates',        icon:'💰', label:'Rates' },
@@ -61,6 +73,50 @@ const NAV: { id: Tab; icon: string; label: string }[] = [
   { id:'testimonials', icon:'💬', label:'Testimonials' },
   { id:'links',        icon:'🔗', label:'Links' },
   { id:'design',       icon:'🎨', label:'Design' },
+  { id:'inbox',        icon:'📬', label:'Inbox', badge:3 },
+]
+
+const DEMO_INBOX: InboxMsg[] = [
+  {
+    id:'1', type:'inquiry', read:false,
+    name:'Jane Smith', company:'Glossier EU', email:'jane.smith@glossier.com',
+    budget:'€1,000 – €2,500',
+    message:"Hi Sophie! We're launching a new serum next quarter and would love a 3-video UGC series. We saw your Replenish Labs work and it's exactly the vibe we're going for. Can we set up a quick call to discuss?",
+    receivedAt:'2 hours ago',
+  },
+  {
+    id:'2', type:'inquiry', read:false,
+    name:'Marcus Obi', company:'Alo Yoga EU', email:'marcus@aloyoga.eu',
+    budget:'€2,500 – €5,000',
+    message:"Hey Sophie, Alo here. We're scaling our Baltic UGC strategy and want a monthly content partner. Your lifestyle content has the exact aesthetic we're building toward. Open to a retainer conversation?",
+    receivedAt:'5 hours ago',
+  },
+  {
+    id:'3', type:'message', read:false,
+    name:'Priya Mehta', company:'Rhode', email:'priya@rhodebeauty.co',
+    message:"Love your content style Sophie — particularly the Bali vlog and the skincare routine. We're looking for creators who can authentically represent the Rhode aesthetic in the Baltics. Keen to explore?",
+    receivedAt:'1 day ago',
+  },
+  {
+    id:'4', type:'inquiry', read:true,
+    name:'Lena Kovacs', company:'Dyson Nordic', email:'l.kovacs@dyson.com',
+    budget:'€500 – €1,000',
+    message:"Hi Sophie, we'd love a single hero video for our new Airwrap launch campaign in the Baltics. Looking for a creator who can make it feel aspirational but relatable. Your work checks every box.",
+    receivedAt:'3 days ago',
+  },
+  {
+    id:'5', type:'message', read:true,
+    name:'Tom Bergmann', company:'NARS Cosmetics', email:'t.bergmann@narscosmetics.com',
+    message:"Sophie, big fan of your recent posts. NARS is planning a spring push in Eastern Europe and we think your audience is a great fit for us. Would love to chat more about potential collaboration.",
+    receivedAt:'5 days ago',
+  },
+  {
+    id:'6', type:'inquiry', read:true,
+    name:'Sofia Andersson', company:'Skims EU', email:'sofia@skims.eu',
+    budget:'€1,000 – €2,500',
+    message:"Hi! I manage creator partnerships at Skims for Europe. We've been following your content for a while and are impressed by your engagement rates. Would love to send you a brief for an upcoming campaign.",
+    receivedAt:'1 week ago',
+  },
 ]
 const INIT: Profile = {
   name:'', bio:'', location:'', profilePic:null, ctaText:'Work With Me', niches:[], slug:'',
@@ -833,6 +889,256 @@ function DesignTab({ profile, setProfile }: { profile:Profile; setProfile:(p:Pro
   )
 }
 
+/* ─── INBOX TAB ───────────────────────────────────────────────────── */
+function InboxTab() {
+  const [msgs, setMsgs]   = useState<InboxMsg[]>(DEMO_INBOX)
+  const [filter, setFilter] = useState<'all'|'messages'|'inquiries'|'unread'>('all')
+  const [expanded, setExpanded] = useState<string|null>(null)
+
+  const unreadCount  = msgs.filter(m=>!m.read).length
+  const inquiryCount = msgs.filter(m=>m.type==='inquiry').length
+  const messageCount = msgs.filter(m=>m.type==='message').length
+
+  const markRead = (id:string) =>
+    setMsgs(prev=>prev.map(m=>m.id===id?{...m,read:true}:m))
+  const deleteMsg = (id:string) =>
+    setMsgs(prev=>prev.filter(m=>m.id!==id))
+  const toggle = (id:string) => {
+    setExpanded(e=>e===id?null:id)
+    markRead(id)
+  }
+
+  const filtered = msgs.filter(m=>{
+    if (filter==='messages')  return m.type==='message'
+    if (filter==='inquiries') return m.type==='inquiry'
+    if (filter==='unread')    return !m.read
+    return true
+  })
+
+  const typeColor = (t:string) => t==='inquiry'
+    ? { bg:'rgba(128,97,255,0.10)', color:'#8061ff', border:'rgba(128,97,255,0.25)' }
+    : { bg:'rgba(255,122,195,0.10)', color:'#ff33bc', border:'rgba(255,122,195,0.25)' }
+
+  return (
+    <div style={{flex:1,background:'#f7f5ff',overflowY:'auto',padding:'28px 24px'}}>
+      <div style={{maxWidth:720,margin:'0 auto'}}>
+
+        {/* Header */}
+        <div style={{marginBottom:24}}>
+          <h2 style={{fontWeight:900,fontSize:22,color:'#0a0612',letterSpacing:'-0.03em',marginBottom:4}}>
+            Inbox
+          </h2>
+          <p style={{color:'rgba(10,6,18,0.45)',fontSize:13}}>
+            Messages and inquiries from brands and collaborators.
+          </p>
+        </div>
+
+        {/* Stats row */}
+        <div style={{
+          display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:24,
+        }}>
+          {[
+            { label:'Total',     value:msgs.length,   color:'#0a0612' },
+            { label:'Unread',    value:unreadCount,   color:'#ff33bc' },
+            { label:'Inquiries', value:inquiryCount,  color:'#8061ff' },
+            { label:'Messages',  value:messageCount,  color:'rgba(10,6,18,0.50)' },
+          ].map(s=>(
+            <div key={s.label} style={{
+              background:'#fff',borderRadius:12,padding:'14px 16px',
+              border:'1.5px solid rgba(10,6,18,0.08)',
+              boxShadow:'0 2px 8px rgba(10,6,18,0.04)',
+            }}>
+              <p style={{fontWeight:900,fontSize:22,color:s.color,letterSpacing:'-0.02em',marginBottom:2}}>
+                {s.value}
+              </p>
+              <p style={{fontSize:11,color:'rgba(10,6,18,0.42)',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.06em'}}>
+                {s.label}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div style={{display:'flex',gap:6,marginBottom:20,flexWrap:'wrap'}}>
+          {(['all','messages','inquiries','unread'] as const).map(f=>(
+            <button key={f} onClick={()=>setFilter(f)} style={{
+              padding:'7px 16px',borderRadius:100,cursor:'pointer',
+              background:filter===f?'#0a0612':'#fff',
+              color:filter===f?'#fff':'rgba(10,6,18,0.55)',
+              fontSize:12,fontWeight:filter===f?700:500,
+              fontFamily:"'Rubik',sans-serif",
+              border:filter===f?'1.5px solid #0a0612':'1.5px solid rgba(10,6,18,0.10)',
+              transition:'all 0.15s ease',
+            }}>
+              {f.charAt(0).toUpperCase()+f.slice(1)}
+              {f==='unread'&&unreadCount>0&&
+                <span style={{
+                  marginLeft:6,background:'#ff33bc',color:'#fff',
+                  borderRadius:100,padding:'1px 6px',fontSize:10,fontWeight:800,
+                }}>{unreadCount}</span>
+              }
+            </button>
+          ))}
+        </div>
+
+        {/* Message list */}
+        {filtered.length===0 ? (
+          <div style={{
+            textAlign:'center',padding:'60px 24px',background:'#fff',
+            borderRadius:16,border:'1.5px solid rgba(10,6,18,0.08)',
+          }}>
+            <p style={{fontSize:36,marginBottom:12}}>📭</p>
+            <p style={{fontWeight:700,fontSize:16,color:'#0a0612',marginBottom:6}}>Nothing here yet</p>
+            <p style={{color:'rgba(10,6,18,0.42)',fontSize:14}}>
+              {filter==='unread'?'All caught up — no unread messages.':'Share your portfolio link to start receiving messages.'}
+            </p>
+          </div>
+        ) : (
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {filtered.map(m=>{
+              const tc   = typeColor(m.type)
+              const open = expanded===m.id
+              return (
+                <div key={m.id} style={{
+                  background:'#fff',borderRadius:14,
+                  border:`1.5px solid ${!m.read?'rgba(128,97,255,0.28)':'rgba(10,6,18,0.08)'}`,
+                  boxShadow: !m.read?'0 4px 16px rgba(128,97,255,0.08)':'0 2px 8px rgba(10,6,18,0.04)',
+                  overflow:'hidden',transition:'all 0.2s ease',
+                }}>
+
+                  {/* Card header — always visible */}
+                  <div
+                    onClick={()=>toggle(m.id)}
+                    style={{
+                      padding:'16px 18px',cursor:'pointer',
+                      display:'flex',alignItems:'flex-start',gap:14,
+                    }}
+                  >
+                    {/* Unread dot */}
+                    <div style={{
+                      width:8,height:8,borderRadius:'50%',flexShrink:0,marginTop:6,
+                      background:m.read?'transparent':'#8061ff',
+                      border:m.read?'1.5px solid rgba(10,6,18,0.15)':'none',
+                      transition:'all 0.2s ease',
+                    }}/>
+
+                    {/* Avatar */}
+                    <div style={{
+                      width:40,height:40,borderRadius:12,flexShrink:0,
+                      background:`linear-gradient(135deg,${tc.color}30,${tc.color}60)`,
+                      display:'flex',alignItems:'center',justifyContent:'center',
+                      fontWeight:900,fontSize:15,color:tc.color,
+                    }}>{m.name[0].toUpperCase()}</div>
+
+                    {/* Meta */}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4,flexWrap:'wrap'}}>
+                        <span style={{fontWeight:800,fontSize:14,color:'#0a0612',letterSpacing:'-0.01em'}}>
+                          {m.name}
+                        </span>
+                        {m.company && (
+                          <span style={{fontSize:12,color:'rgba(10,6,18,0.42)'}}>· {m.company}</span>
+                        )}
+                        <span style={{
+                          fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:100,
+                          background:tc.bg,color:tc.color,border:`1px solid ${tc.border}`,
+                          textTransform:'uppercase',letterSpacing:'0.06em',marginLeft:'auto',
+                        }}>{m.type}</span>
+                      </div>
+
+                      {/* Preview line */}
+                      {!open && (
+                        <p style={{
+                          fontSize:13,color:'rgba(10,6,18,0.55)',
+                          overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+                          maxWidth:'100%',marginBottom:6,lineHeight:1.5,
+                        }}>{m.message}</p>
+                      )}
+
+                      <div style={{display:'flex',alignItems:'center',gap:10}}>
+                        <span style={{fontSize:11,color:'rgba(10,6,18,0.35)'}}>⏱ {m.receivedAt}</span>
+                        {m.budget && (
+                          <span style={{
+                            fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:100,
+                            background:'rgba(200,241,53,0.25)',color:'rgba(10,6,18,0.70)',
+                            border:'1px solid rgba(200,241,53,0.50)',
+                          }}>💰 {m.budget}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Chevron */}
+                    <span style={{
+                      fontSize:12,color:'rgba(10,6,18,0.30)',flexShrink:0,marginTop:2,
+                      transform:open?'rotate(180deg)':'rotate(0deg)',transition:'transform 0.2s ease',
+                    }}>▼</span>
+                  </div>
+
+                  {/* Expanded body */}
+                  {open && (
+                    <div style={{padding:'0 18px 18px',borderTop:'1px solid rgba(10,6,18,0.06)',paddingTop:16}}>
+                      {/* Full message */}
+                      <p style={{
+                        fontSize:14,color:'rgba(10,6,18,0.70)',lineHeight:1.8,
+                        background:'rgba(10,6,18,0.03)',borderRadius:10,padding:'14px 16px',
+                        marginBottom:14,borderLeft:`3px solid ${tc.color}`,
+                      }}>
+                        {m.message}
+                      </p>
+
+                      {/* Email */}
+                      <div style={{
+                        display:'flex',alignItems:'center',gap:8,marginBottom:14,
+                        padding:'10px 14px',background:'rgba(128,97,255,0.05)',
+                        borderRadius:8,border:'1px solid rgba(128,97,255,0.12)',
+                      }}>
+                        <span style={{fontSize:14}}>✉️</span>
+                        <span style={{fontSize:13,fontWeight:500,color:'rgba(10,6,18,0.55)'}}>Reply to:</span>
+                        <a href={`mailto:${m.email}`} style={{
+                          fontSize:13,fontWeight:700,color:'#8061ff',textDecoration:'none',
+                        }}>{m.email}</a>
+                      </div>
+
+                      {/* Actions */}
+                      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                        <a
+                          href={`mailto:${m.email}?subject=Re: Your inquiry via Nexfluence&body=Hi ${m.name.split(' ')[0]},%0A%0AThanks for reaching out!`}
+                          style={{
+                            padding:'9px 18px',borderRadius:8,border:'none',
+                            background:'linear-gradient(90deg,#ff33bc,#8061ff)',
+                            color:'#fff',fontSize:13,fontWeight:700,textDecoration:'none',
+                            display:'inline-flex',alignItems:'center',gap:6,
+                            fontFamily:"'Rubik',sans-serif",
+                          }}
+                        >
+                          ✉️ Reply via email
+                        </a>
+                        {!m.read&&(
+                          <button onClick={e=>{e.stopPropagation();markRead(m.id)}} style={{
+                            padding:'9px 16px',borderRadius:8,fontSize:13,fontWeight:600,
+                            border:'1.5px solid rgba(10,6,18,0.12)',background:'#fff',
+                            color:'rgba(10,6,18,0.55)',cursor:'pointer',fontFamily:"'Rubik',sans-serif",
+                          }}>Mark as read</button>
+                        )}
+                        <button onClick={e=>{e.stopPropagation();deleteMsg(m.id)}} style={{
+                          padding:'9px 14px',borderRadius:8,fontSize:13,fontWeight:600,
+                          border:'none',background:'rgba(255,51,188,0.08)',
+                          color:'#ff33bc',cursor:'pointer',fontFamily:"'Rubik',sans-serif",
+                          marginLeft:'auto',
+                        }}>Delete</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 /* ─── LIVE PREVIEW ────────────────────────────────────────────────── */
 function LivePreview({ profile, device }: { profile:Profile; device:string }) {
   const theme = THEMES.find(t=>t.id===profile.theme)??THEMES[0]
@@ -1000,8 +1306,8 @@ export default function StudioPage() {
           }}>Upgrade</span>
         </div>
 
-        {/* Centre – device switcher (desktop only) */}
-        {isDesktop && (
+        {/* Centre – device switcher (desktop only, hidden on inbox) */}
+        {isDesktop && tab !== 'inbox' && (
           <div style={{
             display:'flex',background:'rgba(10,6,18,0.05)',borderRadius:8,padding:3,
           }}>
@@ -1060,6 +1366,7 @@ export default function StudioPage() {
           }}>
             {NAV.map(n=>{
               const active=tab===n.id
+              const unread = n.id==='inbox' ? DEMO_INBOX.filter(m=>!m.read).length : 0
               return (
                 <button key={n.id} onClick={()=>setTab(n.id)} style={{
                   display:'flex',
@@ -1077,13 +1384,35 @@ export default function StudioPage() {
                   fontFamily:"'Rubik',sans-serif",
                   whiteSpace:'nowrap',
                   minWidth: isMobile?'auto':0,
+                  position:'relative',
                 }}>
-                  <span style={{fontSize: isDesktop?17:20}}>{n.icon}</span>
+                  <span style={{fontSize: isDesktop?17:20, position:'relative'}}>
+                    {n.icon}
+                    {unread>0&&!active&&(
+                      <span style={{
+                        position:'absolute',top:-4,right:-6,
+                        width:16,height:16,borderRadius:'50%',
+                        background:'#ff33bc',color:'#fff',
+                        fontSize:9,fontWeight:900,
+                        display:'flex',alignItems:'center',justifyContent:'center',
+                        lineHeight:1,border:'2px solid #0a0612',
+                      }}>{unread}</span>
+                    )}
+                  </span>
                   {(isDesktop||isMobile) && (
                     <span style={{
                       fontSize: isMobile?11:13,fontWeight:active?700:500,
                       color:active?'#fff':'rgba(255,255,255,0.45)',
-                    }}>{n.label}</span>
+                      display:'flex',alignItems:'center',gap:6,
+                    }}>
+                      {n.label}
+                      {isDesktop&&unread>0&&(
+                        <span style={{
+                          background:'#ff33bc',color:'#fff',borderRadius:100,
+                          padding:'1px 6px',fontSize:9,fontWeight:900,lineHeight:1.4,
+                        }}>{unread}</span>
+                      )}
+                    </span>
                   )}
                 </button>
               )
@@ -1091,8 +1420,8 @@ export default function StudioPage() {
           </div>
         )}
 
-        {/* ── EDIT PANEL ── */}
-        {(!isMobile || !showPreview) && !isMobile && (
+        {/* ── EDIT PANEL (all tabs except inbox) ── */}
+        {(!isMobile || !showPreview) && !isMobile && tab !== 'inbox' && (
           <div style={{
             width:isDesktop?380:'100%',flexShrink:0,
             background:'#fff',overflowY:'auto',
@@ -1109,8 +1438,12 @@ export default function StudioPage() {
           </div>
         )}
 
-        {/* Mobile edit panel (full width, shown when not in preview) */}
-        {isMobile && !showPreview && (
+        {/* ── INBOX — full width, no preview ── */}
+        {tab === 'inbox' && !isMobile && <InboxTab />}
+        {tab === 'inbox' && isMobile && !showPreview && <InboxTab />}
+
+        {/* Mobile edit panel (full width, non-inbox tabs) */}
+        {isMobile && !showPreview && tab !== 'inbox' && (
           <div style={{flex:1,background:'#fff',overflowY:'auto',padding:'20px 16px'}}>
             {tab==='header'       && <HeaderTab       profile={profile} setProfile={setProfile} />}
             {tab==='media'        && <MediaTab         profile={profile} setProfile={setProfile} />}
@@ -1122,8 +1455,8 @@ export default function StudioPage() {
           </div>
         )}
 
-        {/* ── PREVIEW PANEL ── */}
-        {(isDesktop || (isMobile && showPreview)) && (
+        {/* ── PREVIEW PANEL — hidden on inbox ── */}
+        {tab !== 'inbox' && (isDesktop || (isMobile && showPreview)) && (
           <LivePreview profile={profile} device={device} />
         )}
       </div>
