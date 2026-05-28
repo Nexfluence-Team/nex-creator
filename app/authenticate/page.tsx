@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { setToken } from '../../lib/auth'
+
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
 /* ─── Breakpoint hook ─────────────────────────────────────────────── */
 function useBreakpoint() {
@@ -27,8 +30,8 @@ interface SignupData {
   email: string; password: string; showPass: boolean
   otp: string[]; name: string; niches: string[]
   platforms: string[]; followerRange: string; earn: string
-  profilePic: string | null; links: Record<string, string>
-  referralCode: string
+  profilePic: string | null; profileFile: File | null
+  links: Record<string, string>; referralCode: string
 }
 
 /* ─── Data ────────────────────────────────────────────────────────── */
@@ -39,7 +42,6 @@ const NICHES = [
   { e: '📱', l: 'Tech' },      { e: '🏠', l: 'Home' },
   { e: '💊', l: 'Wellness' },  { e: '🎮', l: 'Gaming' },
 ]
-
 const PLATFORMS = [
   { id: 'instagram', icon: '📸', label: 'Instagram' },
   { id: 'tiktok',    icon: '🎵', label: 'TikTok' },
@@ -48,7 +50,6 @@ const PLATFORMS = [
   { id: 'pinterest', icon: '📌', label: 'Pinterest' },
   { id: 'x',         icon: '✕',  label: 'X / Twitter' },
 ]
-
 const RANGES = [
   { l: '0 – 5K',      v: '0-5k',      earn: '€200 – €600' },
   { l: '5K – 20K',    v: '5k-20k',    earn: '€600 – €1,200' },
@@ -57,14 +58,12 @@ const RANGES = [
   { l: '100K – 500K', v: '100k-500k', earn: '€6,000 – €15,000' },
   { l: '500K+',       v: '500k+',     earn: '€15,000+' },
 ]
-
 const SOCIAL_INPUTS = [
   { id: 'instagram', icon: '📸', label: 'Instagram', ph: 'instagram.com/yourhandle' },
   { id: 'tiktok',    icon: '🎵', label: 'TikTok',    ph: 'tiktok.com/@yourhandle' },
   { id: 'youtube',   icon: '▶️', label: 'YouTube',   ph: 'youtube.com/@yourchannel' },
   { id: 'linkedin',  icon: '💼', label: 'LinkedIn',  ph: 'linkedin.com/in/yourname' },
 ]
-
 const QUOTES: Record<number, { text: string; author: string; role: string }> = {
   1: { text: '"Setup took 10 minutes and it already looks more pro than my Linktree."', author: 'Aisha N.',  role: 'Skincare Creator · Riga' },
   2: { text: '"The OTP flow is seamless — I was in within seconds."',                   author: 'Jake M.',   role: 'Fitness Creator · Tallinn' },
@@ -75,7 +74,6 @@ const QUOTES: Record<number, { text: string; author: string; role: string }> = {
   7: { text: '"The custom domain made it feel like a real brand — because it is."',      author: 'Darius K.', role: 'Tech Creator · Kaunas' },
   8: { text: '"My referral code brought in 12 creators in the first week."',             author: 'Anna B.',   role: 'Food Creator · Riga' },
 }
-
 const STEP_COUNT = 8
 
 /* ─── Shared primitives ───────────────────────────────────────────── */
@@ -88,7 +86,6 @@ const inputBase: React.CSSProperties = {
   fontFamily: "'Rubik', sans-serif",
   transition: 'border-color 0.18s ease, box-shadow 0.18s ease',
 }
-
 const labelBase: React.CSSProperties = {
   display: 'block', color: 'rgba(10,6,18,0.45)',
   fontSize: 11, fontWeight: 500,
@@ -96,7 +93,6 @@ const labelBase: React.CSSProperties = {
   marginBottom: 7,
 }
 
-/* ─── LightInput ──────────────────────────────────────────────────── */
 function LightInput({ label, type = 'text', value, onChange, placeholder, suffix }: {
   label: string; type?: string; value: string
   onChange: (v: string) => void; placeholder?: string
@@ -129,7 +125,6 @@ function LightInput({ label, type = 'text', value, onChange, placeholder, suffix
   )
 }
 
-/* ─── FocusInput (no label variant) ──────────────────────────────── */
 function FocusInput({ value, onChange, placeholder }: {
   value: string; onChange: (v: string) => void; placeholder: string
 }) {
@@ -149,13 +144,11 @@ function FocusInput({ value, onChange, placeholder }: {
   )
 }
 
-/* ─── OTPRow ──────────────────────────────────────────────────────── */
 function OTPRow({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const refs = useRef<(HTMLInputElement | null)[]>([])
   const [foci, setFoci] = useState<boolean[]>(Array(6).fill(false))
   const setF = (i: number, v: boolean) =>
     setFoci(f => { const n = [...f]; n[i] = v; return n })
-
   const handle = (i: number, v: string) => {
     if (!/^\d?$/.test(v)) return
     const next = [...value]; next[i] = v; onChange(next)
@@ -190,7 +183,6 @@ function OTPRow({ value, onChange }: { value: string[]; onChange: (v: string[]) 
   )
 }
 
-/* ─── ContinueBtn ─────────────────────────────────────────────────── */
 function ContinueBtn({ disabled, loading, onClick, label = 'Continue' }: {
   disabled: boolean; loading: boolean; onClick: () => void; label?: string
 }) {
@@ -226,7 +218,6 @@ function ContinueBtn({ disabled, loading, onClick, label = 'Continue' }: {
   )
 }
 
-/* ─── SkipBtn ─────────────────────────────────────────────────────── */
 function SkipBtn({ onClick }: { onClick: () => void }) {
   return (
     <p style={{ textAlign: 'center', marginTop: 12 }}>
@@ -241,7 +232,6 @@ function SkipBtn({ onClick }: { onClick: () => void }) {
   )
 }
 
-/* ─── Spinner ─────────────────────────────────────────────────────── */
 function Spinner({ dark }: { dark?: boolean }) {
   return (
     <span style={{
@@ -255,7 +245,21 @@ function Spinner({ dark }: { dark?: boolean }) {
   )
 }
 
-/* ─── SocialBtn ───────────────────────────────────────────────────── */
+function ErrorMsg({ msg }: { msg: string }) {
+  if (!msg) return null
+  return (
+    <div style={{
+      background: 'rgba(255,51,51,0.06)',
+      border: '1.5px solid rgba(255,51,51,0.25)',
+      borderRadius: 10, padding: '10px 14px',
+      marginBottom: 16, fontSize: 13,
+      color: '#cc0000', fontWeight: 500,
+    }}>
+      {msg}
+    </div>
+  )
+}
+
 function SocialBtn({ emoji, label, gradient }: { emoji: string; label: string; gradient?: string }) {
   const [hov, setHov] = useState(false)
   return (
@@ -283,7 +287,6 @@ function SocialBtn({ emoji, label, gradient }: { emoji: string; label: string; g
   )
 }
 
-/* ─── RightPanel ──────────────────────────────────────────────────── */
 function RightPanel({ step }: { step: number }) {
   const q = QUOTES[step] ?? QUOTES[1]
   return (
@@ -330,14 +333,19 @@ function RightPanel({ step }: { step: number }) {
 
 /* ─── Main Page ───────────────────────────────────────────────────── */
 export default function AuthPage() {
+  const router = useRouter()
   const { isMobile, isTablet, isDesktop, w } = useBreakpoint()
 
-  const [mode, setMode]       = useState<Mode>('signup')
-  const [step, setStep]       = useState(1)
-  const [animKey, setAnimKey] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [resend, setResend]   = useState(0)
-  const [copied, setCopied]   = useState(false)
+  const [mode, setMode]             = useState<Mode>('signup')
+  const [step, setStep]             = useState(1)
+  const [animKey, setAnimKey]       = useState(0)
+  const [loading, setLoading]       = useState(false)
+  const [resend, setResend]         = useState(0)
+  const [copied, setCopied]         = useState(false)
+  const [error, setError]           = useState('')
+  const [pendingToken, setPendingToken] = useState('')
+  const [accessToken, setAccessToken]   = useState('')
+
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [data, setData] = useState<SignupData>({
@@ -345,23 +353,12 @@ export default function AuthPage() {
     otp: ['', '', '', '', '', ''],
     name: '', niches: [], platforms: [],
     followerRange: '', earn: '',
-    profilePic: null,
+    profilePic: null, profileFile: null,
     links: { instagram: '', tiktok: '', youtube: '', linkedin: '' },
     referralCode: '',
   })
 
   const set = (patch: Partial<SignupData>) => setData(d => ({ ...d, ...patch }))
-
-  /* referral code on step 8 */
-  useEffect(() => {
-    if (step === 8 && !data.referralCode) {
-      const pfx = (data.name + 'XXX').slice(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X')
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-      let sfx = ''
-      for (let i = 0; i < 4; i++) sfx += chars[Math.floor(Math.random() * chars.length)]
-      set({ referralCode: `${pfx}-${sfx}` })
-    }
-  }, [step])
 
   useEffect(() => {
     if (resend <= 0) return
@@ -369,21 +366,34 @@ export default function AuthPage() {
     return () => clearInterval(id)
   }, [resend])
 
-  const goTo = (n: number) => { setAnimKey(k => k + 1); setStep(n) }
+  useEffect(() => {
+    if (step !== 8 || !accessToken) return
+    fetch(`${API}/referrals/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then(r => r.json())
+      .then(json => {
+        if (json.success) set({ referralCode: json.data.referralCode })
+      })
+      .catch(() => {})
+  }, [step, accessToken])
+
+  const goTo = (n: number) => { setAnimKey(k => k + 1); setStep(n); setError('') }
   const next  = () => goTo(step + 1)
   const back  = () => goTo(step - 1)
-  const fake  = (cb: () => void) => { setLoading(true); setTimeout(() => { setLoading(false); cb() }, 900) }
 
-  const maxStep  = mode === 'login' ? 2 : STEP_COUNT
+  const maxStep  = mode === 'login' ? 1 : STEP_COUNT
   const progress = (step / maxStep) * 100
 
   const toggleNiche = (l: string) =>
     set({ niches: data.niches.includes(l) ? data.niches.filter(x => x !== l) : [...data.niches, l] })
-  const togglePlat  = (id: string) =>
+  const togglePlat = (id: string) =>
     set({ platforms: data.platforms.includes(id) ? data.platforms.filter(x => x !== id) : [...data.platforms, id] })
 
   const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return
+    const file = e.target.files?.[0]
+    if (!file) return
+    set({ profileFile: file })
     const r = new FileReader()
     r.onload = ev => set({ profilePic: ev.target?.result as string })
     r.readAsDataURL(file)
@@ -398,14 +408,189 @@ export default function AuthPage() {
     return true
   }
 
-  /* ── responsive values ── */
-  const navPad   = isMobile ? '14px 16px' : isTablet ? '16px 28px' : '18px 48px'
-  const formPad  = isMobile ? '24px 16px' : isTablet ? '32px 32px' : '40px 48px'
-  const maxForm  = isMobile ? '100%'       : isTablet ? '480px'     : '480px'
-  const h2Size   = isMobile ? 22           : isTablet ? 26          : 30
-  const pillSize = isMobile ? 12           : 13
+  const authHeader = () => ({ Authorization: `Bearer ${accessToken}` })
 
-  /* ── step content ── */
+  /* ── Step 1: Register or Login ── */
+  const handleStep1 = async () => {
+    setLoading(true); setError('')
+    try {
+      const endpoint = mode === 'signup' ? '/auth/register' : '/auth/login'
+      const res  = await fetch(`${API}${endpoint}`, {
+        method:      'POST',
+        headers:     { 'Content-Type': 'application/json' },
+        body:        JSON.stringify({ email: data.email, password: data.password }),
+        credentials: 'include',
+      })
+      const json = await res.json()
+      if (!json.success) { setError(json.message); return }
+
+      // ── Login: verified user gets tokens directly — no OTP ──
+      if (mode === 'login' && json.data.requiresOtp === false) {
+        setToken(json.data.accessToken)
+        router.push('/dashboard')
+        return
+      }
+
+      // ── Signup or unverified login — go to OTP step ──
+      setPendingToken(json.data.pendingToken)
+      next()
+      setResend(30)
+    } catch {
+      setError('Connection error. Make sure the server is running.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /* ── Step 2: Verify OTP (signup only) ── */
+  const handleVerifyOTP = async () => {
+    setLoading(true); setError('')
+    try {
+      const res  = await fetch(`${API}/auth/verify-otp`, {
+        method:      'POST',
+        headers:     { 'Content-Type': 'application/json', Authorization: `Bearer ${pendingToken}` },
+        body:        JSON.stringify({ otp: data.otp.join('') }),
+        credentials: 'include',
+      })
+      const json = await res.json()
+      if (!json.success) { setError(json.message); return }
+      const token = json.data.accessToken
+      setToken(token)
+      setAccessToken(token)
+      next()
+    } catch {
+      setError('Connection error. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /* ── Resend OTP ── */
+  const handleResend = async () => {
+    setError('')
+    try {
+      const res  = await fetch(`${API}/auth/resend-otp`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pendingToken}` },
+        body:    JSON.stringify({ email: data.email }),
+      })
+      const json = await res.json()
+      if (!json.success) { setError(json.message); return }
+      setPendingToken(json.data.pendingToken)
+      set({ otp: Array(6).fill('') })
+      setResend(30)
+    } catch {
+      setError('Could not resend. Please try again.')
+    }
+  }
+
+  /* ── Step 3: Name + niches ── */
+  const handleStep3 = async () => {
+    setLoading(true); setError('')
+    try {
+      const res  = await fetch(`${API}/profile/header`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body:    JSON.stringify({ name: data.name, niches: data.niches }),
+      })
+      const json = await res.json()
+      if (!json.success) { setError(json.message); return }
+      next()
+    } catch {
+      setError('Could not save. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /* ── Step 4: Platforms ── */
+  const handleStep4 = async () => {
+    setLoading(true); setError('')
+    try {
+      const res  = await fetch(`${API}/profile/header`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body:    JSON.stringify({ platforms: data.platforms }),
+      })
+      const json = await res.json()
+      if (!json.success) { setError(json.message); return }
+      next()
+    } catch {
+      setError('Could not save. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /* ── Step 5: Follower range ── */
+  const handleStep5 = async () => {
+    setLoading(true); setError('')
+    try {
+      const res  = await fetch(`${API}/profile/header`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body:    JSON.stringify({ followerRange: data.followerRange }),
+      })
+      const json = await res.json()
+      if (!json.success) { setError(json.message); return }
+      next()
+    } catch {
+      setError('Could not save. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /* ── Step 6: Profile photo ── */
+  const handleStep6 = async () => {
+    if (!data.profileFile) { next(); return }
+    setLoading(true); setError('')
+    try {
+      const form = new FormData()
+      form.append('file', data.profileFile)
+      form.append('type', 'profilePic')
+      const res  = await fetch(`${API}/media/upload`, {
+        method:  'POST',
+        headers: { ...authHeader() },
+        body:    form,
+      })
+      const json = await res.json()
+      if (!json.success) { setError(json.message); return }
+      set({ profilePic: json.data.url })
+      next()
+    } catch {
+      setError('Upload failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /* ── Step 7: Social links ── */
+  const handleStep7 = async () => {
+    setLoading(true); setError('')
+    try {
+      const res  = await fetch(`${API}/links`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body:    JSON.stringify({ links: data.links }),
+      })
+      const json = await res.json()
+      if (!json.success) { setError(json.message); return }
+      next()
+    } catch {
+      setError('Could not save links. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /* ── responsive values ── */
+  const navPad  = isMobile ? '14px 16px' : isTablet ? '16px 28px' : '18px 48px'
+  const formPad = isMobile ? '24px 16px' : isTablet ? '32px 32px' : '40px 48px'
+  const maxForm = isMobile ? '100%' : '480px'
+  const h2Size  = isMobile ? 22 : isTablet ? 26 : 30
+  const pillSize = isMobile ? 12 : 13
+
   const pillStyle: React.CSSProperties = {
     color: 'rgba(10,6,18,0.42)', fontSize: pillSize,
     fontWeight: 400, marginBottom: 8, display: 'block',
@@ -428,20 +613,17 @@ export default function AuthPage() {
         <div>
           <span style={pillStyle}>{mode === 'login' ? 'Welcome back' : 'Create your free account'}</span>
           <h2 style={h2Style}>{mode === 'login' ? 'Sign in to Creator Nexus' : 'Start your creator journey'}</h2>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
             <SocialBtn emoji="📸" label={`${mode === 'login' ? 'Sign in' : 'Continue'} with Instagram`}
               gradient="linear-gradient(90deg,#f77737,#e1306c,#833ab4)" />
             <SocialBtn emoji="🎵" label={`${mode === 'login' ? 'Sign in' : 'Continue'} with TikTok`} />
           </div>
-
-          {/* divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
             <div style={{ flex: 1, height: 1, background: 'rgba(10,6,18,0.08)' }} />
             <span style={{ color: 'rgba(10,6,18,0.28)', fontSize: 11, fontWeight: 600, letterSpacing: '0.12em' }}>OR</span>
             <div style={{ flex: 1, height: 1, background: 'rgba(10,6,18,0.08)' }} />
           </div>
-
+          <ErrorMsg msg={error} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 22 }}>
             <LightInput label="Email address" type="email" value={data.email}
               onChange={v => set({ email: v })} placeholder="you@email.com" />
@@ -459,50 +641,50 @@ export default function AuthPage() {
               }
             />
           </div>
-
-          <ContinueBtn disabled={!canContinue()} loading={loading}
-            onClick={() => fake(() => { next(); setResend(30) })}
-            label={mode === 'login' ? 'Send verification code →' : 'Create account →'} />
-
+          <ContinueBtn
+            disabled={!canContinue()} loading={loading}
+            onClick={handleStep1}
+            label={mode === 'login' ? 'Sign in →' : 'Create account →'}
+          />
           <p style={{ textAlign: 'center', marginTop: 14, fontSize: 13, color: 'rgba(10,6,18,0.35)' }}>
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-            <button onClick={() => { setMode(m => m === 'login' ? 'signup' : 'login'); setStep(1); setAnimKey(k => k + 1) }}
-              style={{ background: 'none', border: 'none', color: '#8061ff', fontWeight: 700, cursor: 'pointer', fontSize: 13, fontFamily: "'Rubik',sans-serif" }}>
+            <button
+              onClick={() => { setMode(m => m === 'login' ? 'signup' : 'login'); setStep(1); setAnimKey(k => k + 1); setError('') }}
+              style={{ background: 'none', border: 'none', color: '#8061ff', fontWeight: 700, cursor: 'pointer', fontSize: 13, fontFamily: "'Rubik',sans-serif" }}
+            >
               {mode === 'login' ? 'Sign up free' : 'Sign in'}
             </button>
           </p>
         </div>
       )
 
-      /* ── 2: OTP ── */
+      /* ── 2: OTP (signup only) ── */
       case 2: return (
         <div>
           <span style={pillStyle}>Check your inbox</span>
           <h2 style={h2Style}>Enter the 6-digit code</h2>
           <p style={subStyle}>
-            Sent to <span style={{ color: '#8061ff', fontWeight: 600 }}>{data.email || 'your email'}</span>
+            Sent to <span style={{ color: '#8061ff', fontWeight: 600 }}>{data.email}</span>
           </p>
+          <ErrorMsg msg={error} />
           <div style={{ marginBottom: 22 }}>
             <OTPRow
               value={data.otp}
               onChange={otp => {
                 set({ otp })
-                if (otp.every(d => d !== '')) {
-                  setLoading(true)
-                  setTimeout(() => { setLoading(false); next() }, 700)
-                }
+                if (otp.every(d => d !== '')) handleVerifyOTP()
               }}
             />
           </div>
           {loading
             ? <div style={{ textAlign: 'center', padding: 12 }}><Spinner dark /></div>
             : <ContinueBtn disabled={!canContinue()} loading={false}
-                onClick={() => fake(next)} label="Verify & continue →" />
+                onClick={handleVerifyOTP} label="Verify & continue →" />
           }
           <p style={{ textAlign: 'center', marginTop: 14, fontSize: 13, color: 'rgba(10,6,18,0.35)' }}>
             {resend > 0
               ? <>Resend in <span style={{ color: '#8061ff', fontWeight: 600 }}>{resend}s</span></>
-              : <button onClick={() => { set({ otp: Array(6).fill('') }); setResend(30) }} style={{
+              : <button onClick={handleResend} style={{
                     background: 'none', border: 'none', color: '#8061ff',
                     fontWeight: 600, cursor: 'pointer', fontSize: 13, fontFamily: "'Rubik',sans-serif",
                   }}>Resend code</button>
@@ -521,9 +703,7 @@ export default function AuthPage() {
               onChange={v => set({ name: v })} placeholder="Sophie Thomas" />
           </div>
           <label style={labelBase}>Content niches — pick all that apply</label>
-          <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24,
-          }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
             {NICHES.map(n => {
               const on = data.niches.includes(n.l)
               return (
@@ -538,13 +718,13 @@ export default function AuthPage() {
                   cursor: 'pointer', fontFamily: "'Rubik',sans-serif",
                   transition: 'all 0.15s ease',
                 }}>
-                  <span style={{ fontSize: 15 }}>{n.e}</span>
-                  {n.l}
+                  <span style={{ fontSize: 15 }}>{n.e}</span>{n.l}
                 </button>
               )
             })}
           </div>
-          <ContinueBtn disabled={!canContinue()} loading={loading} onClick={() => fake(next)} />
+          <ErrorMsg msg={error} />
+          <ContinueBtn disabled={!canContinue()} loading={loading} onClick={handleStep3} />
         </div>
       )
 
@@ -553,12 +733,7 @@ export default function AuthPage() {
         <div>
           <span style={pillStyle}>Your presence</span>
           <h2 style={h2Style}>Which platforms are you on?</h2>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr',
-            gap: isMobile ? 8 : 10,
-            marginBottom: 24,
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? 8 : 10, marginBottom: 24 }}>
             {PLATFORMS.map(p => {
               const on = data.platforms.includes(p.id)
               return (
@@ -573,16 +748,14 @@ export default function AuthPage() {
                   boxShadow: '0 1px 4px rgba(10,6,18,0.05)',
                 }}>
                   <span style={{ fontSize: isMobile ? 18 : 20, flexShrink: 0 }}>{p.icon}</span>
-                  <span style={{
-                    fontSize: isMobile ? 13 : 14, fontWeight: on ? 700 : 500,
-                    color: on ? '#0a0612' : 'rgba(10,6,18,0.55)',
-                  }}>{p.label}</span>
+                  <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: on ? 700 : 500, color: on ? '#0a0612' : 'rgba(10,6,18,0.55)' }}>{p.label}</span>
                   {on && <span style={{ marginLeft: 'auto', color: '#8061ff', fontSize: 13 }}>✓</span>}
                 </button>
               )
             })}
           </div>
-          <ContinueBtn disabled={!canContinue()} loading={loading} onClick={() => fake(next)} />
+          <ErrorMsg msg={error} />
+          <ContinueBtn disabled={!canContinue()} loading={loading} onClick={handleStep4} />
         </div>
       )
 
@@ -591,10 +764,7 @@ export default function AuthPage() {
         <div>
           <span style={pillStyle}>Just for you</span>
           <h2 style={h2Style}>What's your total audience size?</h2>
-          <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr',
-            gap: 8, marginBottom: 16,
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
             {RANGES.map(r => {
               const on = data.followerRange === r.v
               return (
@@ -604,25 +774,20 @@ export default function AuthPage() {
                   border: `1.5px solid ${on ? 'rgba(128,97,255,0.55)' : 'rgba(10,6,18,0.11)'}`,
                   background: on ? 'rgba(128,97,255,0.07)' : '#fff',
                   color: on ? '#0a0612' : 'rgba(10,6,18,0.55)',
-                  fontWeight: on ? 700 : 500,
-                  fontSize: isMobile ? 13 : 14,
+                  fontWeight: on ? 700 : 500, fontSize: isMobile ? 13 : 14,
                   cursor: 'pointer', fontFamily: "'Rubik',sans-serif",
                   transition: 'all 0.15s ease',
-                  boxShadow: '0 1px 4px rgba(10,6,18,0.04)',
                 }}>
                   {r.l}
                 </button>
               )
             })}
           </div>
-
           {data.followerRange && (
             <div style={{
-              borderRadius: 12,
-              border: '1.5px solid rgba(128,97,255,0.18)',
+              borderRadius: 12, border: '1.5px solid rgba(128,97,255,0.18)',
               background: 'rgba(128,97,255,0.04)',
-              padding: isMobile ? '16px' : '20px',
-              marginBottom: 18,
+              padding: isMobile ? '16px' : '20px', marginBottom: 18,
               animation: 'fadeUp 0.4s ease forwards',
             }}>
               <p style={{ color: 'rgba(10,6,18,0.42)', fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
@@ -632,7 +797,7 @@ export default function AuthPage() {
                 {data.earn}
               </p>
               <p style={{ color: 'rgba(10,6,18,0.38)', fontSize: 12, marginTop: 6 }}>per month · based on creators like you</p>
-              <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: isMobile ? 10 : 16 }}>
+              <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 16 }}>
                 {['3× more brand deals', 'Inbound inquiries', 'Pro first impression'].map((t, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ color: '#8061ff', fontSize: 12 }}>✓</span>
@@ -642,7 +807,8 @@ export default function AuthPage() {
               </div>
             </div>
           )}
-          <ContinueBtn disabled={!canContinue()} loading={loading} onClick={() => fake(next)} />
+          <ErrorMsg msg={error} />
+          <ContinueBtn disabled={!canContinue()} loading={loading} onClick={handleStep5} />
         </div>
       )
 
@@ -653,19 +819,16 @@ export default function AuthPage() {
           <h2 style={h2Style}>Upload a profile photo</h2>
           <p style={subStyle}>Profiles with photos get 4× more brand views.</p>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-            <div
-              onClick={() => fileRef.current?.click()}
-              style={{
-                width: isMobile ? 100 : 116, height: isMobile ? 100 : 116,
-                borderRadius: '50%', cursor: 'pointer',
-                background: data.profilePic ? 'transparent' : 'rgba(128,97,255,0.06)',
-                border: `2px dashed ${data.profilePic ? 'transparent' : 'rgba(128,97,255,0.28)'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                overflow: 'hidden',
-                outline: data.profilePic ? '3px solid rgba(128,97,255,0.30)' : 'none',
-                outlineOffset: 3, transition: 'all 0.2s ease',
-              }}
-            >
+            <div onClick={() => fileRef.current?.click()} style={{
+              width: isMobile ? 100 : 116, height: isMobile ? 100 : 116,
+              borderRadius: '50%', cursor: 'pointer',
+              background: data.profilePic ? 'transparent' : 'rgba(128,97,255,0.06)',
+              border: `2px dashed ${data.profilePic ? 'transparent' : 'rgba(128,97,255,0.28)'}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden',
+              outline: data.profilePic ? '3px solid rgba(128,97,255,0.30)' : 'none',
+              outlineOffset: 3, transition: 'all 0.2s ease',
+            }}>
               {data.profilePic
                 ? <img src={data.profilePic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : <div style={{ textAlign: 'center' }}>
@@ -680,12 +843,12 @@ export default function AuthPage() {
               borderRadius: 10, padding: '9px 22px',
               color: '#8061ff', fontSize: 14, fontWeight: 700,
               cursor: 'pointer', fontFamily: "'Rubik',sans-serif",
-              transition: 'all 0.18s ease',
             }}>
               {data.profilePic ? '↑ Change photo' : '↑ Choose photo'}
             </button>
           </div>
-          <ContinueBtn disabled={loading} loading={loading} onClick={() => fake(next)} />
+          <ErrorMsg msg={error} />
+          <ContinueBtn disabled={loading} loading={loading} onClick={handleStep6} />
           <SkipBtn onClick={next} />
         </div>
       )
@@ -707,12 +870,13 @@ export default function AuthPage() {
               </div>
             ))}
           </div>
-          <ContinueBtn disabled={loading} loading={loading} onClick={() => fake(next)} />
+          <ErrorMsg msg={error} />
+          <ContinueBtn disabled={loading} loading={loading} onClick={handleStep7} />
           <SkipBtn onClick={next} />
         </div>
       )
 
-      /* ── 8: Referral ── */
+      /* ── 8: Referral code ── */
       case 8: return (
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: isMobile ? 40 : 48, marginBottom: 12, animation: 'bounce 0.6s ease' }}>🎉</div>
@@ -726,8 +890,7 @@ export default function AuthPage() {
           <div style={{
             borderRadius: 14, border: '1.5px solid rgba(128,97,255,0.18)',
             background: 'rgba(128,97,255,0.04)',
-            padding: isMobile ? '18px 16px' : '22px',
-            marginBottom: 18,
+            padding: isMobile ? '18px 16px' : '22px', marginBottom: 18,
             animation: 'fadeUp 0.4s ease 0.1s both',
           }}>
             <p style={{ color: 'rgba(10,6,18,0.40)', fontSize: 11, fontWeight: 500, letterSpacing: '0.10em', textTransform: 'uppercase', marginBottom: 8 }}>
@@ -739,8 +902,7 @@ export default function AuthPage() {
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
               background: '#f7f5ff', borderRadius: 10,
-              padding: isMobile ? '9px 12px' : '10px 14px',
-              marginBottom: 16,
+              padding: isMobile ? '9px 12px' : '10px 14px', marginBottom: 16,
             }}>
               <span style={{
                 flex: 1, fontSize: isMobile ? 12 : 13,
@@ -750,7 +912,11 @@ export default function AuthPage() {
                 nexfluence.co/r/{data.referralCode}
               </span>
               <button
-                onClick={() => { navigator.clipboard.writeText(`nexfluence.co/r/${data.referralCode}`); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+                onClick={() => {
+                  navigator.clipboard.writeText(`nexfluence.co/r/${data.referralCode}`)
+                  setCopied(true)
+                  setTimeout(() => setCopied(false), 2000)
+                }}
                 style={{
                   background: copied ? 'rgba(128,97,255,0.15)' : 'linear-gradient(90deg,#ff33bc,#8061ff)',
                   border: 'none', borderRadius: 8, padding: '7px 12px',
@@ -771,16 +937,19 @@ export default function AuthPage() {
               ))}
             </div>
           </div>
-          <Link href="/dashboard" style={{
-            display: 'block', padding: '15px 24px', borderRadius: 10,
-            background: '#C8F135', color: '#0a0612',
-            fontSize: 15, fontWeight: 700,
-            textDecoration: 'none', textAlign: 'center',
-            transition: 'all 0.18s ease',
-            animation: 'fadeUp 0.4s ease 0.25s both',
-          }}>
+          <button
+            onClick={() => router.push('/dashboard')}
+            style={{
+              display: 'block', width: '100%', padding: '15px 24px', borderRadius: 10,
+              background: '#C8F135', color: '#0a0612', border: 'none',
+              fontSize: 15, fontWeight: 700, cursor: 'pointer',
+              fontFamily: "'Rubik', sans-serif",
+              transition: 'all 0.18s ease',
+              animation: 'fadeUp 0.4s ease 0.25s both',
+            }}
+          >
             Go to my dashboard →
-          </Link>
+          </button>
         </div>
       )
 
@@ -788,7 +957,6 @@ export default function AuthPage() {
     }
   }
 
-  /* ── SSR guard: don't render until we know the breakpoint ── */
   if (w === 0) return null
 
   return (
@@ -797,13 +965,11 @@ export default function AuthPage() {
       {/* ── LEFT white panel ── */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: '#fff' }}>
 
-        {/* ── Nav ── */}
+        {/* Nav */}
         <nav style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: navPad,
-          borderBottom: '1px solid rgba(10,6,18,0.06)',
+          padding: navPad, borderBottom: '1px solid rgba(10,6,18,0.06)',
         }}>
-          {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10 }}>
             <div style={{
               width: isMobile ? 32 : 36, height: isMobile ? 32 : 36, borderRadius: 10, flexShrink: 0,
@@ -823,50 +989,52 @@ export default function AuthPage() {
               <span style={{ color: '#0a0612', fontWeight: 700, fontSize: 15, letterSpacing: '-0.03em' }}>Creator Nexus</span>
             )}
           </div>
-
-          {/* Sign in / Sign up toggle */}
           <p style={{ color: 'rgba(10,6,18,0.42)', fontSize: isMobile ? 12 : 13, margin: 0 }}>
             {mode === 'signup'
-              ? <>{isMobile ? '' : 'Already have an account? '}<button onClick={() => { setMode('login'); setStep(1); setAnimKey(k => k + 1) }}
-                  style={{ background: 'none', border: 'none', color: '#0a0612', fontWeight: 700, cursor: 'pointer', fontSize: isMobile ? 12 : 13, fontFamily: "'Rubik',sans-serif" }}>
-                  Sign in</button></>
-              : <>{isMobile ? '' : "Don't have an account? "}<button onClick={() => { setMode('signup'); setStep(1); setAnimKey(k => k + 1) }}
-                  style={{ background: 'none', border: 'none', color: '#0a0612', fontWeight: 700, cursor: 'pointer', fontSize: isMobile ? 12 : 13, fontFamily: "'Rubik',sans-serif" }}>
-                  Sign up free</button></>
+              ? <>{isMobile ? '' : 'Already have an account? '}
+                  <button onClick={() => { setMode('login'); setStep(1); setAnimKey(k => k + 1); setError('') }}
+                    style={{ background: 'none', border: 'none', color: '#0a0612', fontWeight: 700, cursor: 'pointer', fontSize: isMobile ? 12 : 13, fontFamily: "'Rubik',sans-serif" }}>
+                    Sign in
+                  </button></>
+              : <>{isMobile ? '' : "Don't have an account? "}
+                  <button onClick={() => { setMode('signup'); setStep(1); setAnimKey(k => k + 1); setError('') }}
+                    style={{ background: 'none', border: 'none', color: '#0a0612', fontWeight: 700, cursor: 'pointer', fontSize: isMobile ? 12 : 13, fontFamily: "'Rubik',sans-serif" }}>
+                    Sign up free
+                  </button></>
             }
           </p>
         </nav>
 
-        {/* ── Progress bar ── */}
-        <div style={{
-          padding: isMobile ? '14px 16px 0' : isTablet ? '16px 28px 0' : '18px 48px 0',
-          display: 'flex', alignItems: 'center', gap: 12,
-        }}>
-          {step > 1 && (
-            <button onClick={back} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'rgba(10,6,18,0.32)', fontSize: 18, padding: 0, lineHeight: 1,
-              flexShrink: 0, transition: 'color 0.18s ease',
-            }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#0a0612')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(10,6,18,0.32)')}
-            >←</button>
-          )}
-          <div style={{ flex: 1, height: 3, background: 'rgba(10,6,18,0.08)', borderRadius: 2, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', borderRadius: 2, background: '#0a0612',
-              width: `${progress}%`,
-              transition: 'width 0.5s cubic-bezier(0.34,1.56,0.64,1)',
-            }} />
+        {/* Progress bar — only show on signup */}
+        {mode === 'signup' && (
+          <div style={{
+            padding: isMobile ? '14px 16px 0' : isTablet ? '16px 28px 0' : '18px 48px 0',
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            {step > 1 && (
+              <button onClick={back} style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'rgba(10,6,18,0.32)', fontSize: 18, padding: 0, lineHeight: 1, flexShrink: 0,
+              }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#0a0612')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(10,6,18,0.32)')}
+              >←</button>
+            )}
+            <div style={{ flex: 1, height: 3, background: 'rgba(10,6,18,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 2, background: '#0a0612',
+                width: `${progress}%`,
+                transition: 'width 0.5s cubic-bezier(0.34,1.56,0.64,1)',
+              }} />
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* ── Form area ── */}
+        {/* Form area */}
         <div style={{
           flex: 1, display: 'flex',
           alignItems: 'flex-start', justifyContent: 'center',
-          padding: formPad,
-          overflowY: 'auto',
+          padding: formPad, overflowY: 'auto',
         }}>
           <div style={{ width: '100%', maxWidth: maxForm }}>
             <div key={animKey} style={{ animation: 'fadeUp 0.32s ease forwards' }}>
@@ -876,7 +1044,7 @@ export default function AuthPage() {
         </div>
       </div>
 
-      {/* ── RIGHT dark panel — desktop only ── */}
+      {/* RIGHT dark panel — desktop only */}
       {isDesktop && <RightPanel step={step} />}
 
       <style>{`

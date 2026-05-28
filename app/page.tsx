@@ -1,9 +1,7 @@
 'use client'
-
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
-/* ── tiny hook: fires when element enters viewport ── */
 function useInView(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -20,7 +18,6 @@ function useInView(threshold = 0.15) {
   return { ref, visible }
 }
 
-/* ── animated counter ── */
 function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
   const [val, setVal] = useState(0)
   const { ref, visible } = useInView()
@@ -70,19 +67,16 @@ export default function Home() {
     <div style={{ background: '#f7f5ff', minHeight: '100vh', fontFamily: "'Rubik', sans-serif", color: '#0a0612' }}>
 
       {/* ── HERO ── */}
-      <section
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '40px 24px',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* soft glow */}
+      <section style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '40px 24px',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
         <div aria-hidden style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
           background: `
@@ -120,11 +114,11 @@ export default function Home() {
 
           {/* CTAs */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Link href="/onboarding" className="btn-apply" style={{ textDecoration: 'none' }}>
+            <Link href="/authenticate" className="btn-apply" style={{ textDecoration: 'none' }}>
               Create my portfolio →
             </Link>
             <Link
-              href="/login"
+              href="/authenticate"
               style={{
                 display: 'block', padding: '14px 24px', borderRadius: 8,
                 background: 'transparent', color: 'rgba(10,6,18,0.65)',
@@ -151,19 +145,16 @@ export default function Home() {
         {/* scroll cue */}
         <div style={{ position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, animation: 'bounce 2s ease-in-out infinite' }}>
           <span style={{ color: 'rgba(10,6,18,0.25)', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 500 }}>Scroll</span>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M4 9l4 4 4-4" stroke="rgba(10,6,18,0.25)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M4 9l4 4 4-4" stroke="rgba(10,6,18,0.25)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </div>
       </section>
 
-      {/* ── STATS BAR ── */}
       <StatsBar />
 
-      {/* ── FEATURE SECTIONS ── */}
       {FEATURES.map((f, i) => (
         <FeatureSection key={i} {...f} flip={i % 2 !== 0} />
       ))}
 
-      {/* ── SOCIAL PROOF ── */}
       <SocialProof />
 
       {/* ── BOTTOM CTA ── */}
@@ -179,8 +170,8 @@ export default function Home() {
           <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15, lineHeight: 1.75, marginBottom: 32 }}>
             Join thousands of Baltic creators building their brand on Creator Nexus.
           </p>
-          <Link href="/onboarding" className="btn-apply" style={{ textDecoration: 'none', maxWidth: 320, margin: '0 auto' }}>
-            Create my portfolio — it's free →
+          <Link href="/authenticate" className="btn-apply" style={{ textDecoration: 'none', maxWidth: 320, margin: '0 auto' }}>
+            Create my portfolio — it is free →
           </Link>
         </div>
       </section>
@@ -211,9 +202,6 @@ export default function Home() {
   )
 }
 
-/* ─────────────────────────────────────────────
-   STATS BAR
-───────────────────────────────────────────── */
 function StatsBar() {
   const { ref, visible } = useInView()
   return (
@@ -244,9 +232,6 @@ function StatsBar() {
   )
 }
 
-/* ─────────────────────────────────────────────
-   FEATURE SECTION WRAPPER
-───────────────────────────────────────────── */
 function FeatureSection({ pill, heading, body, visual, flip }: {
   pill: string; heading: string; body: string; visual: React.ReactNode; flip: boolean
 }) {
@@ -259,7 +244,6 @@ function FeatureSection({ pill, heading, body, visual, flip }: {
         flexDirection: flip ? 'row-reverse' : 'row',
         alignItems: 'center', gap: 56,
       }}>
-        {/* Text */}
         <div style={{
           flex: '1 1 260px', minWidth: 0,
           opacity: visible ? 1 : 0,
@@ -275,7 +259,6 @@ function FeatureSection({ pill, heading, body, visual, flip }: {
           }}>{heading}</h2>
           <p style={{ color: 'rgba(10,6,18,0.52)', fontSize: 15, lineHeight: 1.85, maxWidth: 340 }}>{body}</p>
         </div>
-        {/* Visual */}
         <div style={{
           flex: '1 1 300px', minWidth: 0,
           opacity: visible ? 1 : 0,
@@ -289,18 +272,13 @@ function FeatureSection({ pill, heading, body, visual, flip }: {
   )
 }
 
-/* ─────────────────────────────────────────────
-   VISUAL 1 — Profile card mockup
-───────────────────────────────────────────── */
 function PortfolioVisual() {
   return (
     <div style={{ animation: 'float 5s ease-in-out infinite', maxWidth: 340, margin: '0 auto' }}>
-      {/* card with gradient border */}
       <div className="border-gradient-pm" style={{
         borderRadius: 20, background: '#0a0612', padding: '28px 24px',
         boxShadow: '0 20px 60px rgba(128,97,255,0.18)',
       }}>
-        {/* profile row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
           <div style={{
             width: 52, height: 52, borderRadius: 14, flexShrink: 0,
@@ -313,7 +291,6 @@ function PortfolioVisual() {
             <div style={{ color: 'rgba(255,255,255,0.40)', fontSize: 12, marginTop: 2 }}>🇱🇻 Riga · Beauty & Lifestyle</div>
           </div>
         </div>
-        {/* stats row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}>
           {[['23.4K', 'Followers'], ['4.8%', 'Eng. rate'], ['18', 'Collabs']].map(([v, l]) => (
             <div key={l} style={{
@@ -325,7 +302,6 @@ function PortfolioVisual() {
             </div>
           ))}
         </div>
-        {/* content thumbnails */}
         <div style={{ display: 'flex', gap: 8 }}>
           {['#ff7ac3', '#8061ff', '#ff33bc', '#6a66ff'].map((c, i) => (
             <div key={i} style={{
@@ -340,38 +316,27 @@ function PortfolioVisual() {
   )
 }
 
-/* ─────────────────────────────────────────────
-   VISUAL 2 — Brand discovery
-───────────────────────────────────────────── */
 function DiscoveryVisual() {
   const brands = [
-    { name: 'Nike',    color: '#ff33bc' },
+    { name: 'Nike',     color: '#ff33bc' },
     { name: 'Glossier', color: '#8061ff' },
-    { name: 'Dyson',   color: '#6a66ff' },
-    { name: 'Rhode',   color: '#ff7ac3' },
-    { name: 'Alo',     color: '#ff33bc' },
-    { name: 'Skims',   color: '#8061ff' },
+    { name: 'Dyson',    color: '#6a66ff' },
+    { name: 'Rhode',    color: '#ff7ac3' },
+    { name: 'Alo',      color: '#ff33bc' },
+    { name: 'Skims',    color: '#8061ff' },
   ]
-
-  // Pre-compute and ROUND all trig values at module level so
-  // server and client always get identical strings
   const nodes = brands.map((b, i) => {
     const angle = (i / brands.length) * Math.PI * 2
     return {
       ...b,
-      // SVG line endpoints — rounded to 2dp
       lx: Math.round((170 + Math.cos(angle) * 130) * 100) / 100,
       ly: Math.round((90  + Math.sin(angle) * 70 ) * 100) / 100,
-      // CSS percentage positions — rounded to 2dp
       cx: Math.round((50 + Math.cos(angle) * 36) * 100) / 100,
       cy: Math.round((50 + Math.sin(angle) * 34) * 100) / 100,
     }
   })
-
   return (
     <div style={{ maxWidth: 340, margin: '0 auto', position: 'relative' }}>
-
-      {/* centre creator node */}
       <div style={{ display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
         <div style={{
           width: 72, height: 72, borderRadius: 20,
@@ -383,46 +348,30 @@ function DiscoveryVisual() {
           <span>👤</span>
         </div>
       </div>
-
-      {/* connecting lines */}
-      <svg
-        width="100%" height="180" viewBox="0 0 340 180"
-        style={{ position: 'absolute', top: 20, left: 0, zIndex: 1 }}
-        aria-hidden
-      >
+      <svg width="100%" height="180" viewBox="0 0 340 180"
+        style={{ position: 'absolute', top: 20, left: 0, zIndex: 1 }} aria-hidden>
         {nodes.map((n, i) => (
-          <line
-            key={i}
-            x1="170" y1="36"
-            x2={n.lx} y2={n.ly}
-            stroke="rgba(128,97,255,0.20)"
-            strokeWidth="1.5"
-            strokeDasharray="4 4"
-          />
+          <line key={i} x1="170" y1="36" x2={n.lx} y2={n.ly}
+            stroke="rgba(128,97,255,0.20)" strokeWidth="1.5" strokeDasharray="4 4" />
         ))}
       </svg>
-
-      {/* brand nodes */}
       <div style={{ position: 'relative', height: 180, marginTop: -36 }}>
         {nodes.map((n, i) => (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              left: `${n.cx}%`,
-              top:  `${n.cy}%`,
-              transform: 'translate(-50%, -50%)',
-              background: '#ffffff',
-              border: `1px solid rgba(128,97,255,0.22)`,
-              borderRadius: 12,
-              padding: '8px 14px',
-              fontSize: 13, fontWeight: 700, color: '#0a0612',
-              boxShadow: '0 4px 16px rgba(128,97,255,0.10)',
-              animation: `float ${4 + i * 0.4}s ease-in-out infinite`,
-              animationDelay: `${i * 0.3}s`,
-              whiteSpace: 'nowrap',
-            }}
-          >
+          <div key={i} style={{
+            position: 'absolute',
+            left: `${n.cx}%`,
+            top:  `${n.cy}%`,
+            transform: 'translate(-50%, -50%)',
+            background: '#ffffff',
+            border: '1px solid rgba(128,97,255,0.22)',
+            borderRadius: 12,
+            padding: '8px 14px',
+            fontSize: 13, fontWeight: 700, color: '#0a0612',
+            boxShadow: '0 4px 16px rgba(128,97,255,0.10)',
+            animation: `float ${4 + i * 0.4}s ease-in-out infinite`,
+            animationDelay: `${i * 0.3}s`,
+            whiteSpace: 'nowrap',
+          }}>
             {n.name}
           </div>
         ))}
@@ -431,9 +380,6 @@ function DiscoveryVisual() {
   )
 }
 
-/* ─────────────────────────────────────────────
-   VISUAL 3 — Analytics dashboard
-───────────────────────────────────────────── */
 function AnalyticsVisual() {
   const { ref, visible } = useInView()
   const bars = [
@@ -451,7 +397,6 @@ function AnalyticsVisual() {
         borderRadius: 20, background: '#fff',
         padding: '24px', boxShadow: '0 12px 40px rgba(128,97,255,0.10)',
       }}>
-        {/* header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
           <div>
             <div style={{ color: 'rgba(10,6,18,0.40)', fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Portfolio views</div>
@@ -466,7 +411,6 @@ function AnalyticsVisual() {
             ↑ 24% this week
           </div>
         </div>
-        {/* bars */}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 100 }}>
           {bars.map((b, i) => (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
@@ -481,7 +425,6 @@ function AnalyticsVisual() {
             </div>
           ))}
         </div>
-        {/* recent activity */}
         <div style={{ marginTop: 20, borderTop: '1px solid rgba(128,97,255,0.10)', paddingTop: 16 }}>
           {[
             { dot: '#ff33bc', text: 'Nike viewed your portfolio', time: '2m ago' },
@@ -499,21 +442,17 @@ function AnalyticsVisual() {
   )
 }
 
-/* ─────────────────────────────────────────────
-   VISUAL 4 — One shareable link
-───────────────────────────────────────────── */
 function LinkVisual() {
   const [copied, setCopied] = useState(false)
   const copy = () => { setCopied(true); setTimeout(() => setCopied(false), 2000) }
   const platforms = [
-    { label: 'Instagram bio', icon: '📸', color: '#e1306c' },
-    { label: 'Email signature', icon: '✉️', color: '#8061ff' },
-    { label: 'TikTok bio', icon: '🎵', color: '#ff33bc' },
-    { label: 'Pitch deck', icon: '📋', color: '#6a66ff' },
+    { label: 'Instagram bio',   icon: '📸' },
+    { label: 'Email signature', icon: '✉️' },
+    { label: 'TikTok bio',      icon: '🎵' },
+    { label: 'Pitch deck',      icon: '📋' },
   ]
   return (
     <div style={{ maxWidth: 340, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* link card */}
       <div className="border-gradient-pm" style={{
         borderRadius: 16, background: '#0a0612', padding: '20px',
         boxShadow: '0 12px 40px rgba(128,97,255,0.18)',
@@ -526,20 +465,16 @@ function LinkVisual() {
           }}>
             nexfluence.co/<span style={{ color: '#fff' }}>yourname</span>
           </div>
-          <button
-            onClick={copy}
-            style={{
-              background: copied ? 'rgba(128,97,255,0.3)' : 'linear-gradient(90deg,#ff33bc,#8061ff)',
-              border: 'none', borderRadius: 10, padding: '11px 16px',
-              color: '#fff', fontWeight: 700, fontSize: 13,
-              cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease',
-            }}
-          >
+          <button onClick={copy} style={{
+            background: copied ? 'rgba(128,97,255,0.3)' : 'linear-gradient(90deg,#ff33bc,#8061ff)',
+            border: 'none', borderRadius: 10, padding: '11px 16px',
+            color: '#fff', fontWeight: 700, fontSize: 13,
+            cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease',
+          }}>
             {copied ? '✓' : 'Copy'}
           </button>
         </div>
       </div>
-      {/* platform chips */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {platforms.map((p, i) => (
           <div key={i} style={{
@@ -559,15 +494,12 @@ function LinkVisual() {
   )
 }
 
-/* ─────────────────────────────────────────────
-   SOCIAL PROOF
-───────────────────────────────────────────── */
 function SocialProof() {
   const { ref, visible } = useInView()
   const reviews = [
-    { name: 'Aisha N.', role: 'Skincare Creator', text: '"Setup took 10 minutes and it already looks more pro than my Linktree."' },
-    { name: 'Jake M.', role: 'Fitness Creator', text: '"The custom domain made it feel like a real brand — because it is."' },
-    { name: 'Priya K.', role: 'Fashion Creator', text: '"I went from awkward DMs to a legit inquiry form overnight."' },
+    { name: 'Aisha N.',  role: 'Skincare Creator', text: '"Setup took 10 minutes and it already looks more pro than my Linktree."' },
+    { name: 'Jake M.',   role: 'Fitness Creator',  text: '"The custom domain made it feel like a real brand — because it is."' },
+    { name: 'Priya K.',  role: 'Fashion Creator',  text: '"I went from awkward DMs to a legit inquiry form overnight."' },
   ]
   return (
     <section ref={ref} style={{ padding: '80px 24px', background: '#f7f5ff' }}>
