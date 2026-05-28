@@ -109,7 +109,7 @@ function LightInput({ label, type = 'text', value, onChange, placeholder, suffix
           onFocus={() => setFocus(true)}
           onBlur={() => setFocus(false)}
           style={{
-            ...inputBase, padding: '13px 16px',
+            ...inputBase, padding: '13px 16px', 
             paddingRight: suffix ? 52 : 16,
             borderColor: focus ? 'rgba(128,97,255,0.65)' : 'rgba(10,6,18,0.14)',
             boxShadow: focus ? '0 0 0 3px rgba(128,97,255,0.10)' : 'none',
