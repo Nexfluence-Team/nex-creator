@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { getToken } from '../../lib/auth'
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
-
 function timeAgo(dateStr: string): string {
   const s = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
   if (s < 60)     return 'just now'
@@ -13,6 +12,14 @@ function timeAgo(dateStr: string): string {
   if (s < 86400)  return `${Math.floor(s / 3600)}h ago`
   if (s < 604800) return `${Math.floor(s / 86400)}d ago`
   return `${Math.floor(s / 604800)}w ago`
+}
+
+/* ─── Issue 6 fix: YouTube thumbnail extractor ────────────────────── */
+function getYouTubeThumbnail(url: string): string | null {
+  const match = url.match(
+    /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/
+  )
+  return match ? `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg` : null
 }
 
 /* ─── Breakpoint ──────────────────────────────────────────────────── */
@@ -30,6 +37,7 @@ function useBreakpoint() {
 type Tab = 'header' | 'media' | 'rates' | 'cases' | 'testimonials' | 'links' | 'design' | 'inbox'
 
 interface Video  { id: string; title: string; url: string; platform: string; category: string; views: string }
+interface Photo  { id: string; url: string }
 interface Rate   { id: string; title: string; price: string; turnaround: string; description: string; includes: string[] }
 interface Case   { id: string; brand: string; description: string; period: string; metrics: { label: string; value: string }[] }
 interface Testi  { id: string; name: string; role: string; company: string; quote: string; rating: number }
@@ -41,18 +49,17 @@ interface InboxMsg {
 interface Profile {
   name: string; bio: string; location: string; profilePic: string | null
   ctaText: string; niches: string[]; slug: string
-  videos: Video[]; rates: Rate[]; cases: Case[]; testimonials: Testi[]
+  videos: Video[]; photos: Photo[]; rates: Rate[]; cases: Case[]; testimonials: Testi[]
   links: Record<string, string>
   theme: string; primaryColor: string; accentColor: string; font: string
 }
 
-// ── KEY FIX: use Dispatch<SetStateAction<Profile>> instead of (p: Profile) => void ──
 type SetProfile = Dispatch<SetStateAction<Profile>>
 
 /* ─── Constants ───────────────────────────────────────────────────── */
 const NICHES     = ['Beauty','Fashion','Lifestyle','Food & Drink','Fitness','Travel','Tech','Home','Wellness','Gaming','Parenting','Finance']
 const CATEGORIES = ['Testimonial Story','Product Demo','Lifestyle','Travel','Unboxing','Review']
-const FONTS      = ['Rubik','Inter','Playfair Display','Montserrat']
+/* FONTS constant removed — font switcher removed per Issue 9 */
 const SWATCHES   = ['#8061ff','#ff33bc','#ff7ac3','#C8F135','#4ECDC4','#FF6B35','#0a0612','#2d4a6e']
 const THEMES     = [
   { id: 'minimal', label: 'Minimal',  bg: '#ffffff', fg: '#0a0612' },
@@ -84,7 +91,7 @@ const NAV: { id: Tab; icon: string; label: string }[] = [
 ]
 const INIT: Profile = {
   name: '', bio: '', location: '', profilePic: null, ctaText: 'Work With Me', niches: [], slug: '',
-  videos: [], rates: [], cases: [], testimonials: [],
+  videos: [], photos: [], rates: [], cases: [], testimonials: [],
   links: { instagram: '', tiktok: '', youtube: '', linkedin: '', pinterest: '', x: '', website: '', email: '' },
   theme: 'minimal', primaryColor: '#8061ff', accentColor: '#ff33bc', font: 'Rubik',
 }
@@ -151,12 +158,26 @@ function ApiError({ msg }: { msg: string }) {
   )
 }
 
+/* ─── Toast ───────────────────────────────────────────────────────── */
+function Toast({ msg }: { msg: string }) {
+  if (!msg) return null
+  return (
+    <div style={{
+      position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
+      background: '#0a0612', color: '#fff', padding: '10px 22px', borderRadius: 10,
+      fontSize: 13, fontWeight: 600, zIndex: 9999, pointerEvents: 'none',
+      animation: 'fadeUp 0.22s ease forwards',
+      boxShadow: '0 6px 24px rgba(10,6,18,0.22)',
+      fontFamily: "'Rubik',sans-serif", whiteSpace: 'nowrap',
+    }}>{msg}</div>
+  )
+}
+
 /* ─── Async save hook ─────────────────────────────────────────────── */
 function useApiSave() {
   const [saved,     setSaved]     = useState(false)
   const [loading,   setLoading]   = useState(false)
   const [saveError, setSaveError] = useState('')
-
   const save = async (fn: () => Promise<void>) => {
     setLoading(true); setSaveError('')
     try {
@@ -285,8 +306,7 @@ function VideoModal({ onClose, onAdd }: { onClose: () => void; onAdd: (v: Omit<V
         </div>
         <Field label="View count (optional)"><FInput value={d.views} onChange={v => setD(x => ({ ...x, views: v }))} placeholder="e.g. 23.4K" /></Field>
       </div>
-      <ModalFooter onCancel={onClose} disabled={!ok}
-        onSave={() => { onAdd(d); onClose() }} />
+      <ModalFooter onCancel={onClose} disabled={!ok} onSave={() => { onAdd(d); onClose() }} />
     </Modal>
   )
 }
@@ -409,7 +429,6 @@ function HeaderTab({ profile, setProfile }: { profile: Profile; setProfile: SetP
     save(async () => {
       const token = getToken()
       let profilePicUrl = profile.profilePic
-
       if (pendingFile) {
         const form = new FormData()
         form.append('file', pendingFile)
@@ -422,20 +441,18 @@ function HeaderTab({ profile, setProfile }: { profile: Profile; setProfile: SetP
         profilePicUrl = json.data.url
         setPendingFile(null)
       }
-
       const res  = await fetch(`${API}/profile/header`, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-
-  name:          profile.name         || undefined,
-  bio:           profile.bio          || undefined,
-  location:      profile.location     || undefined,
-  ctaText:       profile.ctaText      || undefined,
-  slug:          profile.slug?.length >= 3 ? profile.slug : undefined,
-  niches:        profile.niches,
-  profilePicUrl: profilePicUrl ?? '',
-}),
+          name:          profile.name         || undefined,
+          bio:           profile.bio          || undefined,
+          location:      profile.location     || undefined,
+          ctaText:       profile.ctaText      || undefined,
+          slug:          profile.slug?.length >= 3 ? profile.slug : undefined,
+          niches:        profile.niches,
+          profilePicUrl: profilePicUrl ?? '',
+        }),
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.message)
@@ -481,8 +498,8 @@ function HeaderTab({ profile, setProfile }: { profile: Profile; setProfile: SetP
           <Field label="CTA button text"><FInput value={profile.ctaText} onChange={v => set({ ctaText: v })} placeholder="Work With Me" /></Field>
           <Field label="Portfolio URL slug">
             <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: 'rgba(10,6,18,0.38)', fontWeight: 500 }}>nexfluence.co/</span>
-              <input value={profile.slug} onChange={e => set({ slug: e.target.value })} placeholder="yourname" style={{ ...inp(false), paddingLeft: 96 }} />
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'rgba(10,6,18,0.35)', fontWeight: 500, whiteSpace: 'nowrap' }}>nexus.nexfluence.eu/</span>
+              <input value={profile.slug} onChange={e => set({ slug: e.target.value })} placeholder="yourname" style={{ ...inp(false), paddingLeft: 118 }} />
             </div>
           </Field>
         </div>
@@ -502,10 +519,16 @@ function HeaderTab({ profile, setProfile }: { profile: Profile; setProfile: SetP
 
 /* ─── TAB: MEDIA ──────────────────────────────────────────────────── */
 function MediaTab({ profile, setProfile }: { profile: Profile; setProfile: SetProfile }) {
-  const [showVideoModal, setShowVideoModal] = useState(false)
-  const [mediaError, setMediaError] = useState('')
-  const platIcon: Record<string, string> = { instagram: '📸', tiktok: '🎵', youtube: '▶️', other: '🎬' }
+  const [showVideoModal,  setShowVideoModal]  = useState(false)
+  const [mediaError,      setMediaError]      = useState('')
+  const [photoUploading,  setPhotoUploading]  = useState(false)
+  const photoRef = useRef<HTMLInputElement>(null)
 
+  /* platform icons for non-YouTube placeholders */
+  const platIcon: Record<string, string> = { instagram: '📸', tiktok: '🎵', youtube: '▶️', other: '🎬' }
+  const platName: Record<string, string> = { instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', other: 'Video' }
+
+  /* ── Videos ── */
   const addVideo = (v: Omit<Video, 'id'>) => {
     const tempId = `temp_${Date.now()}`
     setProfile(p => ({ ...p, videos: [...p.videos, { ...v, id: tempId }] }))
@@ -538,57 +561,189 @@ function MediaTab({ profile, setProfile }: { profile: Profile; setProfile: SetPr
     }).catch(() => {})
   }
 
+  /* ── Issue 7 fix: photo upload ── */
+  const addPhotos = async (files: FileList) => {
+    setPhotoUploading(true)
+    setMediaError('')
+    const token = getToken()
+    for (const file of Array.from(files)) {
+      const tempId  = `temp_${Date.now()}_${Math.random()}`
+      const tempUrl = URL.createObjectURL(file)
+      setProfile(p => ({ ...p, photos: [...p.photos, { id: tempId, url: tempUrl }] }))
+      try {
+        const form = new FormData()
+        form.append('file', file)
+        form.append('type', 'photo')
+        const res  = await fetch(`${API}/media/upload`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
+        })
+        const json = await res.json()
+        if (!json.success) throw new Error(json.message)
+        const savedId = json.data._id || json.data.id || tempId
+        const savedUrl = json.data.url || tempUrl
+        setProfile(p => ({
+          ...p,
+          photos: p.photos.map(ph => ph.id === tempId ? { id: savedId, url: savedUrl } : ph),
+        }))
+      } catch (err: any) {
+        setMediaError(err.message || 'Photo upload failed.')
+        setProfile(p => ({ ...p, photos: p.photos.filter(ph => ph.id !== tempId) }))
+      }
+    }
+    setPhotoUploading(false)
+  }
+
+  const removePhoto = (id: string) => {
+    setProfile(p => ({ ...p, photos: p.photos.filter(ph => ph.id !== id) }))
+    const token = getToken()
+    fetch(`${API}/media/photos/${id}`, {
+      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {})
+  }
+
   return (
     <div>
       <h2 style={sectionTitle}>Media</h2>
       <p style={sectionSub}>Add videos and photos to showcase your best work.</p>
       <ApiError msg={mediaError} />
+
+      {/* ── Videos section ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <span style={{ fontWeight: 700, fontSize: 15, color: '#0a0612' }}>Videos <span style={{ color: 'rgba(10,6,18,0.35)', fontWeight: 400 }}>({profile.videos.length})</span></span>
+        <span style={{ fontWeight: 700, fontSize: 15, color: '#0a0612' }}>
+          Videos <span style={{ color: 'rgba(10,6,18,0.35)', fontWeight: 400 }}>({profile.videos.length})</span>
+        </span>
         <button onClick={() => setShowVideoModal(true)} style={{
           background: 'linear-gradient(90deg,#ff33bc,#8061ff)', border: 'none',
           borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 13, fontWeight: 700,
           cursor: 'pointer', fontFamily: "'Rubik',sans-serif",
         }}>+ Add video</button>
       </div>
+
       {profile.videos.length === 0
         ? <div style={emptyBox}>
             <p style={{ fontSize: 28, marginBottom: 8 }}>🎬</p>
             <p style={{ fontWeight: 700, color: '#0a0612', fontSize: 15, marginBottom: 4 }}>No videos yet</p>
             <p style={{ color: 'rgba(10,6,18,0.45)', fontSize: 13 }}>Add your best UGC videos to show brands what you can do.</p>
           </div>
-        : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 12, marginBottom: 4 }}>
-            {profile.videos.map(v => (
-              <div key={v.id} style={{ ...card, position: 'relative' }}>
-                <button onClick={() => removeVideo(v.id)} style={{
-                  position: 'absolute', top: 10, right: 10, width: 24, height: 24, borderRadius: '50%', border: 'none',
-                  background: 'rgba(255,51,188,0.12)', color: '#ff33bc', cursor: 'pointer', fontSize: 12,
+        : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12, marginBottom: 4 }}>
+            {profile.videos.map(v => {
+              /* Issue 6 fix: YouTube thumbnail, better placeholder for others */
+              const ytThumb = v.platform === 'youtube' ? getYouTubeThumbnail(v.url) : null
+              return (
+                <div key={v.id} style={{ ...card, padding: 0, overflow: 'hidden', position: 'relative' }}>
+                  <button onClick={() => removeVideo(v.id)} style={{
+                    position: 'absolute', top: 8, right: 8, zIndex: 2,
+                    width: 24, height: 24, borderRadius: '50%', border: 'none',
+                    background: 'rgba(10,6,18,0.55)', color: '#fff', cursor: 'pointer', fontSize: 11,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(4px)',
+                  }}>✕</button>
+
+                  {/* Thumbnail area */}
+                  <div style={{ aspectRatio: '9/14', position: 'relative', overflow: 'hidden', background: 'linear-gradient(160deg,rgba(128,97,255,0.18),rgba(255,51,188,0.18))' }}>
+                    {ytThumb ? (
+                      <img src={ytThumb} alt={v.title}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                      />
+                    ) : (
+                      /* Instagram / TikTok / Other: intentional branded placeholder */
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 36 }}>{platIcon[v.platform] ?? '🎬'}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(10,6,18,0.55)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{platName[v.platform] ?? 'Video'}</span>
+                        {v.url && (
+                          <a href={v.url} target="_blank" rel="noopener noreferrer" style={{
+                            fontSize: 11, fontWeight: 700, color: '#8061ff',
+                            background: 'rgba(128,97,255,0.10)', border: '1px solid rgba(128,97,255,0.25)',
+                            borderRadius: 100, padding: '4px 10px', textDecoration: 'none',
+                            marginTop: 4,
+                          }}>View ↗</a>
+                        )}
+                      </div>
+                    )}
+                    {/* Play overlay for YouTube */}
+                    {ytThumb && (
+                      <a href={v.url} target="_blank" rel="noopener noreferrer" style={{
+                        position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(10,6,18,0.22)', textDecoration: 'none', transition: 'background 0.18s ease',
+                      }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(10,6,18,0.44)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(10,6,18,0.22)' }}
+                      >
+                        <div style={{
+                          width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.92)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <span style={{ fontSize: 14, marginLeft: 2 }}>▶</span>
+                        </div>
+                      </a>
+                    )}
+                  </div>
+
+                  {/* Card footer */}
+                  <div style={{ padding: '10px 12px' }}>
+                    <p style={{ fontWeight: 700, fontSize: 12, color: '#0a0612', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.title}</p>
+                    <p style={{ fontSize: 11, color: 'rgba(10,6,18,0.40)' }}>{v.category}{v.views ? ` · ${v.views} views` : ''}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+      }
+
+      <div style={divider} />
+
+      {/* ── Photos section — Issue 7 fix: wired upload ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <span style={{ fontWeight: 700, fontSize: 15, color: '#0a0612' }}>
+          Photos <span style={{ color: 'rgba(10,6,18,0.35)', fontWeight: 400 }}>({profile.photos.length})</span>
+        </span>
+        <button
+          onClick={() => photoRef.current?.click()}
+          disabled={photoUploading}
+          style={{
+            border: '1.5px solid rgba(128,97,255,0.28)', borderRadius: 8, padding: '8px 16px',
+            background: '#fff', color: '#8061ff', fontSize: 13, fontWeight: 700,
+            cursor: photoUploading ? 'not-allowed' : 'pointer',
+            fontFamily: "'Rubik',sans-serif",
+            opacity: photoUploading ? 0.65 : 1,
+          }}>
+          {photoUploading ? 'Uploading…' : '+ Add photos'}
+        </button>
+      </div>
+      <input
+        ref={photoRef}
+        type="file"
+        accept="image/*"
+        multiple
+        style={{ display: 'none' }}
+        onChange={e => { if (e.target.files) addPhotos(e.target.files); e.target.value = '' }}
+      />
+
+      {profile.photos.length === 0
+        ? <div style={emptyBox}>
+            <p style={{ fontSize: 28, marginBottom: 8 }}>🖼️</p>
+            <p style={{ fontWeight: 700, color: '#0a0612', fontSize: 15, marginBottom: 4 }}>No photos yet</p>
+            <p style={{ color: 'rgba(10,6,18,0.45)', fontSize: 13 }}>Upload product photos and behind-the-scenes content.</p>
+          </div>
+        : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(110px,1fr))', gap: 8 }}>
+            {profile.photos.map(ph => (
+              <div key={ph.id} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: 10, overflow: 'hidden', border: '1.5px solid rgba(10,6,18,0.09)', background: 'rgba(128,97,255,0.04)' }}>
+                <img src={ph.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <button onClick={() => removePhoto(ph.id)} style={{
+                  position: 'absolute', top: 5, right: 5,
+                  width: 22, height: 22, borderRadius: '50%', border: 'none',
+                  background: 'rgba(10,6,18,0.55)', color: '#fff', cursor: 'pointer', fontSize: 10,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  backdropFilter: 'blur(4px)',
                 }}>✕</button>
-                <div style={{
-                  aspectRatio: '9/14', background: 'linear-gradient(160deg,rgba(128,97,255,0.15),rgba(255,51,188,0.15))',
-                  borderRadius: 8, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28,
-                }}>{platIcon[v.platform]}</div>
-                <p style={{ fontWeight: 700, fontSize: 13, color: '#0a0612', marginBottom: 3 }}>{v.title}</p>
-                <p style={{ fontSize: 11, color: 'rgba(10,6,18,0.40)' }}>{v.category}{v.views ? ` · ${v.views} views` : ''}</p>
               </div>
             ))}
           </div>
       }
-      <div style={divider} />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-        <span style={{ fontWeight: 700, fontSize: 15, color: '#0a0612' }}>Photos</span>
-        <button style={{
-          border: '1.5px solid rgba(128,97,255,0.28)', borderRadius: 8, padding: '8px 16px',
-          background: '#fff', color: '#8061ff', fontSize: 13, fontWeight: 700,
-          cursor: 'pointer', fontFamily: "'Rubik',sans-serif",
-        }}>+ Add photos</button>
-      </div>
-      <div style={emptyBox}>
-        <p style={{ fontSize: 28, marginBottom: 8 }}>🖼️</p>
-        <p style={{ fontWeight: 700, color: '#0a0612', fontSize: 15, marginBottom: 4 }}>No photos yet</p>
-        <p style={{ color: 'rgba(10,6,18,0.45)', fontSize: 13 }}>Upload product photos and behind-the-scenes content.</p>
-      </div>
+
       {showVideoModal && <VideoModal onClose={() => setShowVideoModal(false)} onAdd={addVideo} />}
     </div>
   )
@@ -602,7 +757,6 @@ function RatesTab({ profile, setProfile }: { profile: Profile; setProfile: SetPr
 
   const addRate = (r: Omit<Rate, 'id'> & { id?: string }) => {
     if (r.id) {
-      // edit existing
       const token = getToken()
       fetch(`${API}/rates/${r.id}`, {
         method: 'PUT',
@@ -914,7 +1068,7 @@ function LinksTab({ profile, setProfile }: { profile: Profile; setProfile: SetPr
   )
 }
 
-/* ─── TAB: DESIGN ─────────────────────────────────────────────────── */
+/* ─── TAB: DESIGN — Issue 9 fix: Typography section removed ──────── */
 function DesignTab({ profile, setProfile }: { profile: Profile; setProfile: SetProfile }) {
   const { saved, loading, saveError, save } = useApiSave()
   const set = (patch: Partial<Profile>) => setProfile(p => ({ ...p, ...patch }))
@@ -925,7 +1079,12 @@ function DesignTab({ profile, setProfile }: { profile: Profile; setProfile: SetP
       const res  = await fetch(`${API}/profile/design`, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ theme: profile.theme, primaryColor: profile.primaryColor, accentColor: profile.accentColor, font: profile.font }),
+        body:    JSON.stringify({
+          theme:        profile.theme,
+          primaryColor: profile.primaryColor,
+          accentColor:  profile.accentColor,
+          font:         'Rubik', // always Rubik — switcher removed
+        }),
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.message)
@@ -936,6 +1095,8 @@ function DesignTab({ profile, setProfile }: { profile: Profile; setProfile: SetP
     <div>
       <h2 style={sectionTitle}>Design</h2>
       <p style={sectionSub}>Customise the look and feel of your portfolio.</p>
+
+      {/* Portfolio theme */}
       <label style={lbl}>Portfolio theme</label>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 28 }}>
         {THEMES.map(t => {
@@ -960,7 +1121,9 @@ function DesignTab({ profile, setProfile }: { profile: Profile; setProfile: SetP
           )
         })}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 28 }}>
+
+      {/* Colour pickers */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 4 }}>
         {[
           { label: 'Primary colour', key: 'primaryColor', val: profile.primaryColor },
           { label: 'Accent colour',  key: 'accentColor',  val: profile.accentColor },
@@ -984,26 +1147,9 @@ function DesignTab({ profile, setProfile }: { profile: Profile; setProfile: SetP
           </div>
         ))}
       </div>
-      <label style={lbl}>Typography</label>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8, marginBottom: 4 }}>
-        {FONTS.map(f => {
-          const active = profile.font === f
-          return (
-            <button key={f} onClick={() => set({ font: f })} style={{
-              padding: '14px 16px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
-              border: `1.5px solid ${active ? 'rgba(128,97,255,0.55)' : 'rgba(10,6,18,0.12)'}`,
-              background: active ? 'rgba(128,97,255,0.07)' : '#fff',
-              transition: 'all 0.15s ease', fontFamily: "'Rubik',sans-serif",
-            }}>
-              <p style={{
-                fontFamily: f === 'Rubik' ? "'Rubik',sans-serif" : f === 'Inter' ? "'Inter',sans-serif" : f === 'Playfair Display' ? "'Playfair Display',serif" : "'Montserrat',sans-serif",
-                fontWeight: 700, fontSize: 15, color: active ? '#0a0612' : 'rgba(10,6,18,0.55)', marginBottom: 2,
-              }}>{f}</p>
-              <p style={{ fontSize: 11, color: 'rgba(10,6,18,0.35)' }}>The quick brown fox</p>
-            </button>
-          )
-        })}
-      </div>
+
+      {/* Typography section intentionally removed — font is always Rubik */}
+
       <SaveRow onSave={handleSave} saved={saved} loading={loading} error={saveError} />
     </div>
   )
@@ -1025,14 +1171,9 @@ function InboxTab({ onUnreadChange }: { onUnreadChange?: (n: number) => void }) 
       .then(json => {
         if (!json.success) throw new Error(json.message)
         const mapped: InboxMsg[] = json.data.messages.map((m: any) => ({
-          id:         m._id,
-          type:       m.type,
-          read:       m.read,
-          name:       m.senderName,
-          company:    m.senderCompany ?? '',
-          email:      m.senderEmail,
-          message:    m.message,
-          budget:     m.budget,
+          id: m._id, type: m.type, read: m.read,
+          name: m.senderName, company: m.senderCompany ?? '',
+          email: m.senderEmail, message: m.message, budget: m.budget,
           receivedAt: timeAgo(m.createdAt),
         }))
         setMsgs(mapped)
@@ -1062,10 +1203,7 @@ function InboxTab({ onUnreadChange }: { onUnreadChange?: (n: number) => void }) 
     })
   }
 
-  const toggle = (id: string) => {
-    setExpanded(e => e === id ? null : id)
-    markRead(id)
-  }
+  const toggle = (id: string) => { setExpanded(e => e === id ? null : id); markRead(id) }
 
   const unreadCount  = msgs.filter(m => !m.read).length
   const inquiryCount = msgs.filter(m => m.type === 'inquiry').length
@@ -1106,10 +1244,7 @@ function InboxTab({ onUnreadChange }: { onUnreadChange?: (n: number) => void }) 
             { label: 'Inquiries', value: inquiryCount,  color: '#8061ff' },
             { label: 'Messages',  value: messageCount,  color: 'rgba(10,6,18,0.50)' },
           ].map(s => (
-            <div key={s.label} style={{
-              background: '#fff', borderRadius: 12, padding: '14px 16px',
-              border: '1.5px solid rgba(10,6,18,0.08)', boxShadow: '0 2px 8px rgba(10,6,18,0.04)',
-            }}>
+            <div key={s.label} style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', border: '1.5px solid rgba(10,6,18,0.08)', boxShadow: '0 2px 8px rgba(10,6,18,0.04)' }}>
               <p style={{ fontWeight: 900, fontSize: 22, color: s.color, letterSpacing: '-0.02em', marginBottom: 2 }}>{s.value}</p>
               <p style={{ fontSize: 11, color: 'rgba(10,6,18,0.42)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</p>
             </div>
@@ -1128,10 +1263,7 @@ function InboxTab({ onUnreadChange }: { onUnreadChange?: (n: number) => void }) 
             }}>
               {f.charAt(0).toUpperCase() + f.slice(1)}
               {f === 'unread' && unreadCount > 0 && (
-                <span style={{
-                  marginLeft: 6, background: '#ff33bc', color: '#fff',
-                  borderRadius: 100, padding: '1px 6px', fontSize: 10, fontWeight: 800,
-                }}>{unreadCount}</span>
+                <span style={{ marginLeft: 6, background: '#ff33bc', color: '#fff', borderRadius: 100, padding: '1px 6px', fontSize: 10, fontWeight: 800 }}>{unreadCount}</span>
               )}
             </button>
           ))}
@@ -1147,7 +1279,7 @@ function InboxTab({ onUnreadChange }: { onUnreadChange?: (n: number) => void }) 
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {filtered.map(m => {
-              const tc   = typeColor(m.type)
+              const tc = typeColor(m.type)
               const open = expanded === m.id
               return (
                 <div key={m.id} style={{
@@ -1157,89 +1289,37 @@ function InboxTab({ onUnreadChange }: { onUnreadChange?: (n: number) => void }) 
                   overflow: 'hidden', transition: 'all 0.2s ease',
                 }}>
                   <div onClick={() => toggle(m.id)} style={{ padding: '16px 18px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                    <div style={{
-                      width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 6,
-                      background: m.read ? 'transparent' : '#8061ff',
-                      border: m.read ? '1.5px solid rgba(10,6,18,0.15)' : 'none',
-                      transition: 'all 0.2s ease',
-                    }} />
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-                      background: `linear-gradient(135deg,${tc.color}30,${tc.color}60)`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 900, fontSize: 15, color: tc.color,
-                    }}>{m.name[0].toUpperCase()}</div>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, marginTop: 6, background: m.read ? 'transparent' : '#8061ff', border: m.read ? '1.5px solid rgba(10,6,18,0.15)' : 'none', transition: 'all 0.2s ease' }} />
+                    <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: `linear-gradient(135deg,${tc.color}30,${tc.color}60)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 15, color: tc.color }}>{m.name[0].toUpperCase()}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 800, fontSize: 14, color: '#0a0612', letterSpacing: '-0.01em' }}>{m.name}</span>
                         {m.company && <span style={{ fontSize: 12, color: 'rgba(10,6,18,0.42)' }}>· {m.company}</span>}
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100,
-                          background: tc.bg, color: tc.color, border: `1px solid ${tc.border}`,
-                          textTransform: 'uppercase', letterSpacing: '0.06em', marginLeft: 'auto',
-                        }}>{m.type}</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100, background: tc.bg, color: tc.color, border: `1px solid ${tc.border}`, textTransform: 'uppercase', letterSpacing: '0.06em', marginLeft: 'auto' }}>{m.type}</span>
                       </div>
-                      {!open && (
-                        <p style={{
-                          fontSize: 13, color: 'rgba(10,6,18,0.55)',
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          maxWidth: '100%', marginBottom: 6, lineHeight: 1.5,
-                        }}>{m.message}</p>
-                      )}
+                      {!open && <p style={{ fontSize: 13, color: 'rgba(10,6,18,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', marginBottom: 6, lineHeight: 1.5 }}>{m.message}</p>}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 11, color: 'rgba(10,6,18,0.35)' }}>⏱ {m.receivedAt}</span>
-                        {m.budget && (
-                          <span style={{
-                            fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 100,
-                            background: 'rgba(200,241,53,0.25)', color: 'rgba(10,6,18,0.70)',
-                            border: '1px solid rgba(200,241,53,0.50)',
-                          }}>💰 {m.budget}</span>
-                        )}
+                        {m.budget && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 100, background: 'rgba(200,241,53,0.25)', color: 'rgba(10,6,18,0.70)', border: '1px solid rgba(200,241,53,0.50)' }}>💰 {m.budget}</span>}
                       </div>
                     </div>
-                    <span style={{
-                      fontSize: 12, color: 'rgba(10,6,18,0.30)', flexShrink: 0, marginTop: 2,
-                      transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease',
-                    }}>▼</span>
+                    <span style={{ fontSize: 12, color: 'rgba(10,6,18,0.30)', flexShrink: 0, marginTop: 2, transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>▼</span>
                   </div>
                   {open && (
                     <div style={{ padding: '0 18px 18px', borderTop: '1px solid rgba(10,6,18,0.06)', paddingTop: 16 }}>
-                      <p style={{
-                        fontSize: 14, color: 'rgba(10,6,18,0.70)', lineHeight: 1.8,
-                        background: 'rgba(10,6,18,0.03)', borderRadius: 10, padding: '14px 16px',
-                        marginBottom: 14, borderLeft: `3px solid ${tc.color}`,
-                      }}>{m.message}</p>
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14,
-                        padding: '10px 14px', background: 'rgba(128,97,255,0.05)',
-                        borderRadius: 8, border: '1px solid rgba(128,97,255,0.12)',
-                      }}>
+                      <p style={{ fontSize: 14, color: 'rgba(10,6,18,0.70)', lineHeight: 1.8, background: 'rgba(10,6,18,0.03)', borderRadius: 10, padding: '14px 16px', marginBottom: 14, borderLeft: `3px solid ${tc.color}` }}>{m.message}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, padding: '10px 14px', background: 'rgba(128,97,255,0.05)', borderRadius: 8, border: '1px solid rgba(128,97,255,0.12)' }}>
                         <span style={{ fontSize: 14 }}>✉️</span>
                         <span style={{ fontSize: 13, fontWeight: 500, color: 'rgba(10,6,18,0.55)' }}>Reply to:</span>
                         <a href={`mailto:${m.email}`} style={{ fontSize: 13, fontWeight: 700, color: '#8061ff', textDecoration: 'none' }}>{m.email}</a>
                       </div>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <a href={`mailto:${m.email}?subject=Re: Your inquiry via Nexfluence&body=Hi ${m.name.split(' ')[0]},%0A%0AThanks for reaching out!`}
-                          style={{
-                            padding: '9px 18px', borderRadius: 8, border: 'none',
-                            background: 'linear-gradient(90deg,#ff33bc,#8061ff)',
-                            color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none',
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            fontFamily: "'Rubik',sans-serif",
-                          }}>✉️ Reply via email</a>
+                          style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(90deg,#ff33bc,#8061ff)', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Rubik',sans-serif" }}>✉️ Reply via email</a>
                         {!m.read && (
-                          <button onClick={e => { e.stopPropagation(); markRead(m.id) }} style={{
-                            padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                            border: '1.5px solid rgba(10,6,18,0.12)', background: '#fff',
-                            color: 'rgba(10,6,18,0.55)', cursor: 'pointer', fontFamily: "'Rubik',sans-serif",
-                          }}>Mark as read</button>
+                          <button onClick={e => { e.stopPropagation(); markRead(m.id) }} style={{ padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, border: '1.5px solid rgba(10,6,18,0.12)', background: '#fff', color: 'rgba(10,6,18,0.55)', cursor: 'pointer', fontFamily: "'Rubik',sans-serif" }}>Mark as read</button>
                         )}
-                        <button onClick={e => { e.stopPropagation(); deleteMsg(m.id) }} style={{
-                          padding: '9px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                          border: 'none', background: 'rgba(255,51,188,0.08)',
-                          color: '#ff33bc', cursor: 'pointer', fontFamily: "'Rubik',sans-serif",
-                          marginLeft: 'auto',
-                        }}>Delete</button>
+                        <button onClick={e => { e.stopPropagation(); deleteMsg(m.id) }} style={{ padding: '9px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, border: 'none', background: 'rgba(255,51,188,0.08)', color: '#ff33bc', cursor: 'pointer', fontFamily: "'Rubik',sans-serif", marginLeft: 'auto' }}>Delete</button>
                       </div>
                     </div>
                   )}
@@ -1253,13 +1333,17 @@ function InboxTab({ onUnreadChange }: { onUnreadChange?: (n: number) => void }) 
   )
 }
 
-/* ─── LIVE PREVIEW ────────────────────────────────────────────────── */
+/* ─── LIVE PREVIEW — Issue 11 fix: correct URL bar domain ─────────── */
 function LivePreview({ profile, device }: { profile: Profile; device: string }) {
   const theme = THEMES.find(t => t.id === profile.theme) ?? THEMES[0]
   const maxW  = device === 'Mobile' ? 340 : device === 'Tablet' ? 600 : '100%'
+  const previewUrl = profile.slug
+    ? `nexus.nexfluence.eu/profile/${profile.slug}`
+    : 'nexus.nexfluence.eu/profile/yourname'
   return (
     <div style={{ flex: 1, background: '#f0eef8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: 24, overflowY: 'auto' }}>
       <div style={{ width: '100%', maxWidth: maxW, transition: 'max-width 0.4s ease' }}>
+        {/* Browser chrome */}
         <div style={{ background: '#e8e4f0', borderRadius: '12px 12px 0 0', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(10,6,18,0.08)', borderBottom: 'none' }}>
           <div style={{ display: 'flex', gap: 5 }}>
             {['#ff5f57', '#febc2e', '#28c840'].map(c => (
@@ -1267,15 +1351,19 @@ function LivePreview({ profile, device }: { profile: Profile; device: string }) 
             ))}
           </div>
           <div style={{ flex: 1, background: 'white', borderRadius: 6, padding: '4px 10px', fontSize: 11, color: 'rgba(10,6,18,0.40)', border: '1px solid rgba(10,6,18,0.08)' }}>
-            nexfluence.co/{profile.slug || 'yourname'}
+            {previewUrl}
           </div>
         </div>
+        {/* Page content */}
         <div style={{ background: theme.bg, border: '1px solid rgba(10,6,18,0.08)', borderTop: 'none', borderRadius: '0 0 12px 12px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(10,6,18,0.10)' }}>
           <div style={{ background: `linear-gradient(135deg, ${profile.primaryColor}22, ${profile.accentColor}22)`, padding: '28px 24px', textAlign: 'center', borderBottom: '1px solid rgba(10,6,18,0.06)' }}>
             <div style={{ width: 64, height: 64, borderRadius: '50%', margin: '0 auto 12px', background: profile.profilePic ? 'transparent' : `linear-gradient(135deg,${profile.primaryColor},${profile.accentColor})`, border: `3px solid ${profile.primaryColor}44`, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 22, color: '#fff' }}>
-              {profile.profilePic ? <img src={profile.profilePic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : profile.name ? profile.name[0].toUpperCase() : '?'}
+              {profile.profilePic
+                ? <img src={profile.profilePic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : profile.name ? profile.name[0].toUpperCase() : '?'
+              }
             </div>
-            <h2 style={{ fontWeight: 900, fontSize: 20, color: theme.fg, letterSpacing: '-0.02em', marginBottom: 6, fontFamily: `'${profile.font}',sans-serif` }}>{profile.name || 'Your Name'}</h2>
+            <h2 style={{ fontWeight: 900, fontSize: 20, color: theme.fg, letterSpacing: '-0.02em', marginBottom: 6, fontFamily: "'Rubik',sans-serif" }}>{profile.name || 'Your Name'}</h2>
             {profile.location && <p style={{ fontSize: 12, color: `${theme.fg}70`, marginBottom: 8 }}>📍 {profile.location}</p>}
             {profile.bio && <p style={{ fontSize: 12, color: `${theme.fg}80`, lineHeight: 1.5, maxWidth: 260, margin: '0 auto 14px' }}>{profile.bio}</p>}
             <button style={{ background: `linear-gradient(90deg,${profile.primaryColor},${profile.accentColor})`, border: 'none', borderRadius: 100, padding: '8px 20px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'default', fontFamily: "'Rubik',sans-serif" }}>{profile.ctaText || 'Work With Me'}</button>
@@ -1288,7 +1376,11 @@ function LivePreview({ profile, device }: { profile: Profile; device: string }) 
             </div>
           )}
           <div style={{ padding: '14px 16px', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', textAlign: 'center', gap: 8, borderBottom: '1px solid rgba(10,6,18,0.06)' }}>
-            {[{ label: 'Videos', val: profile.videos.length }, { label: 'Services', val: profile.rates.length }, { label: 'Reviews', val: profile.testimonials.length }].map(s => (
+            {[
+              { label: 'Videos',   val: profile.videos.length },
+              { label: 'Services', val: profile.rates.length },
+              { label: 'Reviews',  val: profile.testimonials.length },
+            ].map(s => (
               <div key={s.label}>
                 <p style={{ fontWeight: 800, fontSize: 16, color: theme.fg }}>{s.val || '—'}</p>
                 <p style={{ fontSize: 10, color: `${theme.fg}55` }}>{s.label}</p>
@@ -1315,17 +1407,22 @@ function LivePreview({ profile, device }: { profile: Profile; device: string }) 
 export default function StudioPage() {
   const router = useRouter()
   const { isMobile, isDesktop, w } = useBreakpoint()
-  const [tab,          setTab]         = useState<Tab>('header')
-  const [profile,      setProfile]     = useState<Profile>(INIT)
-  const [device,       setDevice]      = useState('Desktop')
-  const [showPreview,  setShowPreview] = useState(false)
-  const [pageLoading,  setPageLoading] = useState(true)
-  const [inboxUnread,  setInboxUnread] = useState(0)
+  const [tab,         setTab]         = useState<Tab>('header')
+  const [profile,     setProfile]     = useState<Profile>(INIT)
+  const [device,      setDevice]      = useState('Desktop')
+  const [showPreview, setShowPreview] = useState(false)
+  const [pageLoading, setPageLoading] = useState(true)
+  const [inboxUnread, setInboxUnread] = useState(0)
+  /* Issue 10 fix: toast state */
+  const [toast, setToast] = useState('')
+  const showToast = (msg: string, ms = 2200) => {
+    setToast(msg)
+    setTimeout(() => setToast(''), ms)
+  }
 
   useEffect(() => {
     const token = getToken()
     if (!token) { router.push('/authenticate'); return }
-
     const headers = { Authorization: `Bearer ${token}` }
 
     Promise.all([
@@ -1335,15 +1432,19 @@ export default function StudioPage() {
       fetch(`${API}/cases`,         { headers }).then(r => r.json()),
       fetch(`${API}/testimonials`,  { headers }).then(r => r.json()),
       fetch(`${API}/links`,         { headers }).then(r => r.json()),
+      /* Issue 7 fix: fetch saved photos */
+      fetch(`${API}/media/photos`,  { headers }).then(r => r.json()).catch(() => ({ success: false })),
     ])
-      .then(([userRes, videosRes, ratesRes, casesRes, testiRes, linksRes]) => {
-        const u        = userRes.data?.user ?? {}
-        const videos   = (videosRes.data?.videos       ?? []).map((v: any) => ({ ...v, id: v._id }))
-        const rates    = (ratesRes.data?.rates         ?? []).map((r: any) => ({ ...r, id: r._id }))
-        const cases    = (casesRes.data?.cases         ?? []).map((c: any) => ({ ...c, id: c._id }))
-        const testis   = (testiRes.data?.testimonials  ?? []).map((t: any) => ({ ...t, id: t._id }))
+      .then(([userRes, videosRes, ratesRes, casesRes, testiRes, linksRes, photosRes]) => {
+        const u      = userRes.data?.user ?? {}
+        const videos = (videosRes.data?.videos       ?? []).map((v: any) => ({ ...v, id: v._id }))
+        const rates  = (ratesRes.data?.rates         ?? []).map((r: any) => ({ ...r, id: r._id }))
+        const cases  = (casesRes.data?.cases         ?? []).map((c: any) => ({ ...c, id: c._id }))
+        const testis = (testiRes.data?.testimonials  ?? []).map((t: any) => ({ ...t, id: t._id }))
+        const photos = (photosRes?.data?.photos      ?? []).map((p: any) => ({ id: p._id || p.id, url: p.url }))
         const linksRaw = linksRes.data?.links ?? {}
 
+        /* Issue 11 fix: profilePicUrl → profilePic correctly mapped */
         setProfile({
           name:         u.name         ?? '',
           bio:          u.bio          ?? '',
@@ -1353,6 +1454,7 @@ export default function StudioPage() {
           niches:       u.niches       ?? [],
           slug:         u.slug         ?? '',
           videos,
+          photos,
           rates,
           cases,
           testimonials: testis,
@@ -1362,14 +1464,14 @@ export default function StudioPage() {
             youtube:   linksRaw.youtube   ?? '',
             linkedin:  linksRaw.linkedin  ?? '',
             pinterest: linksRaw.pinterest ?? '',
-            x:         linksRaw.x        ?? '',
-            website:   linksRaw.website  ?? '',
-            email:     linksRaw.email    ?? '',
+            x:         linksRaw.x         ?? '',
+            website:   linksRaw.website   ?? '',
+            email:     linksRaw.email     ?? '',
           },
           theme:        u.theme        ?? 'minimal',
           primaryColor: u.primaryColor ?? '#8061ff',
           accentColor:  u.accentColor  ?? '#ff33bc',
-          font:         u.font         ?? 'Rubik',
+          font:         'Rubik',
         })
       })
       .catch(console.error)
@@ -1416,18 +1518,32 @@ export default function StudioPage() {
             ))}
           </div>
         )}
+
+        {/* ── Issue 10 fix: Preview + Copy link ── */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {isMobile && (
             <button onClick={() => setShowPreview(p => !p)} style={{ padding: '8px 14px', borderRadius: 8, border: '1.5px solid rgba(128,97,255,0.28)', background: '#fff', color: '#8061ff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Rubik',sans-serif" }}>
               {showPreview ? '← Edit' : 'Preview'}
             </button>
           )}
-          <Link href={profile.slug ? `/profile/${profile.slug}` : '#'} target="_blank" style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#C8F135', color: '#0a0612', fontSize: 13, fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>Preview ↗</Link>
+          {/* Preview button: checks slug before navigating */}
+          <button
+            onClick={() => {
+              if (!profile.slug) { showToast('Set a portfolio URL slug first'); return }
+              window.open(`https://nexus.nexfluence.eu/profile/${profile.slug}`, '_blank')
+            }}
+            style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#C8F135', color: '#0a0612', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Rubik',sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}
+          >Preview ↗</button>
+          {/* Copy link: checks slug, copies correct URL, shows toast */}
           {!isMobile && (
-            <button onClick={() => {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
-  navigator.clipboard.writeText(`${base}/profile/${profile.slug || 'yourname'}`)
-}} style={{ padding: '8px 14px', borderRadius: 8, border: '1.5px solid rgba(10,6,18,0.12)', background: '#fff', color: 'rgba(10,6,18,0.65)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Rubik',sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}>🔗 Copy link</button>
+            <button
+              onClick={() => {
+                if (!profile.slug) { showToast('Set a portfolio URL slug first'); return }
+                navigator.clipboard.writeText(`https://nexus.nexfluence.eu/profile/${profile.slug}`)
+                showToast('Link copied!')
+              }}
+              style={{ padding: '8px 14px', borderRadius: 8, border: '1.5px solid rgba(10,6,18,0.12)', background: '#fff', color: 'rgba(10,6,18,0.65)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Rubik',sans-serif", display: 'flex', alignItems: 'center', gap: 6 }}
+            >🔗 Copy link</button>
           )}
         </div>
       </div>
@@ -1496,7 +1612,6 @@ export default function StudioPage() {
           </div>
         )}
 
-        {/* ── INBOX — full width ── */}
         {tab === 'inbox' && !isMobile && <InboxTab onUnreadChange={setInboxUnread} />}
         {tab === 'inbox' && isMobile  && !showPreview && <InboxTab onUnreadChange={setInboxUnread} />}
 
@@ -1519,6 +1634,9 @@ export default function StudioPage() {
         )}
       </div>
 
+      {/* ── Issue 10 fix: Toast ── */}
+      <Toast msg={toast} />
+
       <style>{`
         * { box-sizing: border-box; }
         textarea { font-family: 'Rubik', sans-serif; }
@@ -1528,6 +1646,7 @@ export default function StudioPage() {
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(10,6,18,0.15); border-radius: 2px; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   )

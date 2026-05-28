@@ -1,11 +1,8 @@
 'use client'
-
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { setToken } from '../../lib/auth'
-
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
-
 /* ─── Breakpoint hook ─────────────────────────────────────────────── */
 function useBreakpoint() {
   const [w, setW] = useState(0)
@@ -22,18 +19,15 @@ function useBreakpoint() {
     w,
   }
 }
-
 /* ─── Types ───────────────────────────────────────────────────────── */
 type Mode = 'signup' | 'login'
-
 interface SignupData {
   email: string; password: string; showPass: boolean
-  otp: string[]; name: string; niches: string[]
+  otp: string[]; name: string; niches: string[]; otherNiche: string
   platforms: string[]; followerRange: string; earn: string
   profilePic: string | null; profileFile: File | null
-  links: Record<string, string>; referralCode: string
+  links: Record<string, string>
 }
-
 /* ─── Data ────────────────────────────────────────────────────────── */
 const NICHES = [
   { e: '💄', l: 'Beauty' },    { e: '👗', l: 'Fashion' },
@@ -42,21 +36,25 @@ const NICHES = [
   { e: '📱', l: 'Tech' },      { e: '🏠', l: 'Home' },
   { e: '💊', l: 'Wellness' },  { e: '🎮', l: 'Gaming' },
 ]
+
+/* ── Issue 5 fix: icons removed from PLATFORMS ── */
 const PLATFORMS = [
-  { id: 'instagram', icon: '📸', label: 'Instagram' },
-  { id: 'tiktok',    icon: '🎵', label: 'TikTok' },
-  { id: 'youtube',   icon: '▶️', label: 'YouTube' },
-  { id: 'linkedin',  icon: '💼', label: 'LinkedIn' },
-  { id: 'pinterest', icon: '📌', label: 'Pinterest' },
-  { id: 'x',         icon: '✕',  label: 'X / Twitter' },
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'tiktok',    label: 'TikTok' },
+  { id: 'youtube',   label: 'YouTube' },
+  { id: 'linkedin',  label: 'LinkedIn' },
+  { id: 'pinterest', label: 'Pinterest' },
+  { id: 'x',         label: 'X / Twitter' },
 ]
+
+/* ── Issue 4 fix: Baltic-realistic earning figures ── */
 const RANGES = [
-  { l: '0 – 5K',      v: '0-5k',      earn: '€200 – €600' },
-  { l: '5K – 20K',    v: '5k-20k',    earn: '€600 – €1,200' },
-  { l: '20K – 50K',   v: '20k-50k',   earn: '€1,200 – €3,000' },
-  { l: '50K – 100K',  v: '50k-100k',  earn: '€3,000 – €6,000' },
-  { l: '100K – 500K', v: '100k-500k', earn: '€6,000 – €15,000' },
-  { l: '500K+',       v: '500k+',     earn: '€15,000+' },
+  { l: '0 – 5K',      v: '0-5k',      earn: '€50 – €150' },
+  { l: '5K – 20K',    v: '5k-20k',    earn: '€150 – €400' },
+  { l: '20K – 50K',   v: '20k-50k',   earn: '€400 – €900' },
+  { l: '50K – 100K',  v: '50k-100k',  earn: '€900 – €2,000' },
+  { l: '100K – 500K', v: '100k-500k', earn: '€2,000 – €6,000' },
+  { l: '500K+',       v: '500k+',     earn: '€6,000+' },
 ]
 const SOCIAL_INPUTS = [
   { id: 'instagram', icon: '📸', label: 'Instagram', ph: 'instagram.com/yourhandle' },
@@ -72,10 +70,9 @@ const QUOTES: Record<number, { text: string; author: string; role: string }> = {
   5: { text: '"I had no idea I could earn this much. The numbers blew me away."',        author: 'Sophie T.', role: 'Lifestyle Creator · Jūrmala' },
   6: { text: '"A great photo makes brands stop and actually read your page."',           author: 'Elena V.',  role: 'Beauty Creator · Tallinn' },
   7: { text: '"The custom domain made it feel like a real brand — because it is."',      author: 'Darius K.', role: 'Tech Creator · Kaunas' },
-  8: { text: '"My referral code brought in 12 creators in the first week."',             author: 'Anna B.',   role: 'Food Creator · Riga' },
+  8: { text: '"My portfolio went live in under 15 minutes. Brands started messaging the same day."', author: 'Anna B.', role: 'Food Creator · Riga' },
 }
 const STEP_COUNT = 8
-
 /* ─── Shared primitives ───────────────────────────────────────────── */
 const inputBase: React.CSSProperties = {
   display: 'block', width: '100%',
@@ -92,7 +89,6 @@ const labelBase: React.CSSProperties = {
   letterSpacing: '0.07em', textTransform: 'uppercase',
   marginBottom: 7,
 }
-
 function LightInput({ label, type = 'text', value, onChange, placeholder, suffix }: {
   label: string; type?: string; value: string
   onChange: (v: string) => void; placeholder?: string
@@ -109,7 +105,7 @@ function LightInput({ label, type = 'text', value, onChange, placeholder, suffix
           onFocus={() => setFocus(true)}
           onBlur={() => setFocus(false)}
           style={{
-            ...inputBase, padding: '13px 16px', 
+            ...inputBase, padding: '13px 16px',
             paddingRight: suffix ? 52 : 16,
             borderColor: focus ? 'rgba(128,97,255,0.65)' : 'rgba(10,6,18,0.14)',
             boxShadow: focus ? '0 0 0 3px rgba(128,97,255,0.10)' : 'none',
@@ -124,7 +120,6 @@ function LightInput({ label, type = 'text', value, onChange, placeholder, suffix
     </div>
   )
 }
-
 function FocusInput({ value, onChange, placeholder }: {
   value: string; onChange: (v: string) => void; placeholder: string
 }) {
@@ -143,7 +138,6 @@ function FocusInput({ value, onChange, placeholder }: {
     />
   )
 }
-
 function OTPRow({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
   const refs = useRef<(HTMLInputElement | null)[]>([])
   const [foci, setFoci] = useState<boolean[]>(Array(6).fill(false))
@@ -182,7 +176,6 @@ function OTPRow({ value, onChange }: { value: string[]; onChange: (v: string[]) 
     </div>
   )
 }
-
 function ContinueBtn({ disabled, loading, onClick, label = 'Continue' }: {
   disabled: boolean; loading: boolean; onClick: () => void; label?: string
 }) {
@@ -217,7 +210,6 @@ function ContinueBtn({ disabled, loading, onClick, label = 'Continue' }: {
     </>
   )
 }
-
 function SkipBtn({ onClick }: { onClick: () => void }) {
   return (
     <p style={{ textAlign: 'center', marginTop: 12 }}>
@@ -231,7 +223,6 @@ function SkipBtn({ onClick }: { onClick: () => void }) {
     </p>
   )
 }
-
 function Spinner({ dark }: { dark?: boolean }) {
   return (
     <span style={{
@@ -244,7 +235,6 @@ function Spinner({ dark }: { dark?: boolean }) {
     }} />
   )
 }
-
 function ErrorMsg({ msg }: { msg: string }) {
   if (!msg) return null
   return (
@@ -260,30 +250,56 @@ function ErrorMsg({ msg }: { msg: string }) {
   )
 }
 
-function SocialBtn({ emoji, label, gradient }: { emoji: string; label: string; gradient?: string }) {
-  const [hov, setHov] = useState(false)
+/* ── Issue 1 fix: black outline SVG icons ── */
+function InstagramOutlineIcon() {
   return (
-    <button
-      type="button"
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        gap: 10, padding: '12px 18px', borderRadius: 10, width: '100%',
-        border: gradient ? 'none' : '1.5px solid rgba(10,6,18,0.13)',
-        background: gradient ?? (hov ? 'rgba(10,6,18,0.03)' : '#fff'),
-        color: gradient ? '#fff' : '#0a0612',
-        fontSize: 14, fontWeight: 700,
-        cursor: 'pointer', fontFamily: "'Rubik', sans-serif",
-        opacity: hov ? 0.88 : 1,
-        transform: hov ? 'scale(1.01)' : 'scale(1)',
-        transition: 'all 0.18s ease',
-        boxShadow: gradient ? 'none' : '0 1px 4px rgba(10,6,18,0.05)',
-      }}
-    >
-      <span style={{ fontSize: 17 }}>{emoji}</span>
-      {label}
-    </button>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+function TikTokOutlineIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+    </svg>
+  )
+}
+
+/* ── Issue 1 fix: disabled "coming soon" social button ── */
+function ComingSoonSocialBtn({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div>
+      <button
+        type="button"
+        disabled
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 10, padding: '12px 18px', borderRadius: 10, width: '100%',
+          border: '1.5px solid rgba(10,6,18,0.10)',
+          background: 'rgba(10,6,18,0.02)',
+          color: 'rgba(10,6,18,0.38)',
+          fontSize: 14, fontWeight: 700,
+          cursor: 'not-allowed', fontFamily: "'Rubik', sans-serif",
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>{icon}</span>
+        {label}
+        <span style={{
+          marginLeft: 'auto', fontSize: 10, fontWeight: 600,
+          background: 'rgba(10,6,18,0.06)',
+          color: 'rgba(10,6,18,0.35)',
+          padding: '2px 8px', borderRadius: 20,
+          letterSpacing: '0.05em', textTransform: 'uppercase',
+        }}>
+          Soon
+        </span>
+      </button>
+    </div>
   )
 }
 
@@ -331,65 +347,55 @@ function RightPanel({ step }: { step: number }) {
   )
 }
 
+/* ── Issue 2 fix: friendly OTP error messages ── */
+function friendlyOtpError(msg: string): string {
+  if (!msg) return msg
+  const lower = msg.toLowerCase()
+  if (lower.includes('invalid request data') || lower.includes('invalid request')) {
+    return 'Incorrect code — please check and try again.'
+  }
+  if (lower.includes('expired')) {
+    return 'This code has expired — request a new one.'
+  }
+  return msg
+}
+
 /* ─── Main Page ───────────────────────────────────────────────────── */
 export default function AuthPage() {
   const router = useRouter()
   const { isMobile, isTablet, isDesktop, w } = useBreakpoint()
-
   const [mode, setMode]             = useState<Mode>('signup')
   const [step, setStep]             = useState(1)
   const [animKey, setAnimKey]       = useState(0)
   const [loading, setLoading]       = useState(false)
   const [resend, setResend]         = useState(0)
-  const [copied, setCopied]         = useState(false)
   const [error, setError]           = useState('')
   const [pendingToken, setPendingToken] = useState('')
   const [accessToken, setAccessToken]   = useState('')
-
   const fileRef = useRef<HTMLInputElement>(null)
-
   const [data, setData] = useState<SignupData>({
     email: '', password: '', showPass: false,
     otp: ['', '', '', '', '', ''],
-    name: '', niches: [], platforms: [],
-    followerRange: '', earn: '',
+    name: '', niches: [], otherNiche: '',
+    platforms: [], followerRange: '', earn: '',
     profilePic: null, profileFile: null,
     links: { instagram: '', tiktok: '', youtube: '', linkedin: '' },
-    referralCode: '',
   })
-
   const set = (patch: Partial<SignupData>) => setData(d => ({ ...d, ...patch }))
-
   useEffect(() => {
     if (resend <= 0) return
     const id = setInterval(() => setResend(t => t - 1), 1000)
     return () => clearInterval(id)
   }, [resend])
-
-  useEffect(() => {
-    if (step !== 8 || !accessToken) return
-    fetch(`${API}/referrals/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-      .then(r => r.json())
-      .then(json => {
-        if (json.success) set({ referralCode: json.data.referralCode })
-      })
-      .catch(() => {})
-  }, [step, accessToken])
-
   const goTo = (n: number) => { setAnimKey(k => k + 1); setStep(n); setError('') }
   const next  = () => goTo(step + 1)
   const back  = () => goTo(step - 1)
-
   const maxStep  = mode === 'login' ? 1 : STEP_COUNT
   const progress = (step / maxStep) * 100
-
   const toggleNiche = (l: string) =>
     set({ niches: data.niches.includes(l) ? data.niches.filter(x => x !== l) : [...data.niches, l] })
   const togglePlat = (id: string) =>
     set({ platforms: data.platforms.includes(id) ? data.platforms.filter(x => x !== id) : [...data.platforms, id] })
-
   const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -398,18 +404,20 @@ export default function AuthPage() {
     r.onload = ev => set({ profilePic: ev.target?.result as string })
     r.readAsDataURL(file)
   }
-
+  /* ── Issue 3 fix: canContinue updated for "Other" niche ── */
   const canContinue = (): boolean => {
     if (step === 1) return !!data.email && data.password.length >= 6
     if (step === 2) return data.otp.every(d => d !== '')
-    if (step === 3) return !!data.name && data.niches.length > 0
+    if (step === 3) {
+      const hasValidNiche = data.niches.some(n => n !== '__other__') ||
+        (data.niches.includes('__other__') && !!data.otherNiche.trim())
+      return !!data.name && data.niches.length > 0 && hasValidNiche
+    }
     if (step === 4) return data.platforms.length > 0
     if (step === 5) return !!data.followerRange
     return true
   }
-
   const authHeader = () => ({ Authorization: `Bearer ${accessToken}` })
-
   /* ── Step 1: Register or Login ── */
   const handleStep1 = async () => {
     setLoading(true); setError('')
@@ -423,15 +431,11 @@ export default function AuthPage() {
       })
       const json = await res.json()
       if (!json.success) { setError(json.message); return }
-
-      // ── Login: verified user gets tokens directly — no OTP ──
       if (mode === 'login' && json.data.requiresOtp === false) {
         setToken(json.data.accessToken)
         router.push('/dashboard')
         return
       }
-
-      // ── Signup or unverified login — go to OTP step ──
       setPendingToken(json.data.pendingToken)
       next()
       setResend(30)
@@ -441,8 +445,7 @@ export default function AuthPage() {
       setLoading(false)
     }
   }
-
-  /* ── Step 2: Verify OTP (signup only) ── */
+  /* ── Step 2: Verify OTP — Issue 2 fix: friendly errors ── */
   const handleVerifyOTP = async () => {
     setLoading(true); setError('')
     try {
@@ -453,7 +456,7 @@ export default function AuthPage() {
         credentials: 'include',
       })
       const json = await res.json()
-      if (!json.success) { setError(json.message); return }
+      if (!json.success) { setError(friendlyOtpError(json.message)); return }
       const token = json.data.accessToken
       setToken(token)
       setAccessToken(token)
@@ -464,7 +467,6 @@ export default function AuthPage() {
       setLoading(false)
     }
   }
-
   /* ── Resend OTP ── */
   const handleResend = async () => {
     setError('')
@@ -475,7 +477,7 @@ export default function AuthPage() {
         body:    JSON.stringify({ email: data.email }),
       })
       const json = await res.json()
-      if (!json.success) { setError(json.message); return }
+      if (!json.success) { setError(friendlyOtpError(json.message)); return }
       setPendingToken(json.data.pendingToken)
       set({ otp: Array(6).fill('') })
       setResend(30)
@@ -483,15 +485,17 @@ export default function AuthPage() {
       setError('Could not resend. Please try again.')
     }
   }
-
-  /* ── Step 3: Name + niches ── */
+  /* ── Step 3: Name + niches — Issue 3 fix: resolve __other__ before sending ── */
   const handleStep3 = async () => {
     setLoading(true); setError('')
     try {
+      const nichesToSend = data.niches
+        .map(n => n === '__other__' ? data.otherNiche.trim() : n)
+        .filter(Boolean)
       const res  = await fetch(`${API}/profile/header`, {
         method:  'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body:    JSON.stringify({ name: data.name, niches: data.niches }),
+        body:    JSON.stringify({ name: data.name, niches: nichesToSend }),
       })
       const json = await res.json()
       if (!json.success) { setError(json.message); return }
@@ -502,7 +506,6 @@ export default function AuthPage() {
       setLoading(false)
     }
   }
-
   /* ── Step 4: Platforms ── */
   const handleStep4 = async () => {
     setLoading(true); setError('')
@@ -521,7 +524,6 @@ export default function AuthPage() {
       setLoading(false)
     }
   }
-
   /* ── Step 5: Follower range ── */
   const handleStep5 = async () => {
     setLoading(true); setError('')
@@ -540,7 +542,6 @@ export default function AuthPage() {
       setLoading(false)
     }
   }
-
   /* ── Step 6: Profile photo ── */
   const handleStep6 = async () => {
     if (!data.profileFile) { next(); return }
@@ -564,7 +565,6 @@ export default function AuthPage() {
       setLoading(false)
     }
   }
-
   /* ── Step 7: Social links ── */
   const handleStep7 = async () => {
     setLoading(true); setError('')
@@ -583,14 +583,12 @@ export default function AuthPage() {
       setLoading(false)
     }
   }
-
   /* ── responsive values ── */
   const navPad  = isMobile ? '14px 16px' : isTablet ? '16px 28px' : '18px 48px'
   const formPad = isMobile ? '24px 16px' : isTablet ? '32px 32px' : '40px 48px'
   const maxForm = isMobile ? '100%' : '480px'
   const h2Size  = isMobile ? 22 : isTablet ? 26 : 30
   const pillSize = isMobile ? 12 : 13
-
   const pillStyle: React.CSSProperties = {
     color: 'rgba(10,6,18,0.42)', fontSize: pillSize,
     fontWeight: 400, marginBottom: 8, display: 'block',
@@ -604,19 +602,22 @@ export default function AuthPage() {
     color: 'rgba(10,6,18,0.48)', fontSize: isMobile ? 13 : 14,
     lineHeight: 1.7, marginBottom: 22,
   }
-
   const renderStep = () => {
     switch (step) {
-
-      /* ── 1: Account ── */
+      /* ── 1: Account — Issue 1 fix: coming soon buttons with black outline SVG logos ── */
       case 1: return (
         <div>
           <span style={pillStyle}>{mode === 'login' ? 'Welcome back' : 'Create your free account'}</span>
           <h2 style={h2Style}>{mode === 'login' ? 'Sign in to Creator Nexus' : 'Start your creator journey'}</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
-            <SocialBtn emoji="📸" label={`${mode === 'login' ? 'Sign in' : 'Continue'} with Instagram`}
-              gradient="linear-gradient(90deg,#f77737,#e1306c,#833ab4)" />
-            <SocialBtn emoji="🎵" label={`${mode === 'login' ? 'Sign in' : 'Continue'} with TikTok`} />
+            <ComingSoonSocialBtn
+              icon={<InstagramOutlineIcon />}
+              label={`${mode === 'login' ? 'Sign in' : 'Continue'} with Instagram`}
+            />
+            <ComingSoonSocialBtn
+              icon={<TikTokOutlineIcon />}
+              label={`${mode === 'login' ? 'Sign in' : 'Continue'} with TikTok`}
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
             <div style={{ flex: 1, height: 1, background: 'rgba(10,6,18,0.08)' }} />
@@ -657,7 +658,6 @@ export default function AuthPage() {
           </p>
         </div>
       )
-
       /* ── 2: OTP (signup only) ── */
       case 2: return (
         <div>
@@ -692,8 +692,7 @@ export default function AuthPage() {
           </p>
         </div>
       )
-
-      /* ── 3: Identity + niches ── */
+      /* ── 3: Identity + niches — Issue 3 fix: "Other" pill + text input ── */
       case 3: return (
         <div>
           <span style={pillStyle}>Help brands find you</span>
@@ -703,7 +702,7 @@ export default function AuthPage() {
               onChange={v => set({ name: v })} placeholder="Sophie Thomas" />
           </div>
           <label style={labelBase}>Content niches — pick all that apply</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: data.niches.includes('__other__') ? 12 : 24 }}>
             {NICHES.map(n => {
               const on = data.niches.includes(n.l)
               return (
@@ -722,13 +721,42 @@ export default function AuthPage() {
                 </button>
               )
             })}
+            {/* Other pill */}
+            {(() => {
+              const on = data.niches.includes('__other__')
+              return (
+                <button onClick={() => toggleNiche('__other__')} style={{
+                  display: 'inline-flex', alignItems: 'center',
+                  gap: 6, padding: isMobile ? '7px 12px' : '8px 16px',
+                  borderRadius: 100,
+                  border: `1.5px solid ${on ? 'rgba(128,97,255,0.55)' : 'rgba(10,6,18,0.13)'}`,
+                  background: on ? 'rgba(128,97,255,0.08)' : '#fff',
+                  color: on ? '#0a0612' : 'rgba(10,6,18,0.58)',
+                  fontSize: isMobile ? 13 : 14, fontWeight: on ? 700 : 500,
+                  cursor: 'pointer', fontFamily: "'Rubik',sans-serif",
+                  transition: 'all 0.15s ease',
+                }}>
+                  + Other
+                </button>
+              )
+            })()}
           </div>
+          {/* Conditional text input for "Other" niche */}
+          {data.niches.includes('__other__') && (
+            <div style={{ marginBottom: 24, animation: 'fadeUp 0.25s ease forwards' }}>
+              <LightInput
+                label="What's your niche?"
+                value={data.otherNiche}
+                onChange={v => set({ otherNiche: v })}
+                placeholder="e.g. DIY Crafts, Motorsport, Parenting…"
+              />
+            </div>
+          )}
           <ErrorMsg msg={error} />
           <ContinueBtn disabled={!canContinue()} loading={loading} onClick={handleStep3} />
         </div>
       )
-
-      /* ── 4: Platforms ── */
+      /* ── 4: Platforms — Issue 5 fix: icons removed ── */
       case 4: return (
         <div>
           <span style={pillStyle}>Your presence</span>
@@ -742,14 +770,15 @@ export default function AuthPage() {
                   borderRadius: 12,
                   border: `1.5px solid ${on ? 'rgba(128,97,255,0.50)' : 'rgba(10,6,18,0.11)'}`,
                   background: on ? 'rgba(128,97,255,0.07)' : '#fff',
-                  display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   cursor: 'pointer', fontFamily: "'Rubik',sans-serif",
                   transition: 'all 0.15s ease',
                   boxShadow: '0 1px 4px rgba(10,6,18,0.05)',
                 }}>
-                  <span style={{ fontSize: isMobile ? 18 : 20, flexShrink: 0 }}>{p.icon}</span>
-                  <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: on ? 700 : 500, color: on ? '#0a0612' : 'rgba(10,6,18,0.55)' }}>{p.label}</span>
-                  {on && <span style={{ marginLeft: 'auto', color: '#8061ff', fontSize: 13 }}>✓</span>}
+                  <span style={{ fontSize: isMobile ? 13 : 14, fontWeight: on ? 700 : 500, color: on ? '#0a0612' : 'rgba(10,6,18,0.55)' }}>
+                    {p.label}
+                  </span>
+                  {on && <span style={{ color: '#8061ff', fontSize: 13 }}>✓</span>}
                 </button>
               )
             })}
@@ -758,12 +787,11 @@ export default function AuthPage() {
           <ContinueBtn disabled={!canContinue()} loading={loading} onClick={handleStep4} />
         </div>
       )
-
-      /* ── 5: Earnings ── */
+      /* ── 5: Earnings — Issue 4 fix: "follower count" heading + Baltic earnings ── */
       case 5: return (
         <div>
           <span style={pillStyle}>Just for you</span>
-          <h2 style={h2Style}>What's your total audience size?</h2>
+          <h2 style={h2Style}>What's your total follower count?</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
             {RANGES.map(r => {
               const on = data.followerRange === r.v
@@ -811,7 +839,6 @@ export default function AuthPage() {
           <ContinueBtn disabled={!canContinue()} loading={loading} onClick={handleStep5} />
         </div>
       )
-
       /* ── 6: Profile photo ── */
       case 6: return (
         <div>
@@ -852,7 +879,6 @@ export default function AuthPage() {
           <SkipBtn onClick={next} />
         </div>
       )
-
       /* ── 7: Social links ── */
       case 7: return (
         <div>
@@ -875,8 +901,7 @@ export default function AuthPage() {
           <SkipBtn onClick={next} />
         </div>
       )
-
-      /* ── 8: Referral code ── */
+      /* ── 8: Success — referral section removed ── */
       case 8: return (
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: isMobile ? 40 : 48, marginBottom: 12, animation: 'bounce 0.6s ease' }}>🎉</div>
@@ -884,59 +909,9 @@ export default function AuthPage() {
           <h2 style={{ ...h2Style, textAlign: 'center' }}>
             {data.name ? `You're in, ${data.name.split(' ')[0]}!` : "You're in!"}
           </h2>
-          <p style={{ ...subStyle, textAlign: 'center', marginBottom: 20 }}>
-            Your portfolio is live. Share your referral code and earn coins every time a creator joins.
+          <p style={{ ...subStyle, textAlign: 'center', maxWidth: 340, margin: '0 auto 32px' }}>
+            Your creator portfolio is live and ready to share with brands. Start building your profile to attract your first deal.
           </p>
-          <div style={{
-            borderRadius: 14, border: '1.5px solid rgba(128,97,255,0.18)',
-            background: 'rgba(128,97,255,0.04)',
-            padding: isMobile ? '18px 16px' : '22px', marginBottom: 18,
-            animation: 'fadeUp 0.4s ease 0.1s both',
-          }}>
-            <p style={{ color: 'rgba(10,6,18,0.40)', fontSize: 11, fontWeight: 500, letterSpacing: '0.10em', textTransform: 'uppercase', marginBottom: 8 }}>
-              Your referral code
-            </p>
-            <p style={{ color: '#0a0612', fontWeight: 900, fontSize: isMobile ? 22 : 26, letterSpacing: '0.06em', marginBottom: 14 }}>
-              {data.referralCode || '---'}
-            </p>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: '#f7f5ff', borderRadius: 10,
-              padding: isMobile ? '9px 12px' : '10px 14px', marginBottom: 16,
-            }}>
-              <span style={{
-                flex: 1, fontSize: isMobile ? 12 : 13,
-                color: '#8061ff', fontWeight: 600,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}>
-                nexfluence.co/r/{data.referralCode}
-              </span>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(`nexfluence.co/r/${data.referralCode}`)
-                  setCopied(true)
-                  setTimeout(() => setCopied(false), 2000)
-                }}
-                style={{
-                  background: copied ? 'rgba(128,97,255,0.15)' : 'linear-gradient(90deg,#ff33bc,#8061ff)',
-                  border: 'none', borderRadius: 8, padding: '7px 12px',
-                  color: copied ? '#8061ff' : '#fff',
-                  fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
-                  fontFamily: "'Rubik',sans-serif", transition: 'all 0.2s ease',
-                }}
-              >
-                {copied ? '✓ Copied' : 'Copy'}
-              </button>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 32 }}>
-              {[['10 🪙', 'per signup'], ['25 🪙', 'on upgrade']].map(([n, l]) => (
-                <div key={l} style={{ textAlign: 'center' }}>
-                  <div style={{ fontWeight: 900, fontSize: isMobile ? 18 : 20, color: '#ff33bc' }}>{n}</div>
-                  <div style={{ color: 'rgba(10,6,18,0.40)', fontSize: 11, marginTop: 3 }}>{l}</div>
-                </div>
-              ))}
-            </div>
-          </div>
           <button
             onClick={() => router.push('/dashboard')}
             style={{
@@ -945,26 +920,21 @@ export default function AuthPage() {
               fontSize: 15, fontWeight: 700, cursor: 'pointer',
               fontFamily: "'Rubik', sans-serif",
               transition: 'all 0.18s ease',
-              animation: 'fadeUp 0.4s ease 0.25s both',
+              animation: 'fadeUp 0.4s ease 0.15s both',
             }}
           >
             Go to my dashboard →
           </button>
         </div>
       )
-
       default: return null
     }
   }
-
   if (w === 0) return null
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: "'Rubik', sans-serif", background: '#fff' }}>
-
       {/* ── LEFT white panel ── */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', background: '#fff' }}>
-
         {/* Nav */}
         <nav style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1004,7 +974,6 @@ export default function AuthPage() {
             }
           </p>
         </nav>
-
         {/* Progress bar — only show on signup */}
         {mode === 'signup' && (
           <div style={{
@@ -1029,7 +998,6 @@ export default function AuthPage() {
             </div>
           </div>
         )}
-
         {/* Form area */}
         <div style={{
           flex: 1, display: 'flex',
@@ -1043,10 +1011,8 @@ export default function AuthPage() {
           </div>
         </div>
       </div>
-
       {/* RIGHT dark panel — desktop only */}
       {isDesktop && <RightPanel step={step} />}
-
       <style>{`
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(14px); }

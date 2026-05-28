@@ -41,6 +41,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta property="og:locale" content="en_US" />
         <meta name="theme-color" content="#8061ff" />
         <link rel="icon" href="/favicon.ico" />
+
+        {/* ── Google Fonts: Rubik (primary brand font) ── */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800;900&display=swap"
+        />
       </head>
       <body>
         <AuthProvider />
