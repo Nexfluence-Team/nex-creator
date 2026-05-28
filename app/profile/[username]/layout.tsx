@@ -14,8 +14,8 @@ export async function generateMetadata(
     const user = json.data.user
     const name = user.name || params.username
     const bio  = user.bio  || 'UGC Creator — Portfolio powered by Creator Nexus'
-    const pic  = user.profilePicUrl || 'https://nexfluence.co/og-default.png'
-    const url  = `https://nexfluence.co/profile/${params.username}`
+    const pic  = user.profilePicUrl || 'https://nexus.nexfluence.eu/og-default.png'
+    const url  = `https://nexus.nexfluence.eu/profile/${params.username}`
 
     return {
       title:       `${name} — Creator Nexus`,

@@ -1341,10 +1341,10 @@ function LivePreview({ profile, device }: { profile: Profile; device: string }) 
     ? `nexus.nexfluence.eu/profile/${profile.slug}`
     : 'nexus.nexfluence.eu/profile/yourname'
   return (
-    <div style={{ flex: 1, background: '#f0eef8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: 24, overflowY: 'auto' }}>
+    <div style={{ flex: 1, background: '#f7f5ff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: 24, overflowY: 'auto' }}>
       <div style={{ width: '100%', maxWidth: maxW, transition: 'max-width 0.4s ease' }}>
         {/* Browser chrome */}
-        <div style={{ background: '#e8e4f0', borderRadius: '12px 12px 0 0', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(10,6,18,0.08)', borderBottom: 'none' }}>
+        <div style={{ background: '#f0edf8', borderRadius: '12px 12px 0 0', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, border: '1px solid rgba(10,6,18,0.08)', borderBottom: 'none' }}>
           <div style={{ display: 'flex', gap: 5 }}>
             {['#ff5f57', '#febc2e', '#28c840'].map(c => (
               <div key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
@@ -1496,8 +1496,8 @@ export default function StudioPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, border: '1.5px solid rgba(10,6,18,0.12)', color: 'rgba(10,6,18,0.50)', textDecoration: 'none', fontSize: 15 }}>←</Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: 'linear-gradient(135deg,#ff33bc,#8061ff)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: '#fff', fontWeight: 900, fontSize: 13 }}>N</span>
+            <div style={{ width: 28, height: 28, borderRadius: 8, flexShrink: 0, overflow: 'hidden' }}>
+              <img src="/Nex.webp" alt="Creator Nexus" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             </div>
             {!isMobile && <span style={{ fontWeight: 700, fontSize: 15, color: '#0a0612', letterSpacing: '-0.02em' }}>Portfolio Studio</span>}
           </div>
@@ -1555,10 +1555,10 @@ export default function StudioPage() {
         {(!isMobile || !showPreview) && (
           <div style={{
             width: isMobile ? '100%' : isDesktop ? 200 : 56, flexShrink: 0,
-            background: '#0a0612',
+            background: '#ffffff',
+            borderRight: '1px solid rgba(10,6,18,0.08)',
             display: 'flex', flexDirection: isMobile ? 'row' : 'column',
             overflowX: isMobile ? 'auto' : 'visible', overflowY: isMobile ? 'visible' : 'auto',
-            borderRight: '1px solid rgba(255,255,255,0.06)',
           }}>
             {NAV.map(n => {
               const active = tab === n.id
@@ -1572,7 +1572,7 @@ export default function StudioPage() {
                   gap: isDesktop ? 10 : 4,
                   padding: isDesktop ? '12px 16px' : isMobile ? '12px 16px' : '14px 8px',
                   border: 'none', cursor: 'pointer',
-                  background: active ? 'rgba(128,97,255,0.18)' : 'transparent',
+                  background: active ? 'rgba(128,97,255,0.08)' : 'transparent',
                   borderLeft: isDesktop ? (active ? '3px solid #8061ff' : '3px solid transparent') : 'none',
                   borderBottom: isMobile ? (active ? '3px solid #8061ff' : '3px solid transparent') : 'none',
                   transition: 'all 0.15s ease', flexShrink: 0,
@@ -1582,11 +1582,11 @@ export default function StudioPage() {
                   <span style={{ fontSize: isDesktop ? 17 : 20, position: 'relative' }}>
                     {n.icon}
                     {unread > 0 && !active && (
-                      <span style={{ position: 'absolute', top: -4, right: -6, width: 16, height: 16, borderRadius: '50%', background: '#ff33bc', color: '#fff', fontSize: 9, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, border: '2px solid #0a0612' }}>{unread}</span>
+                      <span style={{ position: 'absolute', top: -4, right: -6, width: 16, height: 16, borderRadius: '50%', background: '#ff33bc', color: '#fff', fontSize: 9, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, border: '2px solid #fff' }}>{unread}</span>
                     )}
                   </span>
                   {(isDesktop || isMobile) && (
-                    <span style={{ fontSize: isMobile ? 11 : 13, fontWeight: active ? 700 : 500, color: active ? '#fff' : 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: isMobile ? 11 : 13, fontWeight: active ? 700 : 500, color: active ? '#8061ff' : 'rgba(10,6,18,0.45)', display: 'flex', alignItems: 'center', gap: 6 }}>
                       {n.label}
                       {isDesktop && unread > 0 && (
                         <span style={{ background: '#ff33bc', color: '#fff', borderRadius: 100, padding: '1px 6px', fontSize: 9, fontWeight: 900, lineHeight: 1.4 }}>{unread}</span>

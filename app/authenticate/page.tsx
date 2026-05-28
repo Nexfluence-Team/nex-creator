@@ -308,25 +308,43 @@ function RightPanel({ step }: { step: number }) {
   return (
     <div style={{
       width: '38%', flexShrink: 0,
-      background: '#2d4a6e',
+      background: 'linear-gradient(160deg, #f7f4ff 0%, #fff0f8 100%)',
+      borderLeft: '1px solid rgba(128,97,255,0.12)',
       minHeight: '100vh',
       display: 'flex', flexDirection: 'column',
-      justifyContent: 'flex-end',
+      justifyContent: 'center',
       padding: '48px 44px',
       position: 'relative', overflow: 'hidden',
     }}>
+      {/* decorative orbs */}
       <div aria-hidden style={{
-        position: 'absolute', top: 0, right: 0, width: '70%', height: '50%',
-        background: 'radial-gradient(ellipse at 80% 20%, rgba(128,97,255,0.18) 0%, transparent 60%)',
+        position: 'absolute', top: '-10%', right: '-10%', width: '55%', height: '40%',
+        background: 'radial-gradient(ellipse at 70% 30%, rgba(128,97,255,0.12) 0%, transparent 65%)',
         pointerEvents: 'none',
       }} />
+      <div aria-hidden style={{
+        position: 'absolute', bottom: '5%', left: '-5%', width: '45%', height: '35%',
+        background: 'radial-gradient(ellipse at 30% 70%, rgba(255,51,188,0.08) 0%, transparent 65%)',
+        pointerEvents: 'none',
+      }} />
+      {/* logo mark at top */}
+      <div style={{ marginBottom: 48, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}>
+          <img src="/Nex.webp" alt="Creator Nexus" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        </div>
+        <div>
+          <div style={{ color: '#0a0612', fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em', lineHeight: 1 }}>Creator Nexus</div>
+          <div style={{ color: '#ff7ac3', fontWeight: 500, fontSize: 11 }}>by Nexfluence</div>
+        </div>
+      </div>
       <div key={step} style={{ position: 'relative', zIndex: 1, animation: 'fadeUp 0.45s ease forwards' }}>
         <div style={{ display: 'flex', gap: 4, marginBottom: 18 }}>
-          {[...Array(5)].map((_, i) => <span key={i} style={{ color: '#C8F135', fontSize: 20 }}>★</span>)}
+          {[...Array(5)].map((_, i) => <span key={i} style={{ color: '#ff33bc', fontSize: 20 }}>★</span>)}
         </div>
         <p style={{
-          color: '#fff', fontSize: 'clamp(16px, 1.6vw, 20px)',
-          fontWeight: 500, lineHeight: 1.55, marginBottom: 28, maxWidth: 300,
+          color: 'rgba(10,6,18,0.75)', fontSize: 'clamp(15px, 1.5vw, 19px)',
+          fontWeight: 500, lineHeight: 1.6, marginBottom: 28, maxWidth: 300,
+          fontStyle: 'italic',
         }}>
           {q.text}
         </p>
@@ -336,10 +354,11 @@ function RightPanel({ step }: { step: number }) {
             background: 'linear-gradient(135deg, #ff33bc, #8061ff)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 16, fontWeight: 900, color: '#fff',
+            boxShadow: '0 4px 16px rgba(128,97,255,0.28)',
           }}>{q.author[0]}</div>
           <div>
-            <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>{q.author}</div>
-            <div style={{ color: 'rgba(255,255,255,0.48)', fontSize: 13, marginTop: 2 }}>{q.role}</div>
+            <div style={{ color: '#0a0612', fontWeight: 700, fontSize: 15 }}>{q.author}</div>
+            <div style={{ color: 'rgba(10,6,18,0.45)', fontSize: 13, marginTop: 2 }}>{q.role}</div>
           </div>
         </div>
       </div>
@@ -943,11 +962,9 @@ export default function AuthPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10 }}>
             <div style={{
               width: isMobile ? 32 : 36, height: isMobile ? 32 : 36, borderRadius: 10, flexShrink: 0,
-              background: 'linear-gradient(135deg, #ff33bc, #8061ff)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 3px 12px rgba(128,97,255,0.28)',
+              overflow: 'hidden',
             }}>
-              <span style={{ color: '#fff', fontWeight: 900, fontSize: isMobile ? 15 : 17, letterSpacing: '-0.03em' }}>N</span>
+              <img src="/Nex.webp" alt="Creator Nexus" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             </div>
             {!isMobile && (
               <div>
@@ -991,7 +1008,7 @@ export default function AuthPage() {
             )}
             <div style={{ flex: 1, height: 3, background: 'rgba(10,6,18,0.08)', borderRadius: 2, overflow: 'hidden' }}>
               <div style={{
-                height: '100%', borderRadius: 2, background: '#0a0612',
+                height: '100%', borderRadius: 2, background: 'linear-gradient(90deg, #ff33bc, #8061ff)',
                 width: `${progress}%`,
                 transition: 'width 0.5s cubic-bezier(0.34,1.56,0.64,1)',
               }} />
