@@ -87,15 +87,14 @@ export default function Home() {
 
         <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: 440, width: '100%' }}>
 
-          {/* Logo */}
+          {/* Logo — Nex.webp replaces gradient N placeholder */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 44 }}>
-            <div style={{ 
+            <div style={{
               width: 48, height: 48, borderRadius: 14,
-              background: 'linear-gradient(135deg, #ff33bc, #8061ff)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 24px rgba(128,97,255,0.35)',
+              overflow: 'hidden', flexShrink: 0,
+              boxShadow: '0 4px 24px rgba(128,97,255,0.25)',
             }}>
-              <span style={{ color: '#fff', fontWeight: 900, fontSize: 22, letterSpacing: '-0.03em' }}>N</span>
+              <img src="/Nex.webp" alt="Creator Nexus" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             </div>
             <div style={{ textAlign: 'left' }}>
               <div style={{ color: '#0a0612', fontWeight: 700, fontSize: 20, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Creator Nexus</div>
@@ -157,7 +156,7 @@ export default function Home() {
 
       <SocialProof />
 
-      {/* ── BOTTOM CTA ── */}
+      {/* ── BOTTOM CTA — intentionally dark per design spec ── */}
       <section style={{ padding: '80px 24px', textAlign: 'center', background: '#0a0612', position: 'relative', overflow: 'hidden' }}>
         <div aria-hidden style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
@@ -216,8 +215,8 @@ function StatsBar() {
         display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, textAlign: 'center',
       }}>
         {[
-          { n: 3412, suffix: '+', label: 'Active Creators' },
-          { n: 850,  suffix: '+', label: 'Brand Partnerships' },
+          { n: 3412, suffix: '+',  label: 'Active Creators' },
+          { n: 850,  suffix: '+',  label: 'Brand Partnerships' },
           { n: 4,    suffix: '.9★', label: 'Average Rating' },
         ].map((s, i) => (
           <div key={i} style={{ opacity: visible ? 1 : 0, transition: `opacity 0.5s ease ${i * 0.12}s` }}>
@@ -338,14 +337,12 @@ function DiscoveryVisual() {
   return (
     <div style={{ maxWidth: 340, margin: '0 auto', position: 'relative' }}>
       <div style={{ display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
+        {/* Creator avatar — uses Nex.webp as the central brand node */}
         <div style={{
-          width: 72, height: 72, borderRadius: 20,
-          background: 'linear-gradient(135deg, #ff33bc, #8061ff)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: 900, fontSize: 26, color: '#fff',
+          width: 72, height: 72, borderRadius: 20, overflow: 'hidden',
           boxShadow: '0 0 0 12px rgba(128,97,255,0.08), 0 0 0 24px rgba(128,97,255,0.04)',
         }}>
-          <span>👤</span>
+          <img src="/Nex.webp" alt="Creator Nexus" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
         </div>
       </div>
       <svg width="100%" height="180" viewBox="0 0 340 180"
