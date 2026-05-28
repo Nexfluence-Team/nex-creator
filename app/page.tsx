@@ -89,7 +89,7 @@ export default function Home() {
 
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 44 }}>
-            <div style={{
+            <div style={{ 
               width: 48, height: 48, borderRadius: 14,
               background: 'linear-gradient(135deg, #ff33bc, #8061ff)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -115,7 +115,7 @@ export default function Home() {
           {/* CTAs */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <Link href="/authenticate" className="btn-apply" style={{ textDecoration: 'none' }}>
-              Create my portfolio →
+              Create my portfolio
             </Link>
             <Link
               href="/authenticate"
