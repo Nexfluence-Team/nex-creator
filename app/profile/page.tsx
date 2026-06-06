@@ -1708,7 +1708,7 @@ export default function StudioPage() {
             <div style={{ width: 28, height: 28, borderRadius: C.rSm, flexShrink: 0, overflow: 'hidden', background: 'transparent' }}>
               <img src="/Nex.webp" alt="Creator Nexus" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             </div>
-            {!isMobile && <span style={{ fontWeight: 700, fontSize: 15, color: C.ink, letterSpacing: '-0.02em' }}>Portfolio Studio</span>}
+            {!isMobile && <span style={{ fontWeight: 700, fontSize: 15, color: C.ink, letterSpacing: '-0.02em' }}>Studio</span>}
           </div>
           {/* Replaced Upgrade badge with Dashboard button */}
           <Link
