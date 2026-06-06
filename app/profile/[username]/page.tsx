@@ -33,6 +33,160 @@ const C = {
   font:       "'Rubik', sans-serif",
 }
 
+/* ─── Icons (SVG, no emojis) ───────────────────────────────────────── */
+const Icon = ({ children, size = 20, ...props }: { children: React.ReactNode; size?: number; [key: string]: any }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    {children}
+  </svg>
+)
+
+function MessageIcon({ size = 20, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </Icon>
+  )
+}
+function WorkIcon({ size = 20, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <path d="M20 7h-4.18A3 3 0 0 0 16 5.18V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v1.18A3 3 0 0 0 8.18 7H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="12" cy="14" r="3" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <line x1="8" y1="7" x2="16" y2="7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </Icon>
+  )
+}
+function CheckCircleIcon({ size = 20, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <path d="m8 12 3 3 6-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </Icon>
+  )
+}
+function EnvelopeIcon({ size = 20, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <rect x="2" y="4" width="20" height="16" rx="2" ry="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <polyline points="2,6 12,13 22,6" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </Icon>
+  )
+}
+function VideoPlayIcon({ size = 20, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <rect x="2" y="6" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <path d="m22 8-4 4 4 4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </Icon>
+  )
+}
+function InstagramIcon({ size = 18, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/>
+    </Icon>
+  )
+}
+function TikTokIcon({ size = 18, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </Icon>
+  )
+}
+function YouTubeIcon({ size = 18, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="currentColor" stroke="none"/>
+    </Icon>
+  )
+}
+function LinkedInIcon({ size = 18, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <rect x="2" y="9" width="4" height="12" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <circle cx="4" cy="4" r="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+    </Icon>
+  )
+}
+function PinterestIcon({ size = 18, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <path d="M8 20l4-9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M12 4a7 7 0 0 0-7 7c0 3 1.5 5 4 6.5 0-1.5-.5-3 .5-4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+    </Icon>
+  )
+}
+function XIcon({ size = 18, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <path d="M4 4l16 16M20 4L4 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </Icon>
+  )
+}
+function WebsiteIcon({ size = 18, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+    </Icon>
+  )
+}
+function EmailIcon({ size = 18, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <rect x="2" y="4" width="20" height="16" rx="2" ry="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <polyline points="2,6 12,13 22,6" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </Icon>
+  )
+}
+function ProfileIcon({ size = 20, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <path d="M5 20v-2a7 7 0 0 1 14 0v2" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+    </Icon>
+  )
+}
+function StarIcon({ size = 16, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <polygon points="12 17.27 18.18 21 16.54 13.97 22 9.24 14.81 8.63 12 2 9.19 8.63 2 9.24 7.46 13.97 5.82 21 12 17.27" stroke="none"/>
+    </Icon>
+  )
+}
+function ArrowRightIcon({ size = 14, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <polyline points="12 5 19 12 12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    </Icon>
+  )
+}
+function HomeIcon({ size = 20, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <polyline points="9 22 9 12 15 12 15 22" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </Icon>
+  )
+}
+function ExternalIcon({ size = 14, ...props }: { size?: number; [key: string]: any }) {
+  return (
+    <Icon size={size} {...props}>
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <polyline points="15 3 21 3 21 9" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </Icon>
+  )
+}
+
 /* ─── Helper functions ───────────────────────────────────────────────── */
 function useBreakpoint() {
   const [w, setW] = useState(0)
@@ -230,7 +384,7 @@ function MessageModal({ slug, creatorName, onClose, onSent, alreadySent }: {
       <div style={{ padding: '24px' }}>
         {alreadySent || sent ? (
           <div style={{ textAlign: 'center', padding: '32px 0' }}>
-            <p style={{ fontSize: 40, marginBottom: 16 }}>✅</p>
+            <CheckCircleIcon size={48} style={{ color: C.primary, marginBottom: 16 }} />
             <h3 style={{ fontWeight: 800, fontSize: 20, color: C.ink, marginBottom: 8 }}>Message sent!</h3>
             <p style={{ color: C.inkDim, fontSize: 14, lineHeight: 1.7, maxWidth: 320, margin: '0 auto 24px' }}>
               {creatorName} will be in touch via your email. Allow up to 48 hours for a response.
@@ -411,7 +565,7 @@ function WorkWithMeModal({ slug, creatorName, rates, onClose, onSent, alreadySen
           <div style={{ padding: '24px' }}>
             {alreadySent ? (
               <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                <p style={{ fontSize: 36, marginBottom: 12 }}>📬</p>
+                <EnvelopeIcon size={36} style={{ color: C.primary, marginBottom: 12 }} />
                 <p style={{ fontWeight: 800, fontSize: 18, color: C.ink, marginBottom: 8 }}>You've already reached out!</p>
                 <p style={{ color: C.inkDim, fontSize: 14, lineHeight: 1.7 }}>Check your inbox for a reply from {firstName}.</p>
                 <button
@@ -516,7 +670,7 @@ function WorkWithMeModal({ slug, creatorName, rates, onClose, onSent, alreadySen
         <>
           <ModalHeader title="Inquiry sent!" onClose={onClose} />
           <div style={{ padding: '32px 24px', textAlign: 'center' }}>
-            <p style={{ fontSize: 48, marginBottom: 16 }}>🎉</p>
+            <CheckCircleIcon size={48} style={{ color: C.primary, marginBottom: 16 }} />
             <h3 style={{ fontWeight: 800, fontSize: 20, color: C.ink, marginBottom: 8 }}>You're in the inbox!</h3>
             <p style={{ color: C.inkDim, fontSize: 14, lineHeight: 1.7, maxWidth: 340, margin: '0 auto 24px' }}>
               {firstName} has received your inquiry and will reply to <strong style={{ color: C.primary }}>{form.email}</strong> within 24–48 hours.
@@ -555,7 +709,7 @@ function NotFound() {
   return (
     <div style={{ background: C.bgPage, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: C.font, textAlign: 'center', padding: 24 }}>
       <div>
-        <p style={{ fontSize: 64, marginBottom: 16 }}>👤</p>
+        <ProfileIcon size={64} style={{ color: C.primary, marginBottom: 16 }} />
         <h1 style={{ fontWeight: 900, fontSize: 28, color: C.ink, marginBottom: 8 }}>Profile not found</h1>
         <p style={{ color: C.inkDim, fontSize: 15, marginBottom: 24 }}>This creator hasn't set up their portfolio yet.</p>
         <a href="/" style={{ padding: '12px 24px', borderRadius: C.rSm, background: C.grad, color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none', fontFamily: C.font }}>Go home</a>
@@ -618,10 +772,14 @@ export default function PublicProfilePage() {
 
   const CATS = ['All', 'Product Demo', 'Lifestyle', 'Testimonial Story', 'Travel']
   const SOCIAL_FIELDS = [
-    { id: 'instagram', icon: '📸' }, { id: 'tiktok', icon: '🎵' },
-    { id: 'youtube', icon: '▶️' }, { id: 'linkedin', icon: '💼' },
-    { id: 'pinterest', icon: '📌' }, { id: 'x', icon: '✕' },
-    { id: 'website', icon: '🌐' }, { id: 'email', icon: '✉️' },
+    { id: 'instagram', icon: <InstagramIcon size={18} />, label: 'Instagram' },
+    { id: 'tiktok',    icon: <TikTokIcon size={18} />,    label: 'TikTok' },
+    { id: 'youtube',   icon: <YouTubeIcon size={18} />,   label: 'YouTube' },
+    { id: 'linkedin',  icon: <LinkedInIcon size={18} />,  label: 'LinkedIn' },
+    { id: 'pinterest', icon: <PinterestIcon size={18} />, label: 'Pinterest' },
+    { id: 'x',         icon: <XIcon size={18} />,         label: 'X / Twitter' },
+    { id: 'website',   icon: <WebsiteIcon size={18} />,   label: 'Website' },
+    { id: 'email',     icon: <EmailIcon size={18} />,     label: 'Email' },
   ]
 
   return (
@@ -760,7 +918,7 @@ export default function PublicProfilePage() {
               cursor: 'pointer', fontFamily: C.font, boxShadow: C.shadowMd,
             }}
           >
-            {creator.ctaText} →
+            {creator.ctaText} → <ArrowRightIcon size={14} style={{ marginLeft: 4 }} />
           </button>
           <button
             onClick={openMsg}
@@ -828,7 +986,7 @@ export default function PublicProfilePage() {
                     fontSize: isMobile ? 32 : 40, position: 'relative',
                   }}
                 >
-                  <span>🎬</span>
+                  <VideoPlayIcon size={32} style={{ color: C.inkDim }} />
                   <div
                     style={{
                       position: 'absolute', top: 8, left: 8,
@@ -947,7 +1105,7 @@ export default function PublicProfilePage() {
               >
                 <div style={{ display: 'flex', gap: 2, marginBottom: 12 }}>
                   {[...Array(5)].map((_, i) => (
-                    <span key={i} style={{ fontSize: 14, color: i < t.rating ? pc : C.primaryBg }}>★</span>
+                    <StarIcon key={i} size={16} style={{ color: i < t.rating ? pc : C.primaryBg }} />
                   ))}
                 </div>
                 <p style={{ fontSize: 14, color: C.inkDim2, lineHeight: 1.8, marginBottom: 16 }}>"{t.quote}"</p>
@@ -1004,7 +1162,7 @@ export default function PublicProfilePage() {
                 cursor: 'pointer', fontFamily: C.font,
               }}
             >
-              {creator.ctaText} →
+              {creator.ctaText} → <ArrowRightIcon size={14} style={{ marginLeft: 4 }} />
             </button>
             <button
               onClick={openMsg}
@@ -1050,11 +1208,12 @@ export default function PublicProfilePage() {
               href={`https://${links[s.id]}`}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: 'rgba(255,255,255,0.40)', fontSize: 12, fontWeight: 500, textDecoration: 'none' }}
+              style={{ color: 'rgba(255,255,255,0.40)', fontSize: 12, fontWeight: 500, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
               onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.80)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.40)')}
             >
-              {s.id.charAt(0).toUpperCase() + s.id.slice(1)}
+              {s.icon}
+              <span>{s.id.charAt(0).toUpperCase() + s.id.slice(1)}</span>
             </a>
           ))}
         </div>
@@ -1087,7 +1246,7 @@ export default function PublicProfilePage() {
               cursor: 'pointer', fontFamily: C.font,
             }}
           >
-            {creator.ctaText} →
+            {creator.ctaText} → <ArrowRightIcon size={12} />
           </button>
         </div>
       )}
