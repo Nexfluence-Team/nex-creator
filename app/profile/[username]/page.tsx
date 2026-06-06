@@ -798,14 +798,18 @@ export default function PublicProfilePage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
+          <img
+            src="/Nex.webp"
+            alt="Nexfluence"
             style={{
-              width: 32, height: 32, borderRadius: C.rSm, flexShrink: 0,
-              background: customGrad, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 32,
+              height: 32,
+              borderRadius: C.rSm,
+              objectFit: 'cover',
+              display: 'block',
+              background: 'transparent',
             }}
-          >
-            <span style={{ color: '#fff', fontWeight: 900, fontSize: 14 }}>N</span>
-          </div>
+          />
           {scrolled && !isMobile && <span style={{ fontWeight: 700, fontSize: 15, color: C.ink }}>{creator.name}</span>}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -1188,14 +1192,18 @@ export default function PublicProfilePage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div
+          <img
+            src="/Nex.webp"
+            alt="Nexfluence"
             style={{
-              width: 28, height: 28, borderRadius: C.rXs, flexShrink: 0,
-              background: customGrad, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 28,
+              height: 28,
+              borderRadius: C.rXs,
+              objectFit: 'cover',
+              display: 'block',
+              background: 'transparent',
             }}
-          >
-            <span style={{ color: '#fff', fontWeight: 900, fontSize: 12 }}>N</span>
-          </div>
+          />
           <div>
             <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>Portfolio powered by</p>
             <p style={{ color: 'rgba(255,255,255,0.60)', fontWeight: 700, fontSize: 13 }}>Nexfluence</p>
