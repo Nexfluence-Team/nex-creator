@@ -35,17 +35,114 @@ const C = {
   font:       "'Rubik', sans-serif",
 }
 
-/* ─── Icons (SVG, no emojis) ───────────────────────────────────────── */
-function EyeIcon() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> }
-function GlobeIcon() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> }
-function InboxIcon() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 12h-4l-3 3-3-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg> }
-function VideoIcon() { return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="6" width="16" height="12" rx="2"/><path d="m22 8-4 4 4 4"/></svg> }
-function CheckIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg> }
-function PlusIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> }
-function CopyIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> }
-function ArrowRightIcon() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg> }
-function ExternalIcon() { return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> }
-function EditIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 3l4 4-7 7H10v-4l7-7z"/><path d="M3 21h18"/></svg> }
+/* ─── Icons (SVG, no emojis, accept size prop) ──────────────────────── */
+const Icon = ({ children, size = 20, ...props }: { children: React.ReactNode; size?: number; [key: string]: any }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    {children}
+  </svg>
+)
+
+function EyeIcon({ size = 20 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+    </Icon>
+  )
+}
+
+function GlobeIcon({ size = 20 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="1.5"/>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+    </Icon>
+  )
+}
+
+function InboxIcon({ size = 20 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M22 12h-4l-3 3-3-3H2" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </Icon>
+  )
+}
+
+function VideoIcon({ size = 20 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <rect x="2" y="6" width="16" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <path d="m22 8-4 4 4 4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </Icon>
+  )
+}
+
+function CheckIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <polyline points="20 6 9 17 4 12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </Icon>
+  )
+}
+
+function PlusIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </Icon>
+  )
+}
+
+function CopyIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </Icon>
+  )
+}
+
+function ArrowRightIcon({ size = 14 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      <polyline points="12 5 19 12 12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    </Icon>
+  )
+}
+
+function ExternalIcon({ size = 14 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <polyline points="15 3 21 3 21 9" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </Icon>
+  )
+}
+
+function EditIcon({ size = 16 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M17 3l4 4-7 7H10v-4l7-7z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M3 21h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </Icon>
+  )
+}
+
+function PackageIcon({ size = 20 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M4 6h16v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="8" y1="10" x2="16" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="12" y1="14" x2="12" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <path d="M8 2v4M16 2v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </Icon>
+  )
+}
 
 /* ─── Helper functions ──────────────────────────────────────────────── */
 function useBreakpoint() {
@@ -157,7 +254,7 @@ export default function DashboardPage() {
           </Link>
           {user?.slug && (
             <Link href={`https://nexus.nexfluence.eu/profile/${user.slug}`} target="_blank" style={{ padding: '8px 14px', borderRadius: C.rSm, border: `1.5px solid ${C.primaryBg}`, background: C.bg, color: C.ink, fontSize: 13, fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
-              View Public <ExternalIcon />
+              View Public <ExternalIcon size={14} />
             </Link>
           )}
         </div>
@@ -176,14 +273,14 @@ export default function DashboardPage() {
         {/* ── STATS GRID ── */}
         <div style={{ display: 'grid', gridTemplateColumns: cols('repeat(2,1fr)', 'repeat(2,1fr)', 'repeat(4,1fr)'), gap: 12, marginBottom: 24 }}>
           {[
-            { label: 'Profile Views',   value: analytics?.views.total ?? 0, sub: `+${analytics?.views.last7 ?? 0} this week`, icon: <EyeIcon /> },
-            { label: 'Unique Visitors', value: analytics?.views.unique ?? 0, sub: 'all time', icon: <GlobeIcon /> },
-            { label: 'Inbox Messages',  value: (analytics?.inbox.messages ?? 0) + (analytics?.inbox.inquiries ?? 0), sub: `${analytics?.inbox.unread ?? 0} unread`, icon: <InboxIcon /> },
-            { label: 'Videos',          value: analytics?.content.videos ?? 0, sub: 'on your portfolio', icon: <VideoIcon /> },
+            { label: 'Profile Views',   value: analytics?.views.total ?? 0, sub: `+${analytics?.views.last7 ?? 0} this week`, icon: <EyeIcon size={20} /> },
+            { label: 'Unique Visitors', value: analytics?.views.unique ?? 0, sub: 'all time', icon: <GlobeIcon size={20} /> },
+            { label: 'Inbox Messages',  value: (analytics?.inbox.messages ?? 0) + (analytics?.inbox.inquiries ?? 0), sub: `${analytics?.inbox.unread ?? 0} unread`, icon: <InboxIcon size={20} /> },
+            { label: 'Videos',          value: analytics?.content.videos ?? 0, sub: 'on your portfolio', icon: <VideoIcon size={20} /> },
           ].map(s => (
             <div key={s.label} style={{ background: C.bg, borderRadius: C.rLg, padding: '18px 20px', border: C.border, boxShadow: C.shadowCard }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ color: C.primary, width: 20, height: 20 }}>{s.icon}</span>
+                <span style={{ color: C.primary, display: 'flex' }}>{s.icon}</span>
                 <span style={{ fontSize: 10, fontWeight: 600, color: C.inkFaint, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</span>
               </div>
               <p style={{ fontWeight: 900, fontSize: isMobile ? 24 : 28, color: C.primary, letterSpacing: '-0.03em', marginBottom: 4 }}>{s.value.toLocaleString()}</p>
@@ -248,8 +345,9 @@ export default function DashboardPage() {
                     background: item.done ? 'rgba(0,168,90,0.12)' : C.primaryBg,
                     border: `1.5px solid ${item.done ? '#00a85a' : C.primaryBg}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, color: item.done ? '#00a85a' : C.primary,
-                  }}>{item.done ? <CheckIcon style={{ width: 12, height: 12 }} /> : <PlusIcon style={{ width: 12, height: 12 }} />}</div>
+                  }}>
+                    {item.done ? <CheckIcon size={12} /> : <PlusIcon size={12} />}
+                  </div>
                   <span style={{ fontSize: 13, fontWeight: item.done ? 500 : 600, color: item.done ? C.inkDim : C.ink, textDecoration: item.done ? 'line-through' : 'none' }}>
                     {item.label}
                   </span>
@@ -264,10 +362,10 @@ export default function DashboardPage() {
           <p style={{ fontWeight: 800, fontSize: 15, color: C.ink, marginBottom: 16 }}>Quick Actions</p>
           <div style={{ display: 'grid', gridTemplateColumns: cols('1fr', 'repeat(2,1fr)', 'repeat(4,1fr)'), gap: 10 }}>
             {[
-              { label: 'Edit header & bio',     href: '/profile', icon: <EditIcon /> },
-              { label: 'Add a video',           href: '/profile', icon: <VideoIcon /> },
-              { label: 'Add a service package', href: '/profile', icon: '💰' /* still emoji, but we can replace with custom SVG if needed */ },
-              { label: 'Check your inbox',      href: '/profile', icon: <InboxIcon /> },
+              { label: 'Edit header & bio',     href: '/profile', icon: <EditIcon size={18} /> },
+              { label: 'Add a video',           href: '/profile', icon: <VideoIcon size={18} /> },
+              { label: 'Add a service package', href: '/profile', icon: <PackageIcon size={18} /> },
+              { label: 'Check your inbox',      href: '/profile', icon: <InboxIcon size={18} /> },
             ].map(a => (
               <Link key={a.label} href={a.href} style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
@@ -277,9 +375,9 @@ export default function DashboardPage() {
                 onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = C.primary; (e.currentTarget as HTMLAnchorElement).style.background = C.primaryBg }}
                 onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = C.border; (e.currentTarget as HTMLAnchorElement).style.background = C.bgSub }}
               >
-                <span style={{ width: 18, height: 18, color: C.primary }}>{typeof a.icon === 'string' ? a.icon : a.icon}</span>
+                <span style={{ display: 'flex', color: C.primary }}>{a.icon}</span>
                 <span style={{ fontSize: 13, fontWeight: 600, color: C.ink }}>{a.label}</span>
-                <span style={{ marginLeft: 'auto', color: C.inkDim }}><ArrowRightIcon /></span>
+                <span style={{ marginLeft: 'auto', color: C.inkDim }}><ArrowRightIcon size={14} /></span>
               </Link>
             ))}
           </div>
@@ -322,14 +420,14 @@ export default function DashboardPage() {
                 background: C.bg, color: C.primary, fontSize: 13, fontWeight: 700,
                 cursor: 'pointer', fontFamily: C.font, display: 'flex', alignItems: 'center', gap: 6,
               }}>
-                <CopyIcon /> {copied ? 'Copied!' : 'Copy link'}
+                <CopyIcon size={16} /> {copied ? 'Copied!' : 'Copy link'}
               </button>
               <Link href={`https://nexus.nexfluence.eu/profile/${user.slug}`} target="_blank" style={{
                 padding: '9px 18px', borderRadius: C.rSm, border: 'none', background: C.grad,
                 color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none',
                 display: 'flex', alignItems: 'center', gap: 6,
               }}>
-                View live <ExternalIcon />
+                View live <ExternalIcon size={14} />
               </Link>
             </div>
           </div>
