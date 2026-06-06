@@ -1,3 +1,4 @@
+
 'use client'
 import { useState, useRef, useEffect, Dispatch, SetStateAction } from 'react'
 import Link from 'next/link'
@@ -741,8 +742,26 @@ function HeaderTab({ profile, setProfile }: { profile: Profile; setProfile: SetP
           <Field label="CTA button text"><FInput value={profile.ctaText} onChange={v => set({ ctaText: v })} placeholder="Work With Me" /></Field>
           <Field label="Portfolio URL slug">
             <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: C.inkFaint, fontWeight: 500, whiteSpace: 'nowrap' }}>nexus.nexfluence.eu/</span>
-              <input value={profile.slug} onChange={e => set({ slug: e.target.value })} placeholder="yourname" style={{ ...inputBase(false), paddingLeft: 118 }} />
+              {/* Permanent @ symbol prefix */}
+              <span style={{
+                position: 'absolute',
+                left: 12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontSize: 14,
+                fontWeight: 500,
+                color: C.inkDim,
+                pointerEvents: 'none',
+              }}>@</span>
+              <input
+                value={profile.slug}
+                onChange={e => set({ slug: e.target.value })}
+                placeholder="username"
+                style={{
+                  ...inputBase(false),
+                  paddingLeft: 32,
+                }}
+              />
             </div>
           </Field>
         </div>
@@ -1691,7 +1710,31 @@ export default function StudioPage() {
             </div>
             {!isMobile && <span style={{ fontWeight: 700, fontSize: 15, color: C.ink, letterSpacing: '-0.02em' }}>Portfolio Studio</span>}
           </div>
-          <span style={{ background: C.primaryBg, border: `1px solid ${C.primaryBg}`, borderRadius: C.rXs, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: C.primary }}>Upgrade</span>
+          {/* Replaced Upgrade badge with Dashboard button */}
+          <Link
+            href="/dashboard"
+            style={{
+              background: C.primaryBg,
+              border: `1px solid ${C.primaryBg}`,
+              borderRadius: C.rXs,
+              padding: '3px 10px',
+              fontSize: 11,
+              fontWeight: 700,
+              color: C.primary,
+              textDecoration: 'none',
+              transition: 'background 0.2s, color 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = C.primary
+              e.currentTarget.style.color = '#fff'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = C.primaryBg
+              e.currentTarget.style.color = C.primary
+            }}
+          >
+            Dashboard
+          </Link>
         </div>
         {isDesktop && tab !== 'inbox' && (
           <div style={{ display: 'flex', background: C.primaryBg, borderRadius: C.rSm, padding: 3 }}>
@@ -1716,7 +1759,10 @@ export default function StudioPage() {
           )}
           <button
             onClick={() => {
-              if (!profile.slug) { showToast('Set a portfolio URL slug first'); return }
+              if (!profile.slug) {
+                showToast('Create a username for your profile')
+                return
+              }
               window.open(`https://nexus.nexfluence.eu/profile/${profile.slug}`, '_blank')
             }}
             style={{ padding: '8px 16px', borderRadius: C.rSm, border: 'none', background: C.grad, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: C.font, display: 'flex', alignItems: 'center', gap: 6 }}
@@ -1724,7 +1770,10 @@ export default function StudioPage() {
           {!isMobile && (
             <button
               onClick={() => {
-                if (!profile.slug) { showToast('Set a portfolio URL slug first'); return }
+                if (!profile.slug) {
+                  showToast('Create a username for your profile')
+                  return
+                }
                 navigator.clipboard.writeText(`https://nexus.nexfluence.eu/profile/${profile.slug}`)
                 showToast('Link copied!')
               }}
