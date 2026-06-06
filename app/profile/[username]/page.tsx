@@ -534,7 +534,7 @@ function WorkWithMeModal({ slug, creatorName, rates, onClose, onSent, alreadySen
                             border: `1px solid ${C.primaryBg}`,
                           }}
                         >
-                          ✓ {inc}
+                          {inc}
                         </span>
                       ))}
                       {r.includes.length > 3 && (
@@ -867,7 +867,7 @@ export default function PublicProfilePage() {
               fontWeight: 700, cursor: 'pointer', fontFamily: C.font,
             }}
           >
-            {alreadySent ? '✓ Message sent' : 'Send a message'}
+            {alreadySent ? 'Message sent' : 'Send a message'}
           </button>
           <button
             onClick={openWWM}
@@ -1031,7 +1031,7 @@ export default function PublicProfilePage() {
               cursor: 'pointer', fontFamily: C.font, boxShadow: C.shadowMd,
             }}
           >
-            {creator.ctaText} → <ArrowRightIcon size={14} style={{ marginLeft: 4 }} />
+            {creator.ctaText} 
           </button>
           <button
             onClick={openMsg}
@@ -1041,7 +1041,7 @@ export default function PublicProfilePage() {
               cursor: 'pointer', fontFamily: C.font,
             }}
           >
-            {alreadySent ? '✓ Message sent' : 'Send a message'}
+            {alreadySent ? 'Message sent' : 'Send a message'}
           </button>
         </div>
       </section>
@@ -1275,7 +1275,7 @@ export default function PublicProfilePage() {
                 cursor: 'pointer', fontFamily: C.font,
               }}
             >
-              {creator.ctaText} → <ArrowRightIcon size={14} style={{ marginLeft: 4 }} />
+              {creator.ctaText}
             </button>
             <button
               onClick={openMsg}
@@ -1286,7 +1286,7 @@ export default function PublicProfilePage() {
                 cursor: 'pointer', fontFamily: C.font,
               }}
             >
-              {alreadySent ? '✓ Message sent' : 'Send a message'}
+              {alreadySent ? 'Message sent' : 'Send a message'}
             </button>
           </div>
         </div>
@@ -1359,7 +1359,7 @@ export default function PublicProfilePage() {
               background: C.bg, color: C.ink, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: C.font,
             }}
           >
-            {alreadySent ? '✓ Sent' : 'Message'}
+            {alreadySent ? 'Sent' : 'Message'}
           </button>
           <button
             onClick={openWWM}
@@ -1369,7 +1369,7 @@ export default function PublicProfilePage() {
               cursor: 'pointer', fontFamily: C.font,
             }}
           >
-            {creator.ctaText} → <ArrowRightIcon size={12} />
+            {creator.ctaText} 
           </button>
         </div>
       )}
