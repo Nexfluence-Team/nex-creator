@@ -1261,10 +1261,10 @@ export default function PublicProfilePage() {
         />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 440, margin: '0 auto' }}>
           <h2 style={{ fontWeight: 900, fontSize: isMobile ? 24 : 32, color: '#fff', letterSpacing: '-0.03em', marginBottom: 10, lineHeight: 1.15 }}>
-            Ready to create something great?
+            Ready to Create Something Great ?
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15, lineHeight: 1.7, marginBottom: 28 }}>
-            Let's talk about your campaign. One message is all it takes.
+            Let's Talk About Your Campaign. One Message is All It Takes.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
@@ -1315,7 +1315,7 @@ export default function PublicProfilePage() {
             }}
           />
           <p style={{ color: 'rgba(255,255,255,0.60)', fontSize: 13, fontWeight: 500, marginBottom: 12 }}>
-            Powered by Nexfluence
+            Promoted on Nexus
           </p>
           <a
             href="/authenticate"
@@ -1337,7 +1337,7 @@ export default function PublicProfilePage() {
               e.currentTarget.style.color = C.primaryLt
             }}
           >
-            create your own profile
+            Create Your Own Profile
           </a>
         </div>
       </footer>
