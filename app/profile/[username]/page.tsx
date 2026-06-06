@@ -771,16 +771,61 @@ export default function PublicProfilePage() {
   const customGrad = `linear-gradient(90deg, ${pc}, ${ac})`
 
   const CATS = ['All', 'Product Demo', 'Lifestyle', 'Testimonial Story', 'Travel']
-  const SOCIAL_FIELDS = [
-    { id: 'instagram', icon: <InstagramIcon size={18} />, label: 'Instagram' },
-    { id: 'tiktok',    icon: <TikTokIcon size={18} />,    label: 'TikTok' },
-    { id: 'youtube',   icon: <YouTubeIcon size={18} />,   label: 'YouTube' },
-    { id: 'linkedin',  icon: <LinkedInIcon size={18} />,  label: 'LinkedIn' },
-    { id: 'pinterest', icon: <PinterestIcon size={18} />, label: 'Pinterest' },
-    { id: 'x',         icon: <XIcon size={18} />,         label: 'X / Twitter' },
-    { id: 'website',   icon: <WebsiteIcon size={18} />,   label: 'Website' },
-    { id: 'email',     icon: <EmailIcon size={18} />,     label: 'Email' },
-  ]
+
+  // Map of platform IDs to their icon components and URL helper
+  const platformIcons: Record<string, { icon: React.ReactNode; getUrl: (handle: string) => string }> = {
+    instagram: {
+      icon: <InstagramIcon size={22} />,
+      getUrl: (handle: string) => {
+        if (handle.includes('instagram.com/')) return handle.startsWith('http') ? handle : `https://${handle}`
+        return `https://instagram.com/${handle.replace(/^@/, '')}`
+      },
+    },
+    tiktok: {
+      icon: <TikTokIcon size={22} />,
+      getUrl: (handle: string) => {
+        if (handle.includes('tiktok.com/')) return handle.startsWith('http') ? handle : `https://${handle}`
+        return `https://tiktok.com/@${handle.replace(/^@/, '')}`
+      },
+    },
+    youtube: {
+      icon: <YouTubeIcon size={22} />,
+      getUrl: (handle: string) => handle.startsWith('http') ? handle : `https://${handle}`,
+    },
+    linkedin: {
+      icon: <LinkedInIcon size={22} />,
+      getUrl: (handle: string) => handle.startsWith('http') ? handle : `https://${handle}`,
+    },
+    pinterest: {
+      icon: <PinterestIcon size={22} />,
+      getUrl: (handle: string) => handle.startsWith('http') ? handle : `https://${handle}`,
+    },
+    x: {
+      icon: <XIcon size={22} />,
+      getUrl: (handle: string) => {
+        if (handle.includes('x.com/') || handle.includes('twitter.com/')) return handle.startsWith('http') ? handle : `https://${handle}`
+        return `https://x.com/${handle.replace(/^@/, '')}`
+      },
+    },
+    website: {
+      icon: <WebsiteIcon size={22} />,
+      getUrl: (handle: string) => handle.startsWith('http') ? handle : `https://${handle}`,
+    },
+    email: {
+      icon: <EmailIcon size={22} />,
+      getUrl: (handle: string) => `mailto:${handle}`,
+    },
+  }
+
+  // Filter links that have values and map to icon components
+  const activeSocialLinks = Object.entries(links)
+    .filter(([_, value]) => value && value.trim() !== '')
+    .map(([platform, value]) => ({
+      platform,
+      icon: platformIcons[platform]?.icon,
+      url: platformIcons[platform]?.getUrl(value) || `https://${value}`,
+    }))
+    .filter(item => item.icon) // only show if we have an icon for that platform
 
   return (
     <div style={{ background: C.bgPage, minHeight: '100vh', fontFamily: `'${creator.font || 'Rubik'}', sans-serif`, color: C.ink }}>
@@ -857,23 +902,44 @@ export default function PublicProfilePage() {
         />
         <div
           style={{
-            width: isMobile ? 88 : 110, height: isMobile ? 88 : 110,
-            borderRadius: '50%', margin: '0 auto 20px',
-            background: creator.profilePicUrl ? 'transparent' : `${pc}30`,
-            border: `3px solid ${pc}40`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: isMobile ? 40 : 52, overflow: 'hidden', position: 'relative',
+            position: 'relative',
+            width: isMobile ? 88 : 110,
+            height: isMobile ? 88 : 110,
+            margin: '0 auto 20px',
           }}
         >
-          {creator.profilePicUrl ? (
-            <img src={creator.profilePicUrl} alt={creator.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <span style={{ fontWeight: 900, color: pc }}>{creator.name[0]?.toUpperCase()}</span>
-          )}
           <div
             style={{
-              position: 'absolute', bottom: 2, right: 2, width: 20, height: 20,
-              borderRadius: '50%', background: '#22c55e', border: '3px solid #fff',
+              width: '100%',
+              height: '100%',
+              borderRadius: '50%',
+              background: creator.profilePicUrl ? 'transparent' : `${pc}30`,
+              border: `3px solid ${pc}40`,
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: isMobile ? 40 : 52,
+            }}
+          >
+            {creator.profilePicUrl ? (
+              <img src={creator.profilePicUrl} alt={creator.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ fontWeight: 900, color: pc }}>{creator.name[0]?.toUpperCase()}</span>
+            )}
+          </div>
+          {/* Green online dot – now positioned absolutely relative to the wrapper, on top */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 4,
+              right: 4,
+              width: isMobile ? 18 : 22,
+              height: isMobile ? 18 : 22,
+              borderRadius: '50%',
+              background: '#22c55e',
+              border: `3px solid ${C.bgPage}`,
+              zIndex: 2,
             }}
           />
         </div>
@@ -898,6 +964,47 @@ export default function PublicProfilePage() {
             {creator.bio}
           </p>
         )}
+
+        {/* Social links (only icons) - placed directly under bio */}
+        {activeSocialLinks.length > 0 && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 20,
+              marginBottom: 28,
+              flexWrap: 'wrap',
+            }}
+          >
+            {activeSocialLinks.map((item) => (
+              <a
+                key={item.platform}
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: pc,
+                  transition: 'opacity 0.2s ease, transform 0.2s ease',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.opacity = '0.8'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.opacity = '1'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }}
+              >
+                {item.icon}
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Niches */}
         {creator.niches.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginBottom: 28 }}>
             {creator.niches.map((n: string) => (
@@ -913,6 +1020,8 @@ export default function PublicProfilePage() {
             ))}
           </div>
         )}
+
+        {/* CTA Buttons */}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button
             onClick={openWWM}
@@ -1183,47 +1292,53 @@ export default function PublicProfilePage() {
         </div>
       </section>
 
-      {/* FOOTER */}
+      {/* FOOTER - Centred with logo, text, and hyperlink */}
       <footer
         style={{
-          background: C.ink, borderTop: '1px solid rgba(255,255,255,0.07)',
-          padding: isMobile ? '28px 20px' : '32px 40px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+          background: C.ink,
+          padding: isMobile ? '40px 20px' : '48px 24px',
+          textAlign: 'center',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ maxWidth: 300, margin: '0 auto' }}>
           <img
             src="/Nex.webp"
             alt="Nexfluence"
             style={{
-              width: 28,
-              height: 28,
-              borderRadius: C.rXs,
+              width: 40,
+              height: 40,
+              borderRadius: C.rMd,
               objectFit: 'cover',
               display: 'block',
+              margin: '0 auto 12px',
               background: 'transparent',
             }}
           />
-          <div>
-            <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>Portfolio powered by</p>
-            <p style={{ color: 'rgba(255,255,255,0.60)', fontWeight: 700, fontSize: 13 }}>Nexfluence</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 16 }}>
-          {SOCIAL_FIELDS.filter(s => links[s.id]).map(s => (
-            <a
-              key={s.id}
-              href={`https://${links[s.id]}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'rgba(255,255,255,0.40)', fontSize: 12, fontWeight: 500, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.80)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.40)')}
-            >
-              {s.icon}
-              <span>{s.id.charAt(0).toUpperCase() + s.id.slice(1)}</span>
-            </a>
-          ))}
+          <p style={{ color: 'rgba(255,255,255,0.60)', fontSize: 13, fontWeight: 500, marginBottom: 12 }}>
+            Powered by Nexfluence
+          </p>
+          <a
+            href="/authenticate"
+            style={{
+              color: C.primaryLt,
+              fontSize: 13,
+              fontWeight: 600,
+              textDecoration: 'none',
+              borderBottom: `1px solid ${C.primaryLt}40`,
+              transition: 'border-color 0.2s ease, color 0.2s ease',
+              display: 'inline-block',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderBottomColor = C.primaryLt
+              e.currentTarget.style.color = C.primaryLt
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderBottomColor = `${C.primaryLt}40`
+              e.currentTarget.style.color = C.primaryLt
+            }}
+          >
+            create your own profile
+          </a>
         </div>
       </footer>
 
