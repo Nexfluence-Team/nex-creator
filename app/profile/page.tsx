@@ -1,4 +1,3 @@
-
 'use client'
 import { useState, useRef, useEffect, Dispatch, SetStateAction } from 'react'
 import Link from 'next/link'
@@ -742,7 +741,6 @@ function HeaderTab({ profile, setProfile }: { profile: Profile; setProfile: SetP
           <Field label="CTA button text"><FInput value={profile.ctaText} onChange={v => set({ ctaText: v })} placeholder="Work With Me" /></Field>
           <Field label="Portfolio URL slug">
             <div style={{ position: 'relative' }}>
-              {/* Permanent @ symbol prefix */}
               <span style={{
                 position: 'absolute',
                 left: 12,
@@ -1701,36 +1699,42 @@ export default function StudioPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: C.font, background: C.bgPage, overflow: 'hidden' }}>
 
+      {/* TOP BAR — removed the arrow link */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: 56, flexShrink: 0, background: C.bg, borderBottom: `1px solid ${C.primaryBg}`, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: C.rSm, border: `1.5px solid ${C.primaryBg}`, color: C.inkDim, textDecoration: 'none', fontSize: 15 }}>←</Link>
+          {/* Arrow link removed */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 28, height: 28, borderRadius: C.rSm, flexShrink: 0, overflow: 'hidden', background: 'transparent' }}>
               <img src="/Nex.webp" alt="Creator Nexus" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             </div>
             {!isMobile && <span style={{ fontWeight: 700, fontSize: 15, color: C.ink, letterSpacing: '-0.02em' }}>Studio</span>}
           </div>
-          {/* Replaced Upgrade badge with Dashboard button */}
+          {/* Dashboard button – now same shape and size as Preview button */}
           <Link
             href="/dashboard"
             style={{
-              background: C.primaryBg,
-              border: `1px solid ${C.primaryBg}`,
-              borderRadius: C.rXs,
-              padding: '3px 10px',
-              fontSize: 11,
+              padding: '8px 16px',
+              borderRadius: C.rSm,
+              border: 'none',
+              background: C.grad,
+              color: '#fff',
+              fontSize: 13,
               fontWeight: 700,
-              color: C.primary,
+              cursor: 'pointer',
+              fontFamily: C.font,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
               textDecoration: 'none',
-              transition: 'background 0.2s, color 0.2s',
+              transition: 'opacity 0.2s, transform 0.2s',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = C.primary
-              e.currentTarget.style.color = '#fff'
+              e.currentTarget.style.opacity = '0.88'
+              e.currentTarget.style.transform = 'translateY(-2px)'
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = C.primaryBg
-              e.currentTarget.style.color = C.primary
+              e.currentTarget.style.opacity = '1'
+              e.currentTarget.style.transform = 'none'
             }}
           >
             Dashboard
@@ -1872,7 +1876,7 @@ export default function StudioPage() {
         input::placeholder, textarea::placeholder { color: ${C.inkFaint}; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: ${C.primaryBg}; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb { background: ${C.primaryBg}; borderRadius: 2px; }
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
