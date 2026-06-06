@@ -878,7 +878,7 @@ export default function PublicProfilePage() {
               fontWeight: 700, cursor: 'pointer', fontFamily: C.font,
             }}
           >
-            {creator.ctaText} →
+            {creator.ctaText}
           </button>
         </div>
       </nav>
