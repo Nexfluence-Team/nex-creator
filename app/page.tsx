@@ -2,6 +2,39 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
+/* ─── Design tokens (Nexfluence v4) ──────────────────────────────────── */
+const C = {
+  bgPage:     '#f8f7ff',
+  bg:         '#ffffff',
+  bgSub:      '#f5f3ff',
+  bgCard:     '#ede9ff',
+  ink:        '#0a0612',
+  inkDim:     'rgba(10,6,18,0.50)',
+  inkDim2:    'rgba(10,6,18,0.72)',
+  inkFaint:   'rgba(10,6,18,0.28)',
+  primary:    '#8b31e8',
+  primaryLt:  '#b44af0',
+  primaryMd:  '#a03be8',
+  primaryBg:  'rgba(139,49,232,0.08)',
+  grad:       'linear-gradient(90deg, #8b31e8, #b44af0)',
+  gradD:      'linear-gradient(135deg, #8b31e8, #b44af0)',
+  gradSoft:   'linear-gradient(135deg, rgba(139,49,232,0.12), rgba(180,74,240,0.06))',
+  gradText:   'linear-gradient(90deg, #8b31e8, #b44af0)',
+  rXs:        6,
+  rSm:        10,
+  rMd:        14,
+  rLg:        20,
+  rXl:        28,
+  border:     '1px solid rgba(139,49,232,0.16)',
+  borderH:    '1px solid rgba(139,49,232,0.45)',
+  shadowSm:   '0 2px 12px rgba(139,49,232,0.10)',
+  shadowMd:   '0 8px 32px rgba(139,49,232,0.14)',
+  shadowLg:   '0 20px 60px rgba(139,49,232,0.18)',
+  shadowCard: '0 4px 24px rgba(10,6,18,0.07)',
+  font:       "'Rubik', sans-serif",
+}
+
+/* ─── Intersection Observer hook ────────────────────────────────────── */
 function useInView(threshold = 0.15) {
   const ref = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -18,6 +51,7 @@ function useInView(threshold = 0.15) {
   return { ref, visible }
 }
 
+/* ─── Counter animation ──────────────────────────────────────────────── */
 function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
   const [val, setVal] = useState(0)
   const { ref, visible } = useInView()
@@ -35,38 +69,40 @@ function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
   return <span ref={ref}>{val.toLocaleString()}{suffix}</span>
 }
 
-const FEATURES = [
-  {
-    pill: 'Portfolio',
-    heading: 'A portfolio that\nworks while you sleep',
-    body: 'One beautiful page that shows brands exactly who you are — your niche, your stats, your best work. No design skills needed.',
-    visual: <PortfolioVisual />,
-  },
-  {
-    pill: 'Discovery',
-    heading: 'Brands find\nyou, not the other way',
-    body: 'Your profile is searchable by brands actively looking for Baltic creators. Stop cold-DMing. Start getting inbound.',
-    visual: <DiscoveryVisual />,
-  },
-  {
-    pill: 'Analytics',
-    heading: 'Know who is\nlooking at your work',
-    body: 'See exactly when a brand views your portfolio, how long they stay, and which content they engage with most.',
-    visual: <AnalyticsVisual />,
-  },
-  {
-    pill: 'Share',
-    heading: 'One link.\nEvery platform.',
-    body: 'Drop it in your Instagram bio, email signature, or pitch deck. Your entire creator identity, one tap away.',
-    visual: <LinkVisual />,
-  },
-]
+/* ─── Shared pill label ──────────────────────────────────────────────── */
+function PillLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 16,
+    }}>
+      <div style={{ width: 20, height: 1, background: C.primary, flexShrink: 0 }} />
+      <span style={{
+        color: C.primary,
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: '0.18em',
+        textTransform: 'uppercase',
+        fontFamily: C.font,
+      }}>
+        {children}
+      </span>
+    </div>
+  )
+}
 
+/* ─── Main Page ──────────────────────────────────────────────────────── */
 export default function Home() {
   return (
-    <div style={{ background: '#f7f5ff', minHeight: '100vh', fontFamily: "'Rubik', sans-serif", color: '#0a0612' }}>
-
-      {/* ── HERO ── */}
+    <div style={{
+      background: C.bgPage,
+      minHeight: '100vh',
+      fontFamily: C.font,
+      color: C.ink,
+    }}>
+      {/* Hero Section */}
       <section style={{
         minHeight: '100vh',
         display: 'flex',
@@ -79,107 +115,156 @@ export default function Home() {
       }}>
         <div aria-hidden style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: `
-            radial-gradient(ellipse 60% 50% at 50% 30%, rgba(128,97,255,0.10) 0%, transparent 65%),
-            radial-gradient(ellipse 35% 35% at 15% 70%, rgba(255,51,188,0.06) 0%, transparent 55%)
-          `,
+          background: `radial-gradient(ellipse 60% 50% at 50% 30%, ${C.primaryBg} 0%, transparent 65%)`,
         }} />
 
-        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: 440, width: '100%' }}>
-
-          {/* Logo — Nex.webp replaces gradient N placeholder */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 44 }}>
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: 520, width: '100%' }}>
+          {/* Logo – transparent container, no shadow */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 40 }}>
             <div style={{
-              width: 48, height: 48, borderRadius: 14,
-              overflow: 'hidden', flexShrink: 0,
-              boxShadow: '0 4px 24px rgba(128,97,255,0.25)',
+              width: 64, height: 64, borderRadius: C.rLg, overflow: 'hidden',
+              background: 'transparent',
             }}>
-              <img src="/Nex.webp" alt="Creator Nexus" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            </div>
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ color: '#0a0612', fontWeight: 700, fontSize: 20, letterSpacing: '-0.03em', lineHeight: 1.1 }}>Creator Nexus</div>
-              <div style={{ color: '#ff7ac3', fontWeight: 500, fontSize: 13 }}>by Nexfluence</div>
+              <img src="/Nex.webp" alt="Nexfluence" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
           </div>
 
-          {/* Headline */}
-          <h1 style={{ fontWeight: 900, fontSize: 'clamp(30px, 6vw, 40px)', letterSpacing: '-0.035em', lineHeight: 1.1, marginBottom: 14, color: '#0a0612' }}>
-            Your creator portfolio,{' '}
-            <span style={{ color: '#8061ff' }}>ready in minutes</span>
+          <h1 style={{
+            fontWeight: 900,
+            fontSize: 'clamp(36px, 8vw, 56px)',
+            letterSpacing: '-0.04em',
+            lineHeight: 1.1,
+            marginBottom: 20,
+            background: C.gradText,
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
+            Your Creator Portfolio, Ready in Minutes
           </h1>
-          <p style={{ color: 'rgba(10,6,18,0.52)', fontSize: 15, lineHeight: 1.75, marginBottom: 36 }}>
-            Bringing impactful creators across the Baltics under one roof.
+          <p style={{ color: C.inkDim2, fontSize: 18, lineHeight: 1.6, marginBottom: 40, maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}>
+            Join the fastest‑growing network of Baltic creators. Get discovered by brands, showcase your work, and start earning.
           </p>
 
-          {/* CTAs */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Link href="/authenticate" className="btn-apply" style={{ textDecoration: 'none' }}>
-              Create my portfolio
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 320, margin: '0 auto' }}>
+            <Link
+              href="/authenticate"
+              style={{
+                display: 'block',
+                padding: '14px 24px',
+                borderRadius: C.rSm,
+                background: C.grad,
+                color: '#fff',
+                fontSize: 15,
+                fontWeight: 700,
+                letterSpacing: '0.04em',
+                textAlign: 'center',
+                textDecoration: 'none',
+                boxShadow: C.shadowMd,
+                transition: 'opacity 0.2s, transform 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none' }}
+            >
+              Create my portfolio 
             </Link>
             <Link
               href="/authenticate"
               style={{
-                display: 'block', padding: '14px 24px', borderRadius: 8,
-                background: 'transparent', color: 'rgba(10,6,18,0.65)',
-                fontSize: 15, fontWeight: 700, letterSpacing: '0.04em',
-                textAlign: 'center', border: '1px solid rgba(128,97,255,0.30)',
-                textDecoration: 'none', transition: 'border-color 0.2s ease, color 0.2s ease',
+                display: 'block',
+                padding: '14px 24px',
+                borderRadius: C.rSm,
+                background: 'transparent',
+                color: C.inkDim,
+                fontSize: 15,
+                fontWeight: 700,
+                textAlign: 'center',
+                border: `1.5px solid ${C.primaryBg}`,
+                textDecoration: 'none',
+                transition: 'border-color 0.2s, color 0.2s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(128,97,255,0.7)'; e.currentTarget.style.color = '#0a0612' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(128,97,255,0.30)'; e.currentTarget.style.color = 'rgba(10,6,18,0.65)' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = C.primary; e.currentTarget.style.color = C.ink }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = C.primaryBg; e.currentTarget.style.color = C.inkDim }}
             >
               Sign in
             </Link>
           </div>
 
-          {/* Live count */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 28 }}>
-            <span className="dot-live" />
-            <span style={{ color: 'rgba(10,6,18,0.35)', fontSize: 12, letterSpacing: '0.04em' }}>
-              3,412+ creators already joined
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 48 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.primary, boxShadow: `0 0 0 2px ${C.primaryBg}` }} />
+            <span style={{ color: C.inkFaint, fontSize: 13, fontWeight: 500 }}>3,412+ creators already earning</span>
           </div>
-        </div>
-
-        {/* scroll cue */}
-        <div style={{ position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, animation: 'bounce 2s ease-in-out infinite' }}>
-          <span style={{ color: 'rgba(10,6,18,0.25)', fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 500 }}>Scroll</span>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M4 9l4 4 4-4" stroke="rgba(10,6,18,0.25)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </div>
       </section>
 
       <StatsBar />
 
-      {FEATURES.map((f, i) => (
-        <FeatureSection key={i} {...f} flip={i % 2 !== 0} />
-      ))}
+      <FeatureSection
+        pill="Portfolio"
+        heading="A portfolio that works while you sleep"
+        body="One beautiful page that shows brands exactly who you are — your niche, your stats, your best work. No design skills needed."
+        visual={<PortfolioVisual />}
+        flip={false}
+      />
+      <FeatureSection
+        pill="Discovery"
+        heading="Brands find you, not the other way around"
+        body="Your profile is searchable by brands actively looking for Baltic creators. Stop cold‑DMing. Start getting inbound."
+        visual={<DiscoveryVisual />}
+        flip={true}
+      />
+      <FeatureSection
+        pill="Analytics"
+        heading="Know who is looking at your work"
+        body="See exactly when a brand views your portfolio, how long they stay, and which content they engage with most."
+        visual={<AnalyticsVisual />}
+        flip={false}
+      />
+      <FeatureSection
+        pill="Share"
+        heading="One link. Every platform."
+        body="Drop it in your Instagram bio, email signature, or pitch deck. Your entire creator identity, one tap away."
+        visual={<LinkVisual />}
+        flip={true}
+      />
 
       <SocialProof />
 
-      {/* ── BOTTOM CTA — intentionally dark per design spec ── */}
-      <section style={{ padding: '80px 24px', textAlign: 'center', background: '#0a0612', position: 'relative', overflow: 'hidden' }}>
+      <section style={{ padding: '80px 24px', textAlign: 'center', background: C.ink, position: 'relative', overflow: 'hidden' }}>
         <div aria-hidden style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
-          background: 'radial-gradient(ellipse 60% 60% at 50% 50%, rgba(128,97,255,0.18) 0%, transparent 65%)',
+          background: `radial-gradient(ellipse 60% 60% at 50% 50%, ${C.primaryBg} 0%, transparent 65%)`,
         }} />
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 420, margin: '0 auto' }}>
-          <h2 style={{ color: '#fff', fontWeight: 900, fontSize: 'clamp(26px, 5vw, 36px)', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 14 }}>
-            Ready to get discovered?
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 500, margin: '0 auto' }}>
+          <h2 style={{ color: '#fff', fontWeight: 900, fontSize: 'clamp(28px, 5vw, 38px)', letterSpacing: '-0.03em', lineHeight: 1.2, marginBottom: 16 }}>
+            Ready to Get Discovered ?
           </h2>
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15, lineHeight: 1.75, marginBottom: 32 }}>
-            Join thousands of Baltic creators building their brand on Creator Nexus.
+          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 16, lineHeight: 1.75, marginBottom: 32 }}>
+            Join Thousands of Baltic Creators Building their Brand on Creator Nexus.
           </p>
-          <Link href="/authenticate" className="btn-apply" style={{ textDecoration: 'none', maxWidth: 320, margin: '0 auto' }}>
-            Create my portfolio — it is free →
+          <Link
+            href="/authenticate"
+            style={{
+              display: 'inline-block',
+              padding: '14px 32px',
+              borderRadius: C.rSm,
+              background: C.grad,
+              color: '#fff',
+              fontSize: 15,
+              fontWeight: 700,
+              textDecoration: 'none',
+              boxShadow: C.shadowMd,
+              transition: 'transform 0.2s, opacity 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none' }}
+          >
+            Create Portfolio for Free 
           </Link>
         </div>
       </section>
 
       <style>{`
-        @keyframes bounce {
-          0%, 100% { transform: translateX(-50%) translateY(0); }
-          50%       { transform: translateX(-50%) translateY(6px); }
-        }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(28px); }
           to   { opacity: 1; transform: translateY(0); }
@@ -188,42 +273,37 @@ export default function Home() {
           0%, 100% { transform: translateY(0px); }
           50%       { transform: translateY(-8px); }
         }
-        @keyframes slideRight {
-          from { width: 0%; }
-          to   { width: var(--bar-w); }
-        }
-        @keyframes ping {
-          0%   { transform: scale(1); opacity: 0.6; }
-          100% { transform: scale(2.2); opacity: 0; }
-        }
+        * { box-sizing: border-box; }
+        button { -webkit-tap-highlight-color: transparent; }
       `}</style>
     </div>
   )
 }
 
+/* ─── Stats Bar ──────────────────────────────────────────────────────── */
 function StatsBar() {
   const { ref, visible } = useInView()
   return (
     <div ref={ref} style={{
-      background: '#fff',
-      borderTop: '1px solid rgba(128,97,255,0.12)',
-      borderBottom: '1px solid rgba(128,97,255,0.12)',
-      padding: '32px 24px',
+      background: C.bg,
+      borderTop: `1px solid ${C.primaryBg}`,
+      borderBottom: `1px solid ${C.primaryBg}`,
+      padding: '40px 24px',
     }}>
       <div style={{
-        maxWidth: 720, margin: '0 auto',
-        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, textAlign: 'center',
+        maxWidth: 960, margin: '0 auto',
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32, textAlign: 'center',
       }}>
         {[
-          { n: 3412, suffix: '+',  label: 'Active Creators' },
-          { n: 850,  suffix: '+',  label: 'Brand Partnerships' },
-          { n: 4,    suffix: '.9★', label: 'Average Rating' },
+          { n: 3412, suffix: '+', label: 'Active Creators' },
+          { n: 850,  suffix: '+', label: 'Brand Partnerships' },
+          { n: 4.6,  suffix: '', label: 'Average Rating' },
         ].map((s, i) => (
           <div key={i} style={{ opacity: visible ? 1 : 0, transition: `opacity 0.5s ease ${i * 0.12}s` }}>
-            <div style={{ fontWeight: 900, fontSize: 'clamp(24px, 4vw, 34px)', letterSpacing: '-0.03em', color: '#0a0612' }}>
+            <div style={{ fontWeight: 900, fontSize: 'clamp(28px, 5vw, 36px)', letterSpacing: '-0.03em', color: C.primary }}>
               {visible ? <Counter to={s.n} suffix={s.suffix} /> : `0${s.suffix}`}
             </div>
-            <div style={{ color: 'rgba(10,6,18,0.45)', fontSize: 13, marginTop: 4, fontWeight: 500 }}>{s.label}</div>
+            <div style={{ color: C.inkDim, fontSize: 14, marginTop: 6, fontWeight: 500 }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -231,35 +311,42 @@ function StatsBar() {
   )
 }
 
+/* ─── Feature Section (alternating) ──────────────────────────────────── */
 function FeatureSection({ pill, heading, body, visual, flip }: {
   pill: string; heading: string; body: string; visual: React.ReactNode; flip: boolean
 }) {
   const { ref, visible } = useInView()
   return (
-    <section ref={ref} style={{ padding: '80px 24px', background: flip ? '#fff' : '#f7f5ff' }}>
+    <section ref={ref} style={{
+      padding: '80px 24px',
+      background: flip ? C.bg : C.bgPage,
+    }}>
       <div style={{
-        maxWidth: 960, margin: '0 auto',
+        maxWidth: 1100, margin: '0 auto',
         display: 'flex', flexWrap: 'wrap',
         flexDirection: flip ? 'row-reverse' : 'row',
-        alignItems: 'center', gap: 56,
+        alignItems: 'center', gap: 64,
       }}>
         <div style={{
-          flex: '1 1 260px', minWidth: 0,
+          flex: '1 1 300px',
           opacity: visible ? 1 : 0,
           transform: visible ? 'translateY(0)' : 'translateY(28px)',
           transition: 'opacity 0.6s ease, transform 0.6s ease',
         }}>
-          <span className="pill-label" style={{ marginBottom: 16, display: 'inline-flex' }}>{pill}</span>
+          <PillLabel>{pill}</PillLabel>
           <h2 style={{
-            fontWeight: 900, fontSize: 'clamp(22px, 3.5vw, 30px)',
-            letterSpacing: '-0.03em', lineHeight: 1.15,
-            color: '#0a0612', marginBottom: 16,
+            fontWeight: 900,
+            fontSize: 'clamp(24px, 4vw, 34px)',
+            letterSpacing: '-0.03em',
+            lineHeight: 1.2,
+            color: C.ink,
+            marginBottom: 18,
             whiteSpace: 'pre-line',
           }}>{heading}</h2>
-          <p style={{ color: 'rgba(10,6,18,0.52)', fontSize: 15, lineHeight: 1.85, maxWidth: 340 }}>{body}</p>
+          <p style={{ color: C.inkDim2, fontSize: 16, lineHeight: 1.7, maxWidth: 440 }}>{body}</p>
         </div>
         <div style={{
-          flex: '1 1 300px', minWidth: 0,
+          flex: '1 1 360px',
           opacity: visible ? 1 : 0,
           transform: visible ? 'translateY(0)' : 'translateY(28px)',
           transition: 'opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s',
@@ -271,40 +358,50 @@ function FeatureSection({ pill, heading, body, visual, flip }: {
   )
 }
 
+/* ─── Portfolio Visual ───────────────────────────────────────────────── */
 function PortfolioVisual() {
   return (
-    <div style={{ animation: 'float 5s ease-in-out infinite', maxWidth: 340, margin: '0 auto' }}>
-      <div className="border-gradient-pm" style={{
-        borderRadius: 20, background: '#0a0612', padding: '28px 24px',
-        boxShadow: '0 20px 60px rgba(128,97,255,0.18)',
+    <div style={{ animation: 'float 5s ease-in-out infinite', maxWidth: 380, margin: '0 auto' }}>
+      <div style={{
+        borderRadius: C.rLg,
+        background: C.ink,
+        padding: '28px 24px',
+        boxShadow: C.shadowLg,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
           <div style={{
-            width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-            background: 'linear-gradient(135deg, #ff33bc, #8061ff)',
+            width: 56, height: 56, borderRadius: C.rMd, flexShrink: 0,
+            background: C.gradD,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 900, fontSize: 20, color: '#fff',
+            fontWeight: 900, fontSize: 22, color: '#fff',
           }}>S</div>
           <div>
-            <div style={{ color: '#fff', fontWeight: 800, fontSize: 16, letterSpacing: '-0.02em' }}>Sophie Thomas</div>
-            <div style={{ color: 'rgba(255,255,255,0.40)', fontSize: 12, marginTop: 2 }}>🇱🇻 Riga · Beauty & Lifestyle</div>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: 18, letterSpacing: '-0.02em' }}>Sophie Thomas</div>
+            <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, marginTop: 2 }}>Riga · Beauty & Lifestyle</div>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 20 }}>
-          {[['23.4K', 'Followers'], ['4.8%', 'Eng. rate'], ['18', 'Collabs']].map(([v, l]) => (
-            <div key={l} style={{
-              background: 'rgba(128,97,255,0.10)', borderRadius: 12, padding: '12px 8px', textAlign: 'center',
-              border: '1px solid rgba(128,97,255,0.20)',
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 24 }}>
+          {[
+            ['23.4K', 'Followers'],
+            ['4.8%', 'Eng. rate'],
+            ['18', 'Collabs'],
+          ].map(([val, label]) => (
+            <div key={label} style={{
+              background: C.primaryBg,
+              borderRadius: C.rMd,
+              padding: '12px 8px',
+              textAlign: 'center',
+              border: `1px solid ${C.primaryBg}`,
             }}>
-              <div style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>{v}</div>
-              <div style={{ color: 'rgba(255,255,255,0.38)', fontSize: 11, marginTop: 2 }}>{l}</div>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>{val}</div>
+              <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, marginTop: 2 }}>{label}</div>
             </div>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {['#ff7ac3', '#8061ff', '#ff33bc', '#6a66ff'].map((c, i) => (
+        <div style={{ display: 'flex', gap: 10 }}>
+          {['#ff7ac3', C.primary, C.primaryLt, C.primaryMd].map((c, i) => (
             <div key={i} style={{
-              flex: 1, aspectRatio: '9/14', borderRadius: 10,
+              flex: 1, aspectRatio: '9/14', borderRadius: C.rSm,
               background: `linear-gradient(160deg, ${c}33, ${c}99)`,
               border: `1px solid ${c}44`,
             }} />
@@ -315,122 +412,108 @@ function PortfolioVisual() {
   )
 }
 
+/* ─── Discovery Visual – Redbull Card (no button, just text) ─────────── */
 function DiscoveryVisual() {
-  const brands = [
-    { name: 'Nike',     color: '#ff33bc' },
-    { name: 'Glossier', color: '#8061ff' },
-    { name: 'Dyson',    color: '#6a66ff' },
-    { name: 'Rhode',    color: '#ff7ac3' },
-    { name: 'Alo',      color: '#ff33bc' },
-    { name: 'Skims',    color: '#8061ff' },
-  ]
-  const nodes = brands.map((b, i) => {
-    const angle = (i / brands.length) * Math.PI * 2
-    return {
-      ...b,
-      lx: Math.round((170 + Math.cos(angle) * 130) * 100) / 100,
-      ly: Math.round((90  + Math.sin(angle) * 70 ) * 100) / 100,
-      cx: Math.round((50 + Math.cos(angle) * 36) * 100) / 100,
-      cy: Math.round((50 + Math.sin(angle) * 34) * 100) / 100,
-    }
-  })
   return (
-    <div style={{ maxWidth: 340, margin: '0 auto', position: 'relative' }}>
-      <div style={{ display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 2 }}>
-        {/* Creator avatar — uses Nex.webp as the central brand node */}
+    <div style={{ maxWidth: 380, margin: '0 auto' }}>
+      <div style={{
+        borderRadius: C.rLg,
+        background: C.bg,
+        padding: '28px',
+        boxShadow: C.shadowCard,
+        border: `1px solid ${C.primaryBg}`,
+        textAlign: 'center',
+      }}>
         <div style={{
-          width: 72, height: 72, borderRadius: 20, overflow: 'hidden',
-          boxShadow: '0 0 0 12px rgba(128,97,255,0.08), 0 0 0 24px rgba(128,97,255,0.04)',
+          width: 100,
+          height: 100,
+          margin: '0 auto 20px',
+          borderRadius: C.rLg,
+          overflow: 'hidden',
+          background: 'transparent',
         }}>
-          <img src="/Nex.webp" alt="Creator Nexus" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <img
+            src="/brands/RedBull.webp"
+            alt="Redbull"
+            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            onError={(e) => { e.currentTarget.src = 'https://upload.wikimedia.org/wikipedia/en/thumb/c/cb/Red_Bull.svg/1200px-Red_Bull.svg.png' }}
+          />
         </div>
-      </div>
-      <svg width="100%" height="180" viewBox="0 0 340 180"
-        style={{ position: 'absolute', top: 20, left: 0, zIndex: 1 }} aria-hidden>
-        {nodes.map((n, i) => (
-          <line key={i} x1="170" y1="36" x2={n.lx} y2={n.ly}
-            stroke="rgba(128,97,255,0.20)" strokeWidth="1.5" strokeDasharray="4 4" />
-        ))}
-      </svg>
-      <div style={{ position: 'relative', height: 180, marginTop: -36 }}>
-        {nodes.map((n, i) => (
-          <div key={i} style={{
-            position: 'absolute',
-            left: `${n.cx}%`,
-            top:  `${n.cy}%`,
-            transform: 'translate(-50%, -50%)',
-            background: '#ffffff',
-            border: '1px solid rgba(128,97,255,0.22)',
-            borderRadius: 12,
-            padding: '8px 14px',
-            fontSize: 13, fontWeight: 700, color: '#0a0612',
-            boxShadow: '0 4px 16px rgba(128,97,255,0.10)',
-            animation: `float ${4 + i * 0.4}s ease-in-out infinite`,
-            animationDelay: `${i * 0.3}s`,
-            whiteSpace: 'nowrap',
-          }}>
-            {n.name}
-          </div>
-        ))}
+        <h3 style={{ fontSize: 22, fontWeight: 800, color: C.ink, marginBottom: 12 }}>
+          Brands with opportunities awaiting you
+        </h3>
+        <p style={{ color: C.inkDim2, fontSize: 14, lineHeight: 1.6 }}>
+          Baltic creators are getting invited to exclusive campaigns. Your portfolio is your ticket in.
+        </p>
       </div>
     </div>
   )
 }
 
+/* ─── Analytics Visual ───────────────────────────────────────────────── */
 function AnalyticsVisual() {
   const { ref, visible } = useInView()
   const bars = [
-    { label: 'Mon', h: 45, color: '#8061ff' },
-    { label: 'Tue', h: 70, color: '#8061ff' },
-    { label: 'Wed', h: 55, color: '#8061ff' },
-    { label: 'Thu', h: 90, color: '#ff33bc' },
-    { label: 'Fri', h: 65, color: '#8061ff' },
-    { label: 'Sat', h: 80, color: '#8061ff' },
-    { label: 'Sun', h: 50, color: '#8061ff' },
+    { label: 'Mon', h: 45 },
+    { label: 'Tue', h: 70 },
+    { label: 'Wed', h: 55 },
+    { label: 'Thu', h: 92 },
+    { label: 'Fri', h: 65 },
+    { label: 'Sat', h: 80 },
+    { label: 'Sun', h: 50 },
   ]
   return (
-    <div ref={ref} style={{ maxWidth: 340, margin: '0 auto' }}>
-      <div className="border-gradient-pm" style={{
-        borderRadius: 20, background: '#fff',
-        padding: '24px', boxShadow: '0 12px 40px rgba(128,97,255,0.10)',
+    <div ref={ref} style={{ maxWidth: 380, margin: '0 auto' }}>
+      <div style={{
+        borderRadius: C.rLg,
+        background: C.bg,
+        padding: '28px',
+        boxShadow: C.shadowCard,
+        border: `1px solid ${C.primaryBg}`,
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
           <div>
-            <div style={{ color: 'rgba(10,6,18,0.40)', fontSize: 11, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Portfolio views</div>
-            <div style={{ fontWeight: 900, fontSize: 28, letterSpacing: '-0.03em', color: '#0a0612' }}>
+            <div style={{ color: C.inkDim, fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
+              Portfolio views
+            </div>
+            <div style={{ fontWeight: 900, fontSize: 32, letterSpacing: '-0.03em', color: C.ink }}>
               {visible ? <Counter to={847} /> : '0'}
             </div>
           </div>
           <div style={{
-            background: 'rgba(128,97,255,0.08)', borderRadius: 8,
-            padding: '6px 12px', fontSize: 12, fontWeight: 700, color: '#8061ff',
+            background: C.primaryBg,
+            borderRadius: C.rSm,
+            padding: '6px 12px',
+            fontSize: 12,
+            fontWeight: 700,
+            color: C.primary,
           }}>
-            ↑ 24% this week
+            2x <span style={{ color: C.primaryLt }}>Increased</span>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 100 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 120 }}>
           {bars.map((b, i) => (
-            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, height: '100%', justifyContent: 'flex-end' }}>
               <div style={{
-                width: '100%', borderRadius: 6,
-                background: b.color,
+                width: '100%', borderRadius: C.rXs,
+                background: C.grad,
                 opacity: visible ? 1 : 0,
                 height: visible ? `${b.h}%` : '0%',
                 transition: `height 0.7s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.06}s, opacity 0.4s ease ${i * 0.06}s`,
               }} />
-              <div style={{ color: 'rgba(10,6,18,0.35)', fontSize: 10, fontWeight: 500 }}>{b.label}</div>
+              <div style={{ color: C.inkFaint, fontSize: 11, fontWeight: 500 }}>{b.label}</div>
             </div>
           ))}
         </div>
-        <div style={{ marginTop: 20, borderTop: '1px solid rgba(128,97,255,0.10)', paddingTop: 16 }}>
+        <div style={{ marginTop: 24, borderTop: `1px solid ${C.primaryBg}`, paddingTop: 20 }}>
           {[
-            { dot: '#ff33bc', text: 'Nike viewed your portfolio', time: '2m ago' },
-            { dot: '#8061ff', text: 'Glossier opened your rates', time: '1h ago' },
+            { text: 'Nike Viewed Your Portfolio', time: '2 Hours ago' },
+            { text: 'Glossier Opened Your Rates', time: '1 Day ago' },
           ].map((a, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: i === 0 ? 10 : 0 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: a.dot, flexShrink: 0 }} />
-              <div style={{ flex: 1, fontSize: 13, color: '#0a0612', fontWeight: 500 }}>{a.text}</div>
-              <div style={{ fontSize: 11, color: 'rgba(10,6,18,0.35)' }}>{a.time}</div>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: i === 0 ? 12 : 0 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.primary, flexShrink: 0 }} />
+              <div style={{ flex: 1, fontSize: 13, color: C.ink, fontWeight: 500 }}>{a.text}</div>
+              <div style={{ fontSize: 11, color: C.inkFaint }}>{a.time}</div>
             </div>
           ))}
         </div>
@@ -439,51 +522,119 @@ function AnalyticsVisual() {
   )
 }
 
+/* ─── Link Visual – Professional version with SVG icons, no backgrounds, Rubik font, light card ──── */
 function LinkVisual() {
   const [copied, setCopied] = useState(false)
-  const copy = () => { setCopied(true); setTimeout(() => setCopied(false), 2000) }
+  const copy = () => {
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const platforms = [
-    { label: 'Instagram bio',   icon: '📸' },
-    { label: 'Email signature', icon: '✉️' },
-    { label: 'TikTok bio',      icon: '🎵' },
-    { label: 'Pitch deck',      icon: '📋' },
+    { label: 'Instagram', icon: <InstagramIcon /> },
+    { label: 'Email', icon: <EmailIcon /> },
+    { label: 'TikTok ', icon: <TikTokIcon /> },
+    { label: 'Pitch Deck', icon: <FileIcon /> },
   ]
+
   return (
-    <div style={{ maxWidth: 340, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div className="border-gradient-pm" style={{
-        borderRadius: 16, background: '#0a0612', padding: '20px',
-        boxShadow: '0 12px 40px rgba(128,97,255,0.18)',
+    <div style={{ maxWidth: 380, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Main link card – light background (white), gradient border */}
+      <div style={{
+        borderRadius: C.rLg,
+        background: C.bg,
+        padding: '24px',
+        boxShadow: C.shadowCard,
+        position: 'relative',
+        overflow: 'hidden',
+        border: `1px solid ${C.primaryBg}`,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{
-            flex: 1, background: 'rgba(128,97,255,0.12)', borderRadius: 10,
-            padding: '11px 14px', fontSize: 14, fontWeight: 700,
-            color: '#ff7ac3', letterSpacing: '-0.01em',
+            flex: 1,
+            background: C.primaryBg,
+            borderRadius: C.rSm,
+            padding: '12px 16px',
+            fontSize: 14,
+            fontWeight: 700,
+            color: C.primary,
+            letterSpacing: '-0.01em',
+            fontFamily: C.font,   // Rubik font
           }}>
-            nexfluence.co/<span style={{ color: '#fff' }}>yourname</span>
+            nexfluence.co/<span style={{ color: C.ink }}>creator</span>
           </div>
-          <button onClick={copy} style={{
-            background: copied ? 'rgba(128,97,255,0.3)' : 'linear-gradient(90deg,#ff33bc,#8061ff)',
-            border: 'none', borderRadius: 10, padding: '11px 16px',
-            color: '#fff', fontWeight: 700, fontSize: 13,
-            cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s ease',
-          }}>
-            {copied ? '✓' : 'Copy'}
+          <button
+            onClick={copy}
+            style={{
+              background: copied ? C.primaryBg : C.grad,
+              border: 'none',
+              borderRadius: C.rSm,
+              padding: '12px 20px',
+              color: copied ? C.primary : '#fff',
+              fontWeight: 700,
+              fontSize: 13,
+              fontFamily: C.font,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: copied ? 'none' : C.shadowSm,
+            }}
+          >
+            {copied ? 'Copied' : 'Copy link'}
           </button>
         </div>
+        <p style={{
+          color: C.inkDim,
+          fontSize: 12,
+          marginTop: 14,
+          textAlign: 'center',
+          fontFamily: C.font,
+        }}>
+          Your custom link — share it anywhere
+        </p>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+
+      {/* Platform cards – icon background removed, clean SVG icons */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         {platforms.map((p, i) => (
-          <div key={i} style={{
-            background: '#fff', borderRadius: 14, padding: '14px 16px',
-            border: '1px solid rgba(128,97,255,0.14)',
-            display: 'flex', alignItems: 'center', gap: 10,
-            boxShadow: '0 2px 12px rgba(128,97,255,0.06)',
-            animation: `float ${4.5 + i * 0.3}s ease-in-out infinite`,
-            animationDelay: `${i * 0.25}s`,
-          }}>
-            <span style={{ fontSize: 20 }}>{p.icon}</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#0a0612' }}>{p.label}</span>
+          <div
+            key={i}
+            style={{
+              background: C.bg,
+              borderRadius: C.rMd,
+              padding: '14px 16px',
+              border: `1px solid ${C.primaryBg}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              boxShadow: C.shadowSm,
+              transition: 'all 0.2s ease',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-3px)'
+              e.currentTarget.style.boxShadow = C.shadowMd
+              e.currentTarget.style.borderColor = C.primary
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = C.shadowSm
+              e.currentTarget.style.borderColor = C.primaryBg
+            }}
+          >
+            {/* Icon container – transparent background */}
+            <div style={{
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',   // removed background
+              color: C.primary,
+            }}>
+              {p.icon}
+            </div>
+            <span style={{ fontSize: 14, fontWeight: 600, color: C.ink, fontFamily: C.font }}>{p.label}</span>
           </div>
         ))}
       </div>
@@ -491,46 +642,96 @@ function LinkVisual() {
   )
 }
 
+/* ─── SVG Icons (clean, no emojis, inherit color) ───────────────────── */
+function InstagramIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/>
+    </svg>
+  )
+}
+
+function EmailIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="4" width="20" height="16" rx="2" ry="2" stroke="currentColor" strokeWidth="1.5" fill="none"/>
+      <polyline points="2,6 12,13 22,6" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function TikTokIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
+
+function FileIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="8" y1="13" x2="16" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      <line x1="8" y1="17" x2="12" y2="17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  )
+}
+
+/* ─── Social Proof Section with images (no italic) ───────────────────── */
 function SocialProof() {
   const { ref, visible } = useInView()
   const reviews = [
-    { name: 'Aisha N.',  role: 'Skincare Creator', text: '"Setup took 10 minutes and it already looks more pro than my Linktree."' },
-    { name: 'Jake M.',   role: 'Fitness Creator',  text: '"The custom domain made it feel like a real brand — because it is."' },
-    { name: 'Priya K.',  role: 'Fashion Creator',  text: '"I went from awkward DMs to a legit inquiry form overnight."' },
+    { name: 'Aisha N.', role: 'Skincare Creator', text: 'Setup took 10 minutes and it already looks more pro than my Linktree.', img: '/people/Cindy.webp' },
+    { name: 'Jake M.', role: 'Fitness Creator', text: 'The custom domain made it feel like a real brand — because it is.', img: '/people/Cindy.webp' },
+    { name: 'Priya K.', role: 'Fashion Creator', text: 'I went from awkward DMs to a legit inquiry form overnight.', img: '/people/Cindy.webp' },
   ]
   return (
-    <section ref={ref} style={{ padding: '80px 24px', background: '#f7f5ff' }}>
-      <div style={{ maxWidth: 960, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <span className="pill-label" style={{ justifyContent: 'center', marginBottom: 14, display: 'inline-flex' }}>Creators love it</span>
-          <h2 style={{ fontWeight: 900, fontSize: 'clamp(22px, 3.5vw, 30px)', letterSpacing: '-0.03em', color: '#0a0612' }}>
+    <section ref={ref} style={{ padding: '80px 24px', background: C.bgPage }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 56 }}>
+          <PillLabel>Creators love it</PillLabel>
+          <h2 style={{ fontWeight: 900, fontSize: 'clamp(28px, 4vw, 36px)', letterSpacing: '-0.03em', color: C.ink }}>
             Don't take our word for it
           </h2>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
           {reviews.map((r, i) => (
             <div key={i} style={{
-              background: '#fff', borderRadius: 20, padding: '24px',
-              border: '1px solid rgba(128,97,255,0.12)',
-              boxShadow: '0 4px 20px rgba(128,97,255,0.06)',
+              background: C.bg,
+              borderRadius: C.rLg,
+              padding: '28px',
+              border: `1px solid ${C.primaryBg}`,
+              boxShadow: C.shadowCard,
               opacity: visible ? 1 : 0,
               transform: visible ? 'translateY(0)' : 'translateY(24px)',
               transition: `opacity 0.5s ease ${i * 0.12}s, transform 0.5s ease ${i * 0.12}s`,
             }}>
-              <div style={{ display: 'flex', gap: 2, marginBottom: 12 }}>
-                {[...Array(5)].map((_, s) => <span key={s} style={{ color: '#ff33bc', fontSize: 14 }}>★</span>)}
+              <div style={{ display: 'flex', gap: 3, marginBottom: 16 }}>
+                {[...Array(5)].map((_, s) => <span key={s} style={{ color: C.primaryLt, fontSize: 14 }}>★</span>)}
               </div>
-              <p style={{ color: 'rgba(10,6,18,0.70)', fontSize: 14, lineHeight: 1.75, fontStyle: 'italic', marginBottom: 16 }}>{r.text}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <p style={{ color: C.inkDim2, fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
+                "{r.text}"
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{
-                  width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
-                  background: 'linear-gradient(135deg, #ff33bc, #8061ff)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 800, fontSize: 13, color: '#fff',
-                }}>{r.name[0]}</div>
+                  width: 40, height: 40, borderRadius: '50%', overflow: 'hidden',
+                  background: 'transparent',
+                  flexShrink: 0,
+                }}>
+                  <img
+                    src={r.img}
+                    alt={r.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => { e.currentTarget.style.display = 'none' }}
+                  />
+                </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: '#0a0612' }}>{r.name}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(10,6,18,0.40)' }}>{r.role}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: C.ink }}>{r.name}</div>
+                  <div style={{ fontSize: 12, color: C.inkDim }}>{r.role}</div>
                 </div>
               </div>
             </div>
