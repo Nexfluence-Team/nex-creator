@@ -1,16 +1,32 @@
+/* Font @import MUST come first — before @import "tailwindcss" — because
+   Turbopack expands the Tailwind import inline, and CSS requires every
+   @import to precede all other rules. */
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 /* ─── Brand palette (Nexfluence design system) ───────────────────────────────
-   Only these five values are used anywhere on the page.
-   Tailwind v4: --color-* → bg-*, text-*, border-* utilities auto-generated. */
+   Tailwind v4: every --color-* auto-generates bg-*, text-*, border-* utilities
+   plus opacity modifiers (text-ink/50, border-primary/15, …). */
 @theme {
+  /* Original tokens */
   --color-ink:     #0a0612;
   --color-pink:    #ff7ac3;
   --color-magenta: #ff33bc;
   --color-violet:  #8061ff;
   --color-indigo:  #6a66ff;
 
-  --font-rubik: var(--font-rubik), sans-serif;
+  /* v4 light-theme tokens (used by CreatorProfile.tsx)
+     NOTE: background token is `canvas` (NOT bg-page) so the utility is a clean
+     `bg-canvas` — `bg-bg-page` was ambiguous and silently failed to paint. */
+  --color-primary:      #8b31e8;
+  --color-primary-lt:   #b44af0;
+  --color-canvas:       #f8f7ff;
+  --color-surface:      #ffffff;
+  --color-surface-sub:  #f5f3ff;
+  --color-surface-card: #ede9ff;
+
+  /* Concrete Rubik stack (was self-referential before, which broke the font) */
+  --font-rubik: 'Rubik', sans-serif;
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */
@@ -18,16 +34,29 @@
 
 html { scroll-behavior: smooth; }
 
+/* LIGHT body so the portfolio never shows dark bleed on overscroll / first paint.
+   If you keep dark pages, give each dark page's root its own bg-ink wrapper
+   rather than relying on the body. */
 body {
   margin: 0;
-  background: #0a0612;
-  color: #ffffff;
-  font-family: var(--font-rubik), sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-rubik);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
+
+/* ─── Keyframes ──────────────────────────────────────────────────────────── */
+@keyframes marquee { to { transform: translateX(-50%); } }
+@keyframes float   { 0%,100% { transform: translate(0,0); } 50% { transform: translate(0,-26px); } }
+@keyframes rise    { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform:none; } }
 
 /* ─── Custom utilities ───────────────────────────────────────────────────── */
 @layer utilities {
+
+  .animate-marquee    { animation: marquee 28s linear infinite; }
+  .animate-float      { animation: float 9s ease-in-out infinite; }
+  .animate-float-slow { animation: float 13s ease-in-out infinite; }
 
   /* Gradient border helper — wraps a card in a 1px gradient ring */
   .border-gradient-pm {
@@ -50,39 +79,21 @@ body {
     z-index: 0;
   }
 
-  /* Dashed accent border — used for the hotel imagery placeholder */
   .border-dashed-accent {
     border: 2px dashed rgba(255, 122, 195, 0.5);
     border-radius: 12px;
   }
 
-  /* Pill label — small uppercase section labels */
   .pill-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #ff7ac3;
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.18em;
+    text-transform: uppercase; color: #ff7ac3;
   }
-  .pill-label::before {
-    content: "";
-    display: block;
-    width: 20px;
-    height: 1px;
-    background: #ff7ac3;
-  }
+  .pill-label::before { content: ""; display: block; width: 20px; height: 1px; background: #ff7ac3; }
 
-  /* Dot pulse — live / active indicator */
   .dot-live {
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    border-radius: 9999px;
-    background: #ff33bc;
-    box-shadow: 0 0 0 0 rgba(255, 51, 188, 0.5);
+    display: inline-block; width: 7px; height: 7px; border-radius: 9999px;
+    background: #ff33bc; box-shadow: 0 0 0 0 rgba(255, 51, 188, 0.5);
     animation: dot-pulse 1.8s ease-out infinite;
   }
   @keyframes dot-pulse {
@@ -91,25 +102,16 @@ body {
     100% { box-shadow: 0 0 0 0 rgba(255, 51, 188, 0); }
   }
 
-  /* CTA button — magenta fill */
   .btn-apply {
-    display: block;
-    width: 100%;
-    padding: 14px 24px;
-    border-radius: 8px;
-    background: linear-gradient(90deg, #ff33bc, #8061ff);
-    color: #ffffff;
-    font-family: var(--font-rubik), sans-serif;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-align: center;
-    border: none;
-    cursor: pointer;
+    display: block; width: 100%; padding: 14px 24px; border-radius: 8px;
+    background: linear-gradient(90deg, #ff33bc, #8061ff); color: #ffffff;
+    font-family: var(--font-rubik); font-size: 15px; font-weight: 700;
+    letter-spacing: 0.04em; text-align: center; border: none; cursor: pointer;
     transition: opacity 0.2s ease, transform 0.2s ease;
   }
-  .btn-apply:hover {
-    opacity: 0.9;
-    transform: translateY(-1px);
-  }
+  .btn-apply:hover { opacity: 0.9; transform: translateY(-1px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee, .animate-float, .animate-float-slow { animation: none; }
 }
