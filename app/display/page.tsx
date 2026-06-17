@@ -10,22 +10,33 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 const CARD = 'shadow-[0_1px_2px_rgba(10,6,18,0.04),0_12px_32px_-12px_rgba(139,49,232,0.16)]'
 const CARD_HOVER = 'hover:shadow-[0_2px_6px_rgba(10,6,18,0.05),0_24px_56px_-16px_rgba(139,49,232,0.30)]'
 
-/* ════════════════════════════════════════════════════════════════════
-   ★★★  YOUR MEDIA GOES HERE  ★★★
-   ────────────────────────────────────────────────────────────────────
-   1. Cover + avatar → CREATOR.coverUrl / CREATOR.avatarUrl below.
-   2. Photos        → PHOTOS array: set each `src` to your image URL.
-   3. Collaborations → COLLABORATIONS array: each has video + details.
-   Anything left as '' shows a labelled placeholder, so the layout never breaks.
-   ════════════════════════════════════════════════════════════════════ */
+/*
+  GRADIENT TOKEN — single source of truth.
+  Text gradient:   className="bg-gradient-to-r from-primary via-primary-lt to-magenta bg-clip-text text-transparent"
+  Button gradient: className="bg-gradient-to-r from-primary via-primary-lt to-magenta"
+  Both share identical stops so they always match.
+*/
+const GRAD_BTN = 'bg-gradient-to-r from-primary via-primary-lt to-magenta'
+const GRAD_TEXT = 'bg-gradient-to-r from-primary via-primary-lt to-magenta bg-clip-text text-transparent'
+
 const CREATOR = {
   name: 'Amelia Roze', firstName: 'Amelia', initials: 'AR',
   location: 'Riga, Latvia',
   bio: "I'm a beauty & lifestyle creator who turns everyday rituals into content that sells. My videos feel like a friend's recommendation, not an ad — which is exactly why my audience acts on them. I work with brands that care about real engagement, not vanity reach.",
   genres: ['Beauty', 'Skincare', 'Lifestyle', 'Wellness'],
-  coverUrl: '/test/images/Header.png',   // ← cover / banner image
-  avatarUrl: '/test/images/Harshul.png',  // ← profile photo (shown as a square)
+  coverUrl: '/test/images/Header.png',
+  avatarUrl: '/test/images/Harshul.png',
 }
+
+/* ─── Exclusive Brand Deals ─────────────────────────────────────────
+   Add any exclusive / long-term brand partnerships here.
+   `exclusive: true` renders the "Exclusive Partner" badge.
+   `category` is the niche (e.g. "Energy Drinks", "Skincare").        */
+const EXCLUSIVE_DEALS = [
+  { id: 'ed1', brand: 'Red Bull', category: 'Energy Drinks', since: '2023', logoText: 'Red Bull', exclusive: true, color: '#E8112D' },
+  { id: 'ed2', brand: 'Glossé', category: 'Lip Care', since: '2024', logoText: 'Glossé', exclusive: false, color: '#8B31E8' },
+]
+
 const STATS = [
   { to: 142, dec: 0, suffix: 'K', label: 'Combined reach' },
   { to: 6.8, dec: 1, suffix: '%', label: 'Avg engagement' },
@@ -36,12 +47,11 @@ const DEMOGRAPHICS = {
   audience: '142K',
   primaryGender: { value: '78%', label: 'Female audience' },
   primaryAge: { value: '25–34', label: 'Primary age group' },
-  primaryLocation: { value: 'Latvia', label: 'Top location · 64%' },
+  primaryLocation: { value: 'Latvia', label: 'Top location · 64%', flagCode: 'lv' },
   talkAbout: "I create honest beauty and skincare content — morning routines, product results filmed over real time, and lifestyle vlogs from around Riga. My audience trusts me because I only feature what I'd actually rebuy, so when I recommend something, they act on it.",
 }
 const BRANDS = ['Lumora', 'Kinetics', 'Glossé', 'Nordic Skin', 'Bēta Beauty', 'Aura Labs']
 
-/* PHOTO BENTO — 7 tiles, tiles a 4-col grid perfectly (no gaps). */
 const PHOTOS = [
   { id: 'p1', src: '/test/images/Lecture.png', cls: 'col-span-2 md:col-span-2 md:row-span-2' },
   { id: 'p2', src: '/test/images/Listening.png', cls: 'col-span-2 md:col-span-2 md:row-span-1' },
@@ -52,7 +62,6 @@ const PHOTOS = [
   { id: 'p7', src: '/test/images/Kinetics-phone.png', cls: 'col-span-2 md:col-span-2' },
 ]
 
-/* COLLABORATIONS — each video gets a full card with description */
 const COLLABORATIONS = [
   {
     id: 'c1',
@@ -63,26 +72,44 @@ const COLLABORATIONS = [
     result: '3.2x ROAS, 5.8K units sold in first week',
     videoSrc: '/test/video/Drink.mp4',
     insight: 'Authentic storytelling outperformed polished ads – this campaign proved it. The raw, unfiltered shots drove 78% more engagement than our previous studio‑produced content.',
+    metrics: [
+      { icon: 'eye', label: 'Views', value: '1.2M' },
+      { icon: 'heart', label: 'Engagement', value: '8.4%' },
+      { icon: 'cart', label: 'ROAS', value: '3.2×' },
+      { icon: 'share', label: 'Shares', value: '14.2K' },
+    ],
   },
   {
     id: 'c2',
     brand: 'Lumora Skincare',
     title: 'Morning ritual with Lumora',
-    description: 'A get‑ready‑with‑me style video that naturally integrated Lumora’s moisturiser into my daily routine. No hard sell — just honest use.',
+    description: 'A get‑ready‑with‑me style video that naturally integrated Lumoras moisturiser into my daily routine. No hard sell — just honest use.',
     target: 'Skincare enthusiasts looking for hydration',
     result: '2.1M views, 14% engagement rate',
     videoSrc: '/test/video/Food.mp4',
     insight: 'Showing the product in a real, messy morning routine made it feel accessible. DMs were flooded with "where can I buy this?" within hours.',
+    metrics: [
+      { icon: 'eye', label: 'Views', value: '2.1M' },
+      { icon: 'heart', label: 'Engagement', value: '14%' },
+      { icon: 'users', label: 'New followers', value: '+8.3K' },
+      { icon: 'message', label: 'DMs', value: '2.1K' },
+    ],
   },
   {
     id: 'c3',
     brand: 'Glossé',
     title: 'Lip gloss layering hack',
-    description: 'We showed how to achieve a plump, glossy look using Glossé’s new lip oil. The video went viral on TikTok within 48 hours.',
+    description: 'We showed how to achieve a plump, glossy look using Glossés new lip oil. The video went viral on TikTok within 48 hours.',
     target: 'Gen Z and millennials, beauty lovers',
     result: '4.5M views, 22K shares, 8.2K conversions',
     videoSrc: '/test/video/People.mp4',
     insight: 'TikTok users love hacks. By framing it as a "discovery" rather than a promo, we hit the algorithm sweet spot and gained 12K new followers from this single post.',
+    metrics: [
+      { icon: 'eye', label: 'Views', value: '4.5M' },
+      { icon: 'share', label: 'Shares', value: '22K' },
+      { icon: 'cart', label: 'Conversions', value: '8.2K' },
+      { icon: 'users', label: 'New followers', value: '+12K' },
+    ],
   },
 ]
 
@@ -95,15 +122,182 @@ const TESTIMONIALS = [
 const BUDGETS = ['Under €350', '€350–€890', '€890–€2,500', '€2,500+', 'Affiliate only', 'Not sure yet']
 
 /* ─── Icons ─────────────────────────────────────────────────────────────── */
-const Sparkle = ({ s = 16 }: { s?: number }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.2L21 9l-5 4.3L17.6 21 12 17.2 6.4 21 8 13.3 3 9l6.6-.8L12 2z" /></svg>
-const Check = ({ s = 16 }: { s?: number }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-const Play = ({ s = 18 }: { s?: number }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-const Pin = ({ s = 15 }: { s?: number }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z" stroke="currentColor" strokeWidth="1.6" /><circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.6" /></svg>
-const SOCIAL: Record<string, ReactNode> = {
-  instagram: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5.5" stroke="currentColor" strokeWidth="1.6" /><circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="1.6" /><circle cx="17.4" cy="6.6" r="1.3" fill="currentColor" /></svg>,
-  tiktok: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 12a4 4 0 104 4V4a5 5 0 005 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>,
-  youtube: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="4" stroke="currentColor" strokeWidth="1.6" /><path d="M10 9l5 3-5 3V9z" fill="currentColor" /></svg>,
+const Sparkle = ({ s = 16 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2l2.4 6.2L21 9l-5 4.3L17.6 21 12 17.2 6.4 21 8 13.3 3 9l6.6-.8L12 2z" />
+  </svg>
+)
+const Check = ({ s = 16 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <path d="M5 12l4 4 10-10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+const Play = ({ s = 18 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+)
+const Pin = ({ s = 15 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z" stroke="currentColor" strokeWidth="1.6" />
+    <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+  </svg>
+)
+
+/* Bento card top-right icons */
+const EyeIcon = ({ s = 16 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
+  </svg>
+)
+const PersonFemaleIcon = ({ s = 16 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.7" />
+    <path d="M5.5 21v-2a6.5 6.5 0 0113 0v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M12 14v4M10 16h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+  </svg>
+)
+const AgeIcon = ({ s = 16 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="4" width="18" height="17" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
+    <path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M8 14h4M8 17h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+)
+const FollowersIcon = ({ s = 16 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <circle cx="9" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.7" />
+    <path d="M2 20v-1.5a7 7 0 0114 0V20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M16 11a3.5 3.5 0 010-7M22 20v-1.5a7 7 0 00-5-6.7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+  </svg>
+)
+
+/* Metric card icons */
+const MetricEyeIcon = ({ s = 18 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+  </svg>
+)
+const HeartIcon = ({ s = 18 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+const CartIcon = ({ s = 18 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+const ShareIcon = ({ s = 18 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <circle cx="18" cy="5" r="3" stroke="currentColor" strokeWidth="1.8" />
+    <circle cx="6" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+    <circle cx="18" cy="19" r="3" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M8.6 10.7l6.8-4M8.6 13.3l6.8 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+)
+const UsersIcon = ({ s = 18 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M2 20v-1a7 7 0 0114 0v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M16 11a3 3 0 000-6M22 20v-1a7 7 0 00-5-6.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+)
+const MessageIcon = ({ s = 18 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+function MetricIcon({ name, s = 18 }: { name: string; s?: number }) {
+  switch (name) {
+    case 'eye': return <MetricEyeIcon s={s} />
+    case 'heart': return <HeartIcon s={s} />
+    case 'cart': return <CartIcon s={s} />
+    case 'share': return <ShareIcon s={s} />
+    case 'users': return <UsersIcon s={s} />
+    case 'message': return <MessageIcon s={s} />
+    default: return <MetricEyeIcon s={s} />
+  }
 }
+
+/* Social icons — expanded set */
+const SOCIAL_LINKS: { key: string; label: string; href: string; icon: ReactNode }[] = [
+  {
+    key: 'instagram', label: 'Instagram', href: '#',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="2" width="20" height="20" rx="5.5" stroke="currentColor" strokeWidth="1.6" />
+        <circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="1.6" />
+        <circle cx="17.4" cy="6.6" r="1.3" fill="currentColor" />
+      </svg>
+    ),
+  },
+  {
+    key: 'tiktok', label: 'TikTok', href: '#',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M9 12a4 4 0 104 4V4a5 5 0 005 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    key: 'youtube', label: 'YouTube', href: '#',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="5" width="20" height="14" rx="4" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M10 9l5 3-5 3V9z" fill="currentColor" />
+      </svg>
+    ),
+  },
+  {
+    key: 'snapchat', label: 'Snapchat', href: '#',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2C8.5 2 7 4.5 7 7v1.5c-.8.3-1.5.5-2 .5-.3 0-.5.2-.5.5 0 .8.8 1.5 2 1.8-.2.4-.5.7-.8.7-.2 0-.4.1-.4.3 0 .4.6.9 1.5 1.2.3.7.8 1.5 2.7 1.5.2 0 .4 0 .5.1l1 1.5 1-1.5c.1-.1.3-.1.5-.1 1.9 0 2.4-.8 2.7-1.5.9-.3 1.5-.8 1.5-1.2 0-.2-.2-.3-.4-.3-.3 0-.6-.3-.8-.7 1.2-.3 2-1 2-1.8 0-.3-.2-.5-.5-.5-.5 0-1.2-.2-2-.5V7c0-2.5-1.5-5-5-5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    key: 'twitter', label: 'Twitter / X', href: '#',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <path d="M4 4l16 16M4 20L20 4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    key: 'linkedin', label: 'LinkedIn', href: '#',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="2" width="20" height="20" rx="4" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M7 10v7M7 7v.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M12 17v-4a2 2 0 014 0v4M12 10v7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    key: 'facebook', label: 'Facebook', href: '#',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M13 21v-8h2.5l.5-3H13V8.5C13 7.7 13.4 7 14.5 7H16V4.5S15 4 13.5 4C11 4 10 5.7 10 7.5V10H7.5v3H10v8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    key: 'website', label: 'Website', href: '#',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M12 2c-2.8 3-4 6-4 10s1.2 7 4 10M12 2c2.8 3 4 6 4 10s-1.2 7-4 10M2 12h20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+]
 
 /* ─── Reveal-on-scroll ──────────────────────────────────────────────── */
 function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; delay?: number; className?: string }) {
@@ -116,7 +310,11 @@ function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; 
     io.observe(el)
     return () => io.disconnect()
   }, [])
-  return <div ref={ref} style={{ transitionDelay: `${delay}ms` }} className={`transition-all duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'} ${className}`}>{children}</div>
+  return (
+    <div ref={ref} style={{ transitionDelay: `${delay}ms` }} className={`transition-all duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'} ${className}`}>
+      {children}
+    </div>
+  )
 }
 
 /* ─── Animated stat ─────────────────────────────────────────────────── */
@@ -139,13 +337,16 @@ function Stat({ to, dec, suffix, label }: { to: number; dec: number; suffix: str
   }, [to])
   return (
     <div ref={ref} className="relative px-2 py-3 text-center">
-      <div className="text-[clamp(28px,4.2vw,42px)] font-black leading-none tracking-[-0.045em] text-ink">{val.toFixed(dec)}<span className="bg-gradient-to-r from-primary to-magenta bg-clip-text text-transparent">{suffix}</span></div>
+      <div className="text-[clamp(28px,4.2vw,42px)] font-black leading-none tracking-[-0.045em] text-ink">
+        {val.toFixed(dec)}
+        <span className={`${GRAD_TEXT}`}>{suffix}</span>
+      </div>
       <div className="mt-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/45">{label}</div>
     </div>
   )
 }
 
-/* ─── Section head — symmetric, human kicker (no one-sided AI line) ──── */
+/* ─── Section head ──────────────────────────────────────────────────── */
 function SectionHead({ kicker, children, sub, className = '' }: { kicker: string; children: ReactNode; sub?: string; className?: string }) {
   return (
     <Reveal className={`text-center ${className}`}>
@@ -159,8 +360,25 @@ function SectionHead({ kicker, children, sub, className = '' }: { kicker: string
     </Reveal>
   )
 }
-/* gradient keyword helper for headings */
-const G = ({ children }: { children: ReactNode }) => <span className="bg-gradient-to-r from-primary via-primary-lt to-magenta bg-clip-text text-transparent">{children}</span>
+
+/* Gradient keyword helper — matches the button gradient exactly */
+const G = ({ children }: { children: ReactNode }) => (
+  <span className={GRAD_TEXT}>{children}</span>
+)
+
+/* ─── Country flag helper (using flagcdn.com) ───────────────────────── */
+function CountryFlag({ code, className = '' }: { code: string; className?: string }) {
+  return (
+    <img
+      src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`}
+      srcSet={`https://flagcdn.com/w80/${code.toLowerCase()}.png 2x`}
+      alt={code.toUpperCase()}
+      className={`inline-block rounded-[4px] object-cover ${className}`}
+      width={28}
+      height={18}
+    />
+  )
+}
 
 /* ════════════════════════════════════════════════════════════════════
    PAGE
@@ -179,7 +397,7 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-canvas font-rubik text-ink antialiased">
 
-         {/* ════════ HEADER: cover + nav + square avatar ════════ */}
+      {/* ════════ HEADER: cover + nav + square avatar ════════ */}
       <header className="relative">
         <div
           className="relative h-[260px] w-full overflow-hidden bg-gradient-to-br from-primary/30 via-primary-lt/25 to-magenta/30 sm:h-[320px] md:h-[360px]"
@@ -187,11 +405,10 @@ export default function Page() {
         >
           {!c.coverUrl && <span className="absolute inset-0 flex items-center justify-center text-[13px] font-semibold uppercase tracking-[0.2em] text-white/55">Cover image</span>}
           <div className="absolute inset-0 bg-gradient-to-b from-ink/10 via-transparent to-canvas/30" />
- 
-          {/* Brand line sits ABOVE the bar; the bar holds only the 4 links */}
+
           <div className="absolute inset-x-0 top-0 z-30 flex flex-col items-center px-4 pt-5">
             <div className="mb-3 flex items-center gap-2.5 [text-shadow:0_1px_8px_rgba(255,255,255,0.5)]">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary via-primary-lt to-magenta text-white shadow-[0_4px_12px_-2px_rgba(139,49,232,0.5)]"><Sparkle s={14} /></span>
+              <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${GRAD_BTN} text-white shadow-[0_4px_12px_-2px_rgba(139,49,232,0.5)]`}><Sparkle s={14} /></span>
               <span className="text-[15px] font-extrabold tracking-[-0.01em] text-ink">It's me, {c.firstName}</span>
             </div>
             <nav className="flex w-full max-w-[520px] items-center justify-center gap-1 rounded-xl border border-white/40 bg-white/80 px-3 py-2.5 shadow-[0_8px_28px_-8px_rgba(10,6,18,0.25)] backdrop-blur-xl sm:gap-2">
@@ -199,22 +416,64 @@ export default function Page() {
             </nav>
           </div>
         </div>
- 
+
         {/* SQUARE AVATAR — half on cover */}
         <div className="mx-auto -mt-20 flex max-w-[1080px] flex-col items-center px-6 sm:-mt-24">
-          <div className="relative z-20 h-36 w-36 overflow-hidden rounded-2xl border-4 border-canvas bg-gradient-to-br from-primary-lt via-primary to-magenta shadow-[0_16px_44px_-12px_rgba(139,49,232,0.45)] sm:h-44 sm:w-44"
-            style={c.avatarUrl ? { backgroundImage: `url(${c.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
+          <div
+            className={`relative z-20 h-36 w-36 overflow-hidden rounded-2xl border-4 border-canvas ${GRAD_BTN} shadow-[0_16px_44px_-12px_rgba(139,49,232,0.45)] sm:h-44 sm:w-44`}
+            style={c.avatarUrl ? { backgroundImage: `url(${c.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+          >
             {!c.avatarUrl && <span className="flex h-full w-full items-center justify-center text-5xl font-black text-white">{c.initials}</span>}
             <span className="absolute bottom-2 left-2 rounded-md bg-green-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">Open</span>
           </div>
           <h1 className="mt-5 text-[clamp(34px,6vw,56px)] font-black leading-none tracking-[-0.045em] text-ink">{c.name}</h1>
           <p className="mt-3 inline-flex items-center gap-1.5 text-[15px] font-medium text-ink/60"><span className="text-primary"><Pin /></span>Based in {c.location}</p>
-          <div className="mt-5 flex gap-3">
-            {Object.entries(SOCIAL).map(([k, icon]) => <a key={k} href="#" aria-label={k} className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/12 bg-white text-primary transition hover:-translate-y-1 hover:border-transparent hover:bg-gradient-to-br hover:from-primary hover:to-primary-lt hover:text-white hover:shadow-[0_12px_28px_-8px_rgba(139,49,232,0.4)]">{icon}</a>)}
+
+          {/* Social icons row — expanded set */}
+          <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+            {SOCIAL_LINKS.map(s => (
+              <a
+                key={s.key}
+                href={s.href}
+                aria-label={s.label}
+                title={s.label}
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/12 bg-white text-primary transition hover:-translate-y-1 hover:border-transparent hover:bg-gradient-to-br hover:from-primary hover:to-primary-lt hover:text-white hover:shadow-[0_12px_28px_-8px_rgba(139,49,232,0.4)]"
+              >
+                {s.icon}
+              </a>
+            ))}
           </div>
+
+          {/* ── EXCLUSIVE BRAND DEALS ── */}
+          {EXCLUSIVE_DEALS.length > 0 && (
+            <div className="mt-7 w-full max-w-[680px]">
+              <p className="mb-3 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-ink/35">Brand partnerships</p>
+              <div className="flex flex-wrap justify-center gap-3">
+                {EXCLUSIVE_DEALS.map(deal => (
+                  <div
+                    key={deal.id}
+                    className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 ${CARD} transition hover:-translate-y-0.5 ${deal.exclusive ? 'border-primary/25 bg-white' : 'border-primary/10 bg-white'}`}
+                  >
+                    {deal.exclusive && (
+                      <span className={`rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] ${GRAD_BTN} text-white`}>
+                        Exclusive
+                      </span>
+                    )}
+                    <span
+                      className="text-[14px] font-extrabold tracking-[-0.02em]"
+                      style={{ color: deal.color }}
+                    >
+                      {deal.logoText}
+                    </span>
+                    <span className="text-[11px] text-ink/40">{deal.category}</span>
+                    <span className="text-[10px] font-medium text-ink/30">Since {deal.since}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </header>
- 
 
       {/* ════════ ABOUT ════════ */}
       <section id="about" className="py-16">
@@ -222,7 +481,12 @@ export default function Page() {
           <SectionHead kicker="Nice to meet you">The person <G>behind the feed</G></SectionHead>
           <Reveal delay={80}>
             <p className="mt-6 text-[clamp(16px,2vw,18px)] leading-[1.85] text-ink/70">{c.bio}</p>
-            <button onClick={() => setModal('message')} className="mt-7 rounded-lg bg-gradient-to-r from-primary to-primary-lt px-8 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_28px_-8px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5">Contact me</button>
+            <button
+              onClick={() => setModal('message')}
+              className={`mt-7 rounded-lg ${GRAD_BTN} px-8 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_28px_-8px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5`}
+            >
+              Contact me
+            </button>
             <div className="mt-7 flex flex-wrap justify-center gap-2.5">
               {c.genres.map(g => <span key={g} className="rounded-lg border border-primary/15 bg-white px-4 py-2 text-[13px] font-semibold text-primary">{g}</span>)}
             </div>
@@ -230,7 +494,7 @@ export default function Page() {
         </div>
       </section>
 
-      {/* brands */}
+      {/* brands marquee */}
       <Reveal className="pb-6 text-center">
         <p className="mb-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink/35">Trusted by brands across the Baltics</p>
         <div className="relative overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_14%,#000_86%,transparent)]">
@@ -251,28 +515,62 @@ export default function Page() {
             </div>
           </Reveal>
 
-          {/* demographics bento — varied sizes, fully tiled */}
+          {/* demographics bento */}
           <div className="mt-5 grid auto-rows-[minmax(120px,auto)] grid-cols-2 gap-4 md:grid-cols-4">
+            {/* "What I talk about" — spans 2 cols × 2 rows, no corner icon */}
             <Reveal className="col-span-2 row-span-2 md:col-span-2">
               <div className={`flex h-full flex-col rounded-2xl border border-primary/10 bg-white p-7 ${CARD}`}>
                 <span className="mb-3 inline-flex w-fit items-center gap-2 rounded-lg bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">What I talk about</span>
                 <p className="text-[15px] leading-[1.8] text-ink/70">{DEMOGRAPHICS.talkAbout}</p>
               </div>
             </Reveal>
-            <BentoStat delay={60} value={DEMOGRAPHICS.primaryGender.value} label={DEMOGRAPHICS.primaryGender.label} />
-            <BentoStat delay={120} value={DEMOGRAPHICS.primaryAge.value} label={DEMOGRAPHICS.primaryAge.label} />
-            <BentoStat delay={180} value={DEMOGRAPHICS.audience} label="Total followers" />
-            <BentoStat delay={240} value={DEMOGRAPHICS.primaryLocation.value} label={DEMOGRAPHICS.primaryLocation.label} />
+
+            {/* Gender — person icon */}
+            <BentoStat
+              delay={60}
+              value={DEMOGRAPHICS.primaryGender.value}
+              label={DEMOGRAPHICS.primaryGender.label}
+              topRightIcon={<PersonFemaleIcon s={15} />}
+            />
+
+            {/* Age — calendar icon */}
+            <BentoStat
+              delay={120}
+              value={DEMOGRAPHICS.primaryAge.value}
+              label={DEMOGRAPHICS.primaryAge.label}
+              topRightIcon={<AgeIcon s={15} />}
+            />
+
+            {/* Total followers — eye icon */}
+            <BentoStat
+              delay={180}
+              value={DEMOGRAPHICS.audience}
+              label="Total followers"
+              topRightIcon={<EyeIcon s={15} />}
+            />
+
+            {/* Location — actual flag */}
+            <BentoStat
+              delay={240}
+              value={DEMOGRAPHICS.primaryLocation.value}
+              label={DEMOGRAPHICS.primaryLocation.label}
+              topRightIcon={
+                <CountryFlag
+                  code={DEMOGRAPHICS.primaryLocation.flagCode}
+                  className="h-[14px] w-[22px]"
+                />
+              }
+            />
           </div>
         </div>
       </section>
 
-      {/* ════════ WORK: photo bento + iPhone reels (now carousel) ════════ */}
+      {/* ════════ WORK: photo bento + iPhone reels (carousel) ════════ */}
       <section id="work" className="py-20">
         <div className="mx-auto max-w-[1080px] px-6">
           <SectionHead kicker="My work" className="mb-10">Photos <span className="font-light text-ink/35">&amp;</span> <G>reels</G></SectionHead>
 
-          {/* PHOTO BENTO — perfectly tiled. Set each photo's `src` in PHOTOS above. */}
+          {/* PHOTO BENTO */}
           <div className="grid auto-rows-[150px] grid-cols-2 gap-3 sm:auto-rows-[170px] md:grid-cols-4">
             {PHOTOS.map((p, i) => (
               <Reveal key={p.id} delay={(i % 4) * 60} className={p.cls}>
@@ -285,7 +583,7 @@ export default function Page() {
             ))}
           </div>
 
-          {/* CAROUSEL — one collaboration card at a time, with arrows */}
+          {/* CAROUSEL */}
           <Reveal className="mt-12">
             <CollaborationCarousel collaborations={COLLABORATIONS} />
           </Reveal>
@@ -300,55 +598,35 @@ export default function Page() {
           </SectionHead>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {/* Affiliate – highlighted as most popular */}
             <WorkModel
               delay={0}
               name="Affiliate / Revenue Share"
               price="10–20%"
               priceLabel="per sale"
               icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-              features={[
-                'Lower or zero upfront',
-                'Earn a cut of every sale',
-                'Incentives fully aligned',
-                'Trackable codes & links',
-              ]}
+              features={['Lower or zero upfront', 'Earn a cut of every sale', 'Incentives fully aligned', 'Trackable codes & links']}
               description="My favourite model. I only win when you do."
               popular={true}
               onChoose={() => setModal('inquiry')}
             />
-
-            {/* Paid campaigns */}
             <WorkModel
               delay={90}
               name="Paid Campaigns"
               price="From €350"
               priceLabel="per video"
               icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="6" width="19" height="12" rx="2.5" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="2" /></svg>}
-              features={[
-                'Flat fee per deliverable',
-                'You brief, I produce',
-                'Full usage rights included',
-                'Fast turnaround',
-              ]}
+              features={['Flat fee per deliverable', 'You brief, I produce', 'Full usage rights included', 'Fast turnaround']}
               description="Straightforward, predictable pricing."
               popular={false}
               onChoose={() => setModal('inquiry')}
             />
-
-            {/* Barter / Gifting */}
             <WorkModel
               delay={180}
               name="Barter / Gifting"
               price="€120+"
               priceLabel="product value"
               icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M4 8l4-4 4 4M20 16l-4 4-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 4v9a3 3 0 003 3h2M16 20v-9a3 3 0 00-3-3h-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>}
-              features={[
-                'Product-for-content exchange',
-                'Select premium items only',
-                'I genuinely use what I promote',
-                'Limited spots available',
-              ]}
+              features={['Product-for-content exchange', 'Select premium items only', 'I genuinely use what I promote', 'Limited spots available']}
               description="For brands with products I'd honestly love."
               popular={false}
               onChoose={() => setModal('inquiry')}
@@ -368,7 +646,7 @@ export default function Page() {
                   <div className="mb-4 flex gap-0.5 text-primary">{'★★★★★'.slice(0, t.rating)}</div>
                   <p className="text-[15px] leading-[1.85] text-ink/75">{t.quote}</p>
                   <div className="mt-5 flex items-center gap-3 border-t border-primary/10 pt-4">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary-lt text-[15px] font-extrabold text-white">{t.name[0]}</div>
+                    <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${GRAD_BTN} text-[15px] font-extrabold text-white`}>{t.name[0]}</div>
                     <div><div className="text-[13.5px] font-bold text-ink">{t.name}</div><div className="mt-0.5 text-xs text-ink/50">{t.role}</div></div>
                   </div>
                 </div>
@@ -385,22 +663,66 @@ export default function Page() {
           <h2 className="text-[clamp(30px,5vw,46px)] font-black leading-[1.08] tracking-[-0.04em] text-white">Let's make something that sells.</h2>
           <p className="mb-8 mt-4 text-base leading-[1.7] text-white/55">Tell me about your product and your goal. One message — I reply within 48 hours.</p>
           <div className="flex flex-wrap justify-center gap-3">
-            <button onClick={() => setModal('inquiry')} className="rounded-lg bg-gradient-to-r from-primary to-primary-lt px-8 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_28px_-8px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5">Work with me</button>
+            <button onClick={() => setModal('inquiry')} className={`rounded-lg ${GRAD_BTN} px-8 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_28px_-8px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5`}>Work with me</button>
             <button onClick={() => setModal('message')} className="rounded-lg border-[1.5px] border-white/25 px-8 py-3.5 text-[15px] font-bold text-white transition hover:-translate-y-0.5 hover:border-white hover:bg-white/[0.06]">Send a message</button>
           </div>
         </Reveal>
       </section>
 
-      {/* ════════ FOOTER ════════ */}
-      <footer className="bg-ink px-6 pb-16 pt-14 text-center">
-        <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary via-primary-lt to-magenta text-white"><Sparkle s={20} /></div>
-        <p className="text-[13px] font-medium text-white/55">Promoted on Nexus by Nexfluence</p>
-        <a href="/authenticate" className="mt-3 inline-block text-[13px] font-semibold text-primary-lt underline-offset-4 hover:underline">Create your own creator profile</a>
+      {/* ════════ FOOTER — avatar left + text/CTA right ════════ */}
+      <footer className="bg-ink px-6 pb-16 pt-14">
+        <div className="mx-auto max-w-[900px]">
+          <div className="flex flex-col items-center gap-10 sm:flex-row sm:items-center sm:gap-14">
+
+            {/* Left: creator avatar */}
+            <div className="flex-shrink-0">
+              <div
+                className="h-40 w-40 overflow-hidden rounded-2xl border-4 border-white/10 shadow-[0_20px_50px_-12px_rgba(139,49,232,0.55)]"
+                style={c.avatarUrl ? { backgroundImage: `url(${c.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+              >
+                {!c.avatarUrl && (
+                  <span className={`flex h-full w-full items-center justify-center text-5xl font-black text-white ${GRAD_BTN}`}>
+                    {c.initials}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Right: text + CTA */}
+            <div className="flex-1 text-center sm:text-left">
+              <div className="mb-1 flex items-center justify-center gap-2 sm:justify-start">
+                <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${GRAD_BTN} text-white shadow-[0_4px_12px_-2px_rgba(139,49,232,0.5)]`}><Sparkle s={14} /></span>
+                <span className="text-[14px] font-extrabold text-white/70 tracking-[-0.01em]">Nexfluence</span>
+              </div>
+              <h3 className="mt-3 text-[clamp(22px,3.5vw,32px)] font-black leading-[1.1] tracking-[-0.035em] text-white">
+                Ready to work with <span className={GRAD_TEXT}>{c.firstName}?</span>
+              </h3>
+              <p className="mt-3 text-[14px] leading-[1.7] text-white/55">
+                Promoted on Nexus by Nexfluence — the Baltic influencer marketing platform.
+              </p>
+
+              {/* ONE wide gradient CTA button */}
+              <button
+                onClick={() => setModal('inquiry')}
+                className={`mt-6 w-full rounded-xl ${GRAD_BTN} px-8 py-4 text-[15px] font-bold text-white shadow-[0_12px_32px_-8px_rgba(139,49,232,0.55)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-8px_rgba(139,49,232,0.7)] sm:max-w-[380px]`}
+              >
+                Work with me via Creator Nexus
+              </button>
+
+              <div className="mt-4">
+                <a href="/authenticate" className="text-[13px] font-semibold text-primary-lt underline-offset-4 hover:underline">
+                  Create your own creator profile →
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       </footer>
 
+      {/* Mobile sticky bar */}
       <div className="fixed inset-x-0 bottom-0 z-[150] flex gap-2.5 border-t border-primary/10 bg-white/95 px-4 py-3 backdrop-blur-xl pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden">
         <button onClick={() => setModal('message')} className="flex-1 rounded-lg border-[1.5px] border-primary/15 bg-white py-3 text-sm font-bold text-ink">Message</button>
-        <button onClick={() => setModal('inquiry')} className="flex-[1.6] rounded-lg bg-gradient-to-r from-primary to-primary-lt py-3 text-sm font-bold text-white">Work with me</button>
+        <button onClick={() => setModal('inquiry')} className={`flex-[1.6] rounded-lg ${GRAD_BTN} py-3 text-sm font-bold text-white`}>Work with me</button>
       </div>
 
       <ContactModal open={modal !== null} type={modal ?? 'message'} slug="amelia-roze" firstName={c.firstName} onClose={() => setModal(null)} />
@@ -408,12 +730,18 @@ export default function Page() {
   )
 }
 
-/* ─── Bento stat ────────────────────────────────────────────────────── */
-function BentoStat({ value, label, delay }: { value: string; label: string; delay: number }) {
+/* ─── Bento stat — with optional top-right icon ────────────────────── */
+function BentoStat({ value, label, delay, topRightIcon }: { value: string; label: string; delay: number; topRightIcon?: ReactNode }) {
   return (
     <Reveal delay={delay}>
-      <div className={`flex h-full flex-col justify-center rounded-2xl border border-primary/10 bg-white p-6 ${CARD}`}>
-        <div className="bg-gradient-to-r from-primary to-magenta bg-clip-text text-[clamp(26px,3.5vw,34px)] font-black tracking-[-0.04em] text-transparent">{value}</div>
+      <div className={`relative flex h-full flex-col justify-center rounded-2xl border border-primary/10 bg-white p-6 ${CARD}`}>
+        {/* Top-right icon badge */}
+        {topRightIcon && (
+          <div className="absolute right-4 top-4 flex items-center justify-center rounded-lg border border-primary/10 bg-surface-sub p-1.5 text-primary">
+            {topRightIcon}
+          </div>
+        )}
+        <div className={`${GRAD_TEXT} text-[clamp(26px,3.5vw,34px)] font-black tracking-[-0.04em]`}>{value}</div>
         <div className="mt-1.5 text-[12px] font-medium text-ink/55">{label}</div>
       </div>
     </Reveal>
@@ -434,7 +762,7 @@ function Phone({ src, label }: { src?: string; label?: string }) {
   )
 }
 
-/* ─── Collaboration Carousel (arrows outside, insight box inside) ─── */
+/* ─── Collaboration Carousel — iPhone left, metrics grid right ──────── */
 function CollaborationCarousel({ collaborations }: { collaborations: typeof COLLABORATIONS }) {
   const [current, setCurrent] = useState(0)
   const total = collaborations.length
@@ -446,35 +774,17 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
 
   return (
     <div className="relative w-full">
-      {/* Arrow controls – outside the card, top‑right */}
+      {/* Arrow controls */}
       <div className="mb-3 flex items-center justify-between sm:justify-end">
-        <span className="text-sm font-medium text-ink/40 sm:hidden">
-          {current + 1} / {total}
-        </span>
+        <span className="text-sm font-medium text-ink/40 sm:hidden">{current + 1} / {total}</span>
         <div className="flex items-center gap-3">
-          <span className="hidden text-sm font-medium text-ink/40 sm:inline">
-            {current + 1} / {total}
-          </span>
+          <span className="hidden text-sm font-medium text-ink/40 sm:inline">{current + 1} / {total}</span>
           <div className="flex gap-1.5">
-            <button
-              onClick={prev}
-              disabled={current === 0}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/60 transition hover:bg-primary/[0.06] hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-              aria-label="Previous"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+            <button onClick={prev} disabled={current === 0} className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/60 transition hover:bg-primary/[0.06] hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Previous">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
-            <button
-              onClick={next}
-              disabled={current === total - 1}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/60 transition hover:bg-primary/[0.06] hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-              aria-label="Next"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+            <button onClick={next} disabled={current === total - 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/60 transition hover:bg-primary/[0.06] hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Next">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           </div>
         </div>
@@ -482,26 +792,25 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
 
       {/* Card */}
       <div className={`flex flex-col gap-6 rounded-2xl border border-primary/10 bg-white p-6 transition hover:-translate-y-1 sm:flex-row sm:p-8 ${CARD} ${CARD_HOVER}`}>
-        {/* Left side: content */}
+
+        {/* Left: content + insight + metrics grid */}
         <div className="flex flex-1 flex-col space-y-4 pr-0 sm:pr-6">
-          {/* Badge + counter */}
+          {/* Badge */}
           <div className="flex items-center gap-3">
-            <span className="rounded-full bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">
-              Featured collaboration
-            </span>
+            <span className="rounded-full bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">Featured collaboration</span>
             <span className="text-xs font-medium text-ink/40">#{current + 1}</span>
           </div>
 
           <div>
             <h3 className="text-2xl font-extrabold tracking-[-0.03em] text-ink">
-              We collaborated with <span className="bg-gradient-to-r from-primary to-magenta bg-clip-text text-transparent">{item.brand}</span>
+              We collaborated with <span className={GRAD_TEXT}>{item.brand}</span>
             </h3>
             <p className="mt-1 text-lg font-semibold text-ink/80">{item.title}</p>
           </div>
 
-          <p className="flex-1 text-[15px] leading-relaxed text-ink/70">{item.description}</p>
+          <p className="text-[15px] leading-relaxed text-ink/70">{item.description}</p>
 
-          {/* Metrics with icons */}
+          {/* Target + Result */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 text-sm">
             <span className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -515,20 +824,36 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
             </span>
           </div>
 
-          {/* Insight box – fills bottom-left space with meaningful context */}
+          {/* ── CAMPAIGN METRICS GRID ── */}
+          {item.metrics && (
+            <div className="grid grid-cols-2 gap-2.5">
+              {item.metrics.map((m, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 rounded-xl border border-primary/10 bg-surface-sub px-3.5 py-3"
+                >
+                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary/[0.08] text-primary">
+                    <MetricIcon name={m.icon} s={16} />
+                  </span>
+                  <div>
+                    <div className="text-[13px] font-black tracking-[-0.02em] text-ink">{m.value}</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink/40">{m.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Insight box */}
           {item.insight && (
-            <div className="mt-2 rounded-lg border border-primary/10 bg-primary/[0.03] px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink/40">
-                <span className="mr-2">💡</span> Key insight
-              </p>
-              <p className="text-sm font-medium leading-relaxed text-ink/70">
-                {item.insight}
-              </p>
+            <div className="rounded-lg border border-primary/10 bg-primary/[0.03] px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink/40"><span className="mr-2">💡</span> Key insight</p>
+              <p className="text-sm font-medium leading-relaxed text-ink/70">{item.insight}</p>
             </div>
           )}
         </div>
 
-        {/* Right side: iPhone */}
+        {/* Right: iPhone */}
         <div className="flex justify-center sm:justify-end">
           <Phone src={item.videoSrc} label={item.title} />
         </div>
@@ -537,63 +862,30 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
   )
 }
 
-/* ─── Work model card (tiered plans style) ─────────────────────────── */
+/* ─── Work model card ───────────────────────────────────────────────── */
 function WorkModel({
-  name,
-  price,
-  priceLabel,
-  icon,
-  features,
-  description,
-  popular = false,
-  delay = 0,
-  onChoose,
+  name, price, priceLabel, icon, features, description, popular = false, delay = 0, onChoose,
 }: {
-  name: string
-  price: string
-  priceLabel: string
-  icon: ReactNode
-  features: string[]
-  description: string
-  popular?: boolean
-  delay?: number
-  onChoose: () => void
+  name: string; price: string; priceLabel: string; icon: ReactNode
+  features: string[]; description: string; popular?: boolean; delay?: number; onChoose: () => void
 }) {
   return (
     <Reveal delay={delay} className="h-full">
-      <div
-        className={`group relative flex h-full flex-col rounded-2xl border bg-white p-6 transition-all hover:-translate-y-2 hover:shadow-xl ${
-          popular
-            ? 'border-primary/30 bg-gradient-to-br from-primary/[0.08] via-primary-lt/[0.04] to-magenta/[0.06] ring-2 ring-primary/20'
-            : 'border-primary/10'
-        } ${CARD} ${CARD_HOVER}`}
-      >
+      <div className={`group relative flex h-full flex-col rounded-2xl border bg-white p-6 transition-all hover:-translate-y-2 hover:shadow-xl ${popular ? 'border-primary/30 bg-gradient-to-br from-primary/[0.08] via-primary-lt/[0.04] to-magenta/[0.06] ring-2 ring-primary/20' : 'border-primary/10'} ${CARD} ${CARD_HOVER}`}>
         {popular && (
-          <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-magenta px-4 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white shadow-[0_4px_12px_rgba(139,49,232,0.4)]">
+          <span className={`absolute -top-3 left-1/2 -translate-x-1/2 rounded-full ${GRAD_BTN} px-4 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white shadow-[0_4px_12px_rgba(139,49,232,0.4)]`}>
             Most popular
           </span>
         )}
-
-        {/* Icon */}
-        <div
-          className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-lt text-white shadow-[0_8px_20px_-6px_rgba(139,49,232,0.5)] ${
-            popular ? 'h-16 w-16' : ''
-          }`}
-        >
+        <div className={`mb-4 flex items-center justify-center rounded-2xl ${GRAD_BTN} text-white shadow-[0_8px_20px_-6px_rgba(139,49,232,0.5)] ${popular ? 'h-16 w-16' : 'h-14 w-14'}`}>
           {icon}
         </div>
-
         <h3 className="text-lg font-extrabold tracking-[-0.02em] text-ink">{name}</h3>
-
-        {/* Price + label */}
         <div className="mt-1 flex items-baseline gap-1.5">
           <span className="text-2xl font-black text-ink">{price}</span>
           <span className="text-sm font-medium text-ink/50">{priceLabel}</span>
         </div>
-
         <p className="mt-3 text-sm leading-relaxed text-ink/60">{description}</p>
-
-        {/* Feature list */}
         <ul className="mt-4 space-y-2 border-t border-primary/10 pt-4 text-sm">
           {features.map((f, i) => (
             <li key={i} className="flex items-start gap-2.5 text-ink/70">
@@ -602,15 +894,9 @@ function WorkModel({
             </li>
           ))}
         </ul>
-
-        {/* CTA button */}
         <button
           onClick={onChoose}
-          className={`mt-6 w-full rounded-lg py-2.5 text-sm font-bold transition hover:-translate-y-0.5 ${
-            popular
-              ? 'bg-gradient-to-r from-primary to-primary-lt text-white shadow-[0_8px_24px_-6px_rgba(139,49,232,0.4)] hover:shadow-xl'
-              : 'border border-primary/20 bg-white text-primary hover:bg-primary/[0.04]'
-          }`}
+          className={`mt-6 w-full rounded-lg py-2.5 text-sm font-bold transition hover:-translate-y-0.5 ${popular ? `${GRAD_BTN} text-white shadow-[0_8px_24px_-6px_rgba(139,49,232,0.4)] hover:shadow-xl` : 'border border-primary/20 bg-white text-primary hover:bg-primary/[0.04]'}`}
         >
           Choose this
         </button>
@@ -670,7 +956,7 @@ function ContactModal({ open, type, slug, firstName, onClose }: { open: boolean;
               <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-green-500/12 text-green-500"><Check s={30} /></div>
               <h3 className="mb-2 text-xl font-extrabold text-ink">{isInq ? "You're in the inbox!" : 'Message sent!'}</h3>
               <p className="mx-auto max-w-[340px] text-sm leading-[1.7] text-ink/65">{form.name && `Thanks, ${form.name.split(' ')[0]} — `}{firstName} will reply to <b className="text-primary">{form.email || 'your email'}</b> within 48 hours.</p>
-              <button onClick={onClose} className="mx-auto mt-6 rounded-lg bg-gradient-to-r from-primary to-primary-lt px-8 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5">Done</button>
+              <button onClick={onClose} className={`mx-auto mt-6 rounded-lg ${GRAD_BTN} px-8 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5`}>Done</button>
             </div>
           ) : (
             <>
@@ -689,7 +975,7 @@ function ContactModal({ open, type, slug, firstName, onClose }: { open: boolean;
               <div className="mt-4"><label className={lbl}>{isInq ? 'About your project *' : 'Your message *'}</label>
                 <textarea className={`${inp} min-h-[108px] resize-y leading-relaxed`} value={form.message} onChange={e => set('message', e.target.value)} placeholder={isInq ? "What are you promoting? What's the goal?" : `Hi ${firstName}, I'm reaching out because…`} />
               </div>
-              <button onClick={submit} disabled={!ok || loading} className="mt-5 w-full rounded-lg bg-gradient-to-r from-primary to-primary-lt py-3.5 text-[15px] font-bold text-white shadow-[0_8px_28px_-6px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-surface-card disabled:bg-none disabled:text-ink/30 disabled:shadow-none disabled:hover:translate-y-0">
+              <button onClick={submit} disabled={!ok || loading} className={`mt-5 w-full rounded-lg ${GRAD_BTN} py-3.5 text-[15px] font-bold text-white shadow-[0_8px_28px_-6px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-surface-card disabled:bg-none disabled:text-ink/30 disabled:shadow-none disabled:hover:translate-y-0`}>
                 {loading ? 'Sending…' : `Send ${isInq ? 'inquiry' : 'message'}`}
               </button>
             </>
