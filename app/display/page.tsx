@@ -566,7 +566,7 @@ export default function Page() {
               </div>
               {/* LOGO — absolute, out of flex flow */}
               <div className="pointer-events-none absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2">
-                <NexLogo height={144} className="pointer-events-auto drop-shadow-[0_6px_24px_rgba(139,49,232,0.65)]" />
+                <NexLogo height={120} className="pointer-events-auto drop-shadow-[0_6px_24px_rgba(139,49,232,0.65)]" />
               </div>
             </div>
           </div>
