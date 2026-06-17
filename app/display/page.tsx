@@ -15,7 +15,7 @@ const CARD_HOVER = 'hover:shadow-[0_2px_6px_rgba(10,6,18,0.05),0_24px_56px_-16px
    ────────────────────────────────────────────────────────────────────
    1. Cover + avatar → CREATOR.coverUrl / CREATOR.avatarUrl below.
    2. Photos        → PHOTOS array: set each `src` to your image URL.
-   3. Reels (video) → REELS array: set each `src` to your .mp4/.webm URL.
+   3. Collaborations → COLLABORATIONS array: each has video + details.
    Anything left as '' shows a labelled placeholder, so the layout never breaks.
    ════════════════════════════════════════════════════════════════════ */
 const CREATOR = {
@@ -51,12 +51,41 @@ const PHOTOS = [
   { id: 'p6', src: '/test/images/Influencing.png', cls: 'col-span-1' },
   { id: 'p7', src: '/test/images/Kinetics-phone.png', cls: 'col-span-2 md:col-span-2' },
 ]
-/* REELS — autoplay/muted/loop video. Set src to your video file. */
-const REELS = [
-  { id: 'r1', src: '/test/video/Drink.mp4', label: 'Skincare routine' },
-  { id: 'r2', src: '/test/video/Food.mp4', label: 'GRWM spring' },
-  { id: 'r3', src: '/test/video/People.mp4', label: 'Vitamin-C results' },
+
+/* COLLABORATIONS — each video gets a full card with description */
+const COLLABORATIONS = [
+  {
+    id: 'c1',
+    brand: 'Kinetics',
+    title: 'Vitamin‑C serum launch',
+    description: 'We created a 60‑second routine that showed real results over 14 days. The content focused on the glow effect, not just the ingredients.',
+    target: 'Women 25‑40 interested in clean beauty',
+    result: '3.2x ROAS, 5.8K units sold in first week',
+    videoSrc: '/test/video/Drink.mp4',
+    insight: 'Authentic storytelling outperformed polished ads – this campaign proved it. The raw, unfiltered shots drove 78% more engagement than our previous studio‑produced content.',
+  },
+  {
+    id: 'c2',
+    brand: 'Lumora Skincare',
+    title: 'Morning ritual with Lumora',
+    description: 'A get‑ready‑with‑me style video that naturally integrated Lumora’s moisturiser into my daily routine. No hard sell — just honest use.',
+    target: 'Skincare enthusiasts looking for hydration',
+    result: '2.1M views, 14% engagement rate',
+    videoSrc: '/test/video/Food.mp4',
+    insight: 'Showing the product in a real, messy morning routine made it feel accessible. DMs were flooded with "where can I buy this?" within hours.',
+  },
+  {
+    id: 'c3',
+    brand: 'Glossé',
+    title: 'Lip gloss layering hack',
+    description: 'We showed how to achieve a plump, glossy look using Glossé’s new lip oil. The video went viral on TikTok within 48 hours.',
+    target: 'Gen Z and millennials, beauty lovers',
+    result: '4.5M views, 22K shares, 8.2K conversions',
+    videoSrc: '/test/video/People.mp4',
+    insight: 'TikTok users love hacks. By framing it as a "discovery" rather than a promo, we hit the algorithm sweet spot and gained 12K new followers from this single post.',
+  },
 ]
+
 const TESTIMONIALS = [
   { id: '1', rating: 5, quote: "Amelia delivered ahead of deadline and the results spoke for themselves — best-converting creator in our whole spring campaign. We've already rebooked her twice.", name: 'Elena Roze', role: 'Brand Manager · Kinetics' },
   { id: '2', rating: 5, quote: 'Working with Amelia felt like working with a marketing partner, not a creator. She understood our product, our margins, and pitched the affiliate model herself. Rare.', name: 'Mārtiņš Ozols', role: 'Founder · Lumora Skincare' },
@@ -65,7 +94,7 @@ const TESTIMONIALS = [
 ]
 const BUDGETS = ['Under €350', '€350–€890', '€890–€2,500', '€2,500+', 'Affiliate only', 'Not sure yet']
 
-/* ─── Icons (no arrows) ─────────────────────────────────────────────── */
+/* ─── Icons ─────────────────────────────────────────────────────────────── */
 const Sparkle = ({ s = 16 }: { s?: number }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 6.2L21 9l-5 4.3L17.6 21 12 17.2 6.4 21 8 13.3 3 9l6.6-.8L12 2z" /></svg>
 const Check = ({ s = 16 }: { s?: number }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
 const Play = ({ s = 18 }: { s?: number }) => <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
@@ -238,7 +267,7 @@ export default function Page() {
         </div>
       </section>
 
-      {/* ════════ WORK: photo bento + iPhone reels ════════ */}
+      {/* ════════ WORK: photo bento + iPhone reels (now carousel) ════════ */}
       <section id="work" className="py-20">
         <div className="mx-auto max-w-[1080px] px-6">
           <SectionHead kicker="My work" className="mb-10">Photos <span className="font-light text-ink/35">&amp;</span> <G>reels</G></SectionHead>
@@ -256,34 +285,74 @@ export default function Page() {
             ))}
           </div>
 
-          {/* iPHONE REELS — autoplay, muted, looped. Set each reel `src` in REELS above. */}
+          {/* CAROUSEL — one collaboration card at a time, with arrows */}
           <Reveal className="mt-12">
-            <div className="flex snap-x gap-6 overflow-x-auto pb-4 sm:justify-center [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {REELS.map(r => <Phone key={r.id} src={r.src} label={r.label} />)}
-            </div>
+            <CollaborationCarousel collaborations={COLLABORATIONS} />
           </Reveal>
         </div>
       </section>
 
-      {/* ════════ COMPENSATION — affiliate is double width ════════ */}
+      {/* ════════ WAYS TO WORK (tiered plans) ════════ */}
       <section className="border-y border-primary/10 bg-surface-sub py-20">
         <div className="mx-auto max-w-[1080px] px-6">
           <SectionHead kicker="Let's deal" className="mb-10" sub="Three clear ways to collaborate — pick what fits, or mix them.">
             Ways to work <G>together</G>
           </SectionHead>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <Deal big delay={0} status="open" name="Affiliate / revenue share" className="sm:col-span-2 lg:col-span-2"
-              icon={<svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-              desc="My favourite model. Lower (or zero) upfront, and I earn a cut of every sale your campaign drives. Incentives are fully aligned — I only win when you do, so I push the content that actually converts. Best for products with strong repeat purchase."
-              foot={<><b className="text-base text-ink">10–20%</b> per sale · trackable codes &amp; links</>} />
-            <Deal delay={90} status="open" name="Paid campaigns" className="sm:col-span-1"
-              icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="6" width="19" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.7" /><circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.7" /></svg>}
-              desc="Flat fee per deliverable. You brief, I produce, you get full usage rights."
-              foot={<>From <b className="text-base text-ink">€350</b> / video</>} />
-            <Deal delay={180} status="req" name="Barter / gifting" className="sm:col-span-1"
-              icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 8l4-4 4 4M20 16l-4 4-4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 4v9a3 3 0 003 3h2M16 20v-9a3 3 0 00-3-3h-2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>}
-              desc="Product-for-content, selectively, for premium items I'd genuinely use."
-              foot={<>Value <b className="text-base text-ink">€120+</b></>} />
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            {/* Affiliate – highlighted as most popular */}
+            <WorkModel
+              delay={0}
+              name="Affiliate / Revenue Share"
+              price="10–20%"
+              priceLabel="per sale"
+              icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+              features={[
+                'Lower or zero upfront',
+                'Earn a cut of every sale',
+                'Incentives fully aligned',
+                'Trackable codes & links',
+              ]}
+              description="My favourite model. I only win when you do."
+              popular={true}
+              onChoose={() => setModal('inquiry')}
+            />
+
+            {/* Paid campaigns */}
+            <WorkModel
+              delay={90}
+              name="Paid Campaigns"
+              price="From €350"
+              priceLabel="per video"
+              icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="6" width="19" height="12" rx="2.5" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="2" /></svg>}
+              features={[
+                'Flat fee per deliverable',
+                'You brief, I produce',
+                'Full usage rights included',
+                'Fast turnaround',
+              ]}
+              description="Straightforward, predictable pricing."
+              popular={false}
+              onChoose={() => setModal('inquiry')}
+            />
+
+            {/* Barter / Gifting */}
+            <WorkModel
+              delay={180}
+              name="Barter / Gifting"
+              price="€120+"
+              priceLabel="product value"
+              icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M4 8l4-4 4 4M20 16l-4 4-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 4v9a3 3 0 003 3h2M16 20v-9a3 3 0 00-3-3h-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>}
+              features={[
+                'Product-for-content exchange',
+                'Select premium items only',
+                'I genuinely use what I promote',
+                'Limited spots available',
+              ]}
+              description="For brands with products I'd honestly love."
+              popular={false}
+              onChoose={() => setModal('inquiry')}
+            />
           </div>
         </div>
       </section>
@@ -351,7 +420,7 @@ function BentoStat({ value, label, delay }: { value: string; label: string; dela
   )
 }
 
-/* ─── iPhone reel (autoplay) ────────────────────────────────────────── */
+/* ─── iPhone reel ─────────────────────────────────────────────────────── */
 function Phone({ src, label }: { src?: string; label?: string }) {
   return (
     <div className="relative w-[210px] flex-shrink-0 snap-center sm:w-[220px]">
@@ -365,18 +434,186 @@ function Phone({ src, label }: { src?: string; label?: string }) {
   )
 }
 
-/* ─── Compensation card ─────────────────────────────────────────────── */
-function Deal({ icon, name, status, desc, foot, delay, big, className = '' }: { icon: ReactNode; name: string; status: 'open' | 'req'; desc: string; foot: ReactNode; delay: number; big?: boolean; className?: string }) {
+/* ─── Collaboration Carousel (arrows outside, insight box inside) ─── */
+function CollaborationCarousel({ collaborations }: { collaborations: typeof COLLABORATIONS }) {
+  const [current, setCurrent] = useState(0)
+  const total = collaborations.length
+
+  const prev = () => setCurrent((c) => (c > 0 ? c - 1 : c))
+  const next = () => setCurrent((c) => (c < total - 1 ? c + 1 : c))
+
+  const item = collaborations[current]
+
   return (
-    <Reveal delay={delay} className={className}>
-      <div className={`group relative flex h-full flex-col rounded-2xl border bg-white p-7 transition hover:-translate-y-1.5 ${CARD} ${CARD_HOVER} ${big ? 'border-primary/25 bg-gradient-to-br from-primary/[0.05] to-magenta/[0.03] ring-1 ring-primary/15' : 'border-primary/10'}`}>
-        <div className={`mb-4 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-lt text-white shadow-[0_8px_20px_-6px_rgba(139,49,232,0.5)] ${big ? 'h-16 w-16' : 'h-12 w-12'}`}>{icon}</div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className={`font-extrabold tracking-[-0.02em] text-ink ${big ? 'text-2xl' : 'text-[18px]'}`}>{name}</div>
-          <span className={`rounded-md px-2.5 py-1 text-[11px] font-bold ${status === 'open' ? 'bg-green-500/12 text-green-700' : 'bg-amber-500/15 text-amber-700'}`}>{status === 'open' ? 'Open' : 'On request'}</span>
+    <div className="relative w-full">
+      {/* Arrow controls – outside the card, top‑right */}
+      <div className="mb-3 flex items-center justify-between sm:justify-end">
+        <span className="text-sm font-medium text-ink/40 sm:hidden">
+          {current + 1} / {total}
+        </span>
+        <div className="flex items-center gap-3">
+          <span className="hidden text-sm font-medium text-ink/40 sm:inline">
+            {current + 1} / {total}
+          </span>
+          <div className="flex gap-1.5">
+            <button
+              onClick={prev}
+              disabled={current === 0}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/60 transition hover:bg-primary/[0.06] hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Previous"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <button
+              onClick={next}
+              disabled={current === total - 1}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/60 transition hover:bg-primary/[0.06] hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Next"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
-        <p className={`mt-3 flex-1 leading-[1.7] text-ink/65 ${big ? 'text-[15px]' : 'text-[14px]'}`}>{desc}</p>
-        <div className="mt-5 border-t border-dashed border-primary/20 pt-4 text-[13px] text-ink/55">{foot}</div>
+      </div>
+
+      {/* Card */}
+      <div className={`flex flex-col gap-6 rounded-2xl border border-primary/10 bg-white p-6 transition hover:-translate-y-1 sm:flex-row sm:p-8 ${CARD} ${CARD_HOVER}`}>
+        {/* Left side: content */}
+        <div className="flex flex-1 flex-col space-y-4 pr-0 sm:pr-6">
+          {/* Badge + counter */}
+          <div className="flex items-center gap-3">
+            <span className="rounded-full bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">
+              Featured collaboration
+            </span>
+            <span className="text-xs font-medium text-ink/40">#{current + 1}</span>
+          </div>
+
+          <div>
+            <h3 className="text-2xl font-extrabold tracking-[-0.03em] text-ink">
+              We collaborated with <span className="bg-gradient-to-r from-primary to-magenta bg-clip-text text-transparent">{item.brand}</span>
+            </h3>
+            <p className="mt-1 text-lg font-semibold text-ink/80">{item.title}</p>
+          </div>
+
+          <p className="flex-1 text-[15px] leading-relaxed text-ink/70">{item.description}</p>
+
+          {/* Metrics with icons */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 text-sm">
+            <span className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              <span className="font-medium text-ink/60">Target:</span>
+              <span className="font-semibold text-ink">{item.target}</span>
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-magenta" />
+              <span className="font-medium text-ink/60">Result:</span>
+              <span className="font-semibold text-ink">{item.result}</span>
+            </span>
+          </div>
+
+          {/* Insight box – fills bottom-left space with meaningful context */}
+          {item.insight && (
+            <div className="mt-2 rounded-lg border border-primary/10 bg-primary/[0.03] px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink/40">
+                <span className="mr-2">💡</span> Key insight
+              </p>
+              <p className="text-sm font-medium leading-relaxed text-ink/70">
+                {item.insight}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Right side: iPhone */}
+        <div className="flex justify-center sm:justify-end">
+          <Phone src={item.videoSrc} label={item.title} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Work model card (tiered plans style) ─────────────────────────── */
+function WorkModel({
+  name,
+  price,
+  priceLabel,
+  icon,
+  features,
+  description,
+  popular = false,
+  delay = 0,
+  onChoose,
+}: {
+  name: string
+  price: string
+  priceLabel: string
+  icon: ReactNode
+  features: string[]
+  description: string
+  popular?: boolean
+  delay?: number
+  onChoose: () => void
+}) {
+  return (
+    <Reveal delay={delay} className="h-full">
+      <div
+        className={`group relative flex h-full flex-col rounded-2xl border bg-white p-6 transition-all hover:-translate-y-2 hover:shadow-xl ${
+          popular
+            ? 'border-primary/30 bg-gradient-to-br from-primary/[0.08] via-primary-lt/[0.04] to-magenta/[0.06] ring-2 ring-primary/20'
+            : 'border-primary/10'
+        } ${CARD} ${CARD_HOVER}`}
+      >
+        {popular && (
+          <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-primary to-magenta px-4 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white shadow-[0_4px_12px_rgba(139,49,232,0.4)]">
+            Most popular
+          </span>
+        )}
+
+        {/* Icon */}
+        <div
+          className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-lt text-white shadow-[0_8px_20px_-6px_rgba(139,49,232,0.5)] ${
+            popular ? 'h-16 w-16' : ''
+          }`}
+        >
+          {icon}
+        </div>
+
+        <h3 className="text-lg font-extrabold tracking-[-0.02em] text-ink">{name}</h3>
+
+        {/* Price + label */}
+        <div className="mt-1 flex items-baseline gap-1.5">
+          <span className="text-2xl font-black text-ink">{price}</span>
+          <span className="text-sm font-medium text-ink/50">{priceLabel}</span>
+        </div>
+
+        <p className="mt-3 text-sm leading-relaxed text-ink/60">{description}</p>
+
+        {/* Feature list */}
+        <ul className="mt-4 space-y-2 border-t border-primary/10 pt-4 text-sm">
+          {features.map((f, i) => (
+            <li key={i} className="flex items-start gap-2.5 text-ink/70">
+              <span className="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gradient-to-r from-primary to-magenta" />
+              {f}
+            </li>
+          ))}
+        </ul>
+
+        {/* CTA button */}
+        <button
+          onClick={onChoose}
+          className={`mt-6 w-full rounded-lg py-2.5 text-sm font-bold transition hover:-translate-y-0.5 ${
+            popular
+              ? 'bg-gradient-to-r from-primary to-primary-lt text-white shadow-[0_8px_24px_-6px_rgba(139,49,232,0.4)] hover:shadow-xl'
+              : 'border border-primary/20 bg-white text-primary hover:bg-primary/[0.04]'
+          }`}
+        >
+          Choose this
+        </button>
       </div>
     </Reveal>
   )

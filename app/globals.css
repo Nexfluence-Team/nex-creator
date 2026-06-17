@@ -1,7 +1,7 @@
 /* Font @import MUST come first — before @import "tailwindcss" — because
    Turbopack expands the Tailwind import inline, and CSS requires every
    @import to precede all other rules. */
-@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&display=swap');
 @import "tailwindcss";
 
 /* ─── Brand palette (Nexfluence design system) ───────────────────────────────
@@ -25,8 +25,8 @@
   --color-surface-sub:  #f5f3ff;
   --color-surface-card: #ede9ff;
 
-  /* Concrete Rubik stack (was self-referential before, which broke the font) */
-  --font-rubik: 'Rubik', sans-serif;
+  /* Concrete Iosevka Charon stack (was self-referential before, which broke the font) */
+  --font-rubik: "Aref Ruqaa", sans-serif;
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */
