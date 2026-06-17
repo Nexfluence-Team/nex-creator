@@ -4,6 +4,12 @@ import { useState, useEffect, useRef, type ReactNode } from 'react'
 
 /* ════════════════════════════════════════════════════════════════════
    Creator portfolio — page.tsx  (Nexfluence v4, LIGHT)
+   Changes:
+   1. Nav pill: transparent gradient in the middle (white → transparent → white)
+   2. Exclusive deals: "Signed in" badge + clickable modal with brand logo
+   3. Campaign reviews: brand logo instead of reviewer photo
+   4. Social icons: accurate brand SVGs (Instagram, TikTok, YouTube, etc.)
+   5. Website button: separate pill below social icons with globe icon
    ════════════════════════════════════════════════════════════════════ */
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
@@ -20,6 +26,7 @@ const CREATOR = {
   genres: ['Beauty', 'Skincare', 'Lifestyle', 'Wellness'],
   coverUrl: '/test/images/Header.png',
   avatarUrl: '/test/images/Harshul.png',
+  websiteUrl: 'https://ameliaroze.com',
 }
 
 const EXCLUSIVE_DEALS = [
@@ -28,12 +35,15 @@ const EXCLUSIVE_DEALS = [
     exclusive: true, color: '#E8112D', scope: 'Baltic-wide exclusivity',
     description: "Amelia is Red Bull's sole creator for energy drink content across Latvia, Lithuania & Estonia. No energy drink or stimulant brand competitors will be featured on any channel.",
     blockedCategory: 'All energy drink & stimulant brands', duration: 'Rolling annual contract',
+    /* Brand logo: text-based SVG logo with brand colour */
+    logo: null,
   },
   {
     id: 'ed2', brand: 'Glossé', category: 'Lip Care', since: '2024', logoText: 'Glossé',
     exclusive: false, color: '#8B31E8', scope: 'Preferred partner',
     description: 'Long-term preferred partnership for lip care content. First-look rights on all new Glossé product launches before any other creator in the region.',
     blockedCategory: null, duration: '12-month preferred deal',
+    logo: null,
   },
 ]
 
@@ -73,7 +83,13 @@ const COLLABORATIONS = [
       { icon: 'eye', label: 'Views', value: '1.2M' }, { icon: 'heart', label: 'Engagement', value: '8.4%' },
       { icon: 'cart', label: 'ROAS', value: '3.2×' }, { icon: 'share', label: 'Shares', value: '14.2K' },
     ],
-    review: { rating: 5, quote: "Amelia delivered ahead of deadline and the results spoke for themselves — best-converting creator in our whole spring campaign. She understood the brief immediately, needed zero revisions, and the 3.2× ROAS surprised even our own performance team. We've already rebooked her twice.", name: 'Elena Roze', role: 'Brand Manager', company: 'Kinetics' },
+    review: {
+      rating: 5,
+      quote: "Amelia delivered ahead of deadline and the results spoke for themselves — best-converting creator in our whole spring campaign. She understood the brief immediately, needed zero revisions, and the 3.2× ROAS surprised even our own performance team. We've already rebooked her twice.",
+      name: 'Elena Roze', role: 'Brand Manager', company: 'Kinetics',
+      brandColor: '#2563EB', brandInitials: 'KI',
+      brandLogoUrl: '/test/images/brands/kinetics.png',
+    },
   },
   {
     id: 'c2', brand: 'Lumora Skincare', title: 'Morning ritual with Lumora',
@@ -85,7 +101,13 @@ const COLLABORATIONS = [
       { icon: 'eye', label: 'Views', value: '2.1M' }, { icon: 'heart', label: 'Engagement', value: '14%' },
       { icon: 'users', label: 'New followers', value: '+8.3K' }, { icon: 'message', label: 'DMs', value: '2.1K' },
     ],
-    review: { rating: 5, quote: "Working with Amelia felt like working with a marketing partner, not a creator. She understood our product, our margins, and pitched the affiliate model herself — something none of our other creators have ever done. The morning ritual video is still our best-performing piece of content six months later.", name: 'Mārtiņš Ozols', role: 'Founder', company: 'Lumora Skincare' },
+    review: {
+      rating: 5,
+      quote: "Working with Amelia felt like working with a marketing partner, not a creator. She understood our product, our margins, and pitched the affiliate model herself — something none of our other creators have ever done. The morning ritual video is still our best-performing piece of content six months later.",
+      name: 'Mārtiņš Ozols', role: 'Founder', company: 'Lumora Skincare',
+      brandColor: '#059669', brandInitials: 'LS',
+      brandLogoUrl: '/test/images/brands/lumora.png',
+    },
   },
   {
     id: 'c3', brand: 'Glossé', title: 'Lip gloss layering hack',
@@ -97,7 +119,13 @@ const COLLABORATIONS = [
       { icon: 'eye', label: 'Views', value: '4.5M' }, { icon: 'share', label: 'Shares', value: '22K' },
       { icon: 'cart', label: 'Conversions', value: '8.2K' }, { icon: 'users', label: 'New followers', value: '+12K' },
     ],
-    review: { rating: 4, quote: "The content didn't feel like an ad — it felt like a recommendation from a trusted friend. Our DMs blew up the day it went live. We went from sceptical about influencer marketing to building our entire Q3 strategy around creators after this single campaign.", name: 'Anna Kalniņa', role: 'Marketing Lead', company: 'Glossé' },
+    review: {
+      rating: 4,
+      quote: "The content didn't feel like an ad — it felt like a recommendation from a trusted friend. Our DMs blew up the day it went live. We went from sceptical about influencer marketing to building our entire Q3 strategy around creators after this single campaign.",
+      name: 'Anna Kalniņa', role: 'Marketing Lead', company: 'Glossé',
+      brandColor: '#8B31E8', brandInitials: 'GL',
+      brandLogoUrl: '/test/images/brands/glosse.png',
+    },
   },
 ]
 
@@ -131,70 +159,36 @@ const CalendarIcon = ({ s = 13 }: { s?: number }) => (
   </svg>
 )
 
-/* ─── Bento top-right icons — s=26 default, badge container h-14 w-14 ─
-   GENDER:   PersonIcon  — female pictogram shape from uploaded SVG
-   AGE:      HeartPulseIcon — heart + ECG line from uploaded SVG
-   REACH:    EyeIcon — retained
-   LOCATION: Real flag image — retained
-   TALK:     ChatBubbleIcon — top-right, s=32, container h-14 w-14       */
+/* ─── Bento icons ────────────────────────────────────────────────────── */
 const EyeIcon = ({ s = 26 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
   </svg>
 )
-/* ─── Person / Gender icon ─────────────────────────────────────────────
-   Shape derived from the uploaded female-mark SVG: round head + body with
-   a wider skirt/trapezoidal silhouette (female pictogram form).
-   Stroke-only: strokeWidth=1.8, round caps/joins — our iconography style. */
 const PersonIcon = ({ s = 26 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    {/* Head */}
     <circle cx="12" cy="5" r="2.8" stroke="currentColor" strokeWidth="1.8" />
-    {/* Neck + shoulders spreading outward */}
     <path d="M12 7.8v1.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    {/* Body — trapezoidal silhouette matching the female pictogram:
-        narrow at waist, wider at hem, like an A-line form              */}
-    <path
-      d="M8 9c-.5 0-1.2.6-1.5 1.5L5 16h4l1 5h4l1-5h4l-1.5-5.5C17.2 9.6 16.5 9 16 9"
-      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-    />
-    {/* Shoulder arc connecting neck to body sides */}
-    <path
-      d="M9.5 9c.7-.5 1.6-.5 2.5-.5s1.8 0 2.5.5"
-      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
-    />
+    <path d="M8 9c-.5 0-1.2.6-1.5 1.5L5 16h4l1 5h4l1-5h4l-1.5-5.5C17.2 9.6 16.5 9 16 9"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M9.5 9c.7-.5 1.6-.5 2.5-.5s1.8 0 2.5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
   </svg>
 )
-
-/* ─── Heart-pulse / Age icon ────────────────────────────────────────────
-   Shape derived from the uploaded heart-pulse SVG: heart outline with an
-   ECG/vital-signs line running through it — reads as "vitality / age".
-   Stroke-only, adapted to our strokeWidth=1.8, round caps/joins.         */
 const HeartPulseIcon = ({ s = 26 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    {/* Heart outline — matches the uploaded heart shape */}
-    <path
-      d="M12 20.5S3.5 14 3.5 8a4.5 4.5 0 018.5-2 4.5 4.5 0 018.5 2c0 6-8.5 12.5-8.5 12.5z"
-      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-    />
-    {/* ECG pulse line through the heart's midline */}
-    <path
-      d="M3.5 12h2.3l1.5-2.8 2 5 1.5-3.5 1 1.8H18"
-      stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
-    />
+    <path d="M12 20.5S3.5 14 3.5 8a4.5 4.5 0 018.5-2 4.5 4.5 0 018.5 2c0 6-8.5 12.5-8.5 12.5z"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M3.5 12h2.3l1.5-2.8 2 5 1.5-3.5 1 1.8H18"
+      stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
-/* Chat bubble for "What I talk about" — top-right, larger (s=40) */
 const ChatBubbleIcon = ({ s = 40 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
   </svg>
 )
-
-/* ─── Lightbulb icon for "Key insight" — replaces emoji ──────────────
-   Stroke-based, round caps/joins, consistent with the iconography system. */
 const LightbulbIcon = ({ s = 16 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
     <path d="M9 21h6M12 3a7 7 0 014.9 11.9c-.6.6-1.1 1.3-1.4 2.1H8.5c-.3-.8-.8-1.5-1.4-2.1A7 7 0 0112 3z"
@@ -203,7 +197,7 @@ const LightbulbIcon = ({ s = 16 }: { s?: number }) => (
   </svg>
 )
 
-/* Metric card icons */
+/* ─── Metric card icons ─────────────────────────────────────────────── */
 const MetricEyeIcon = ({ s = 18 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -253,27 +247,53 @@ function MetricIcon({ name, s = 18 }: { name: string; s?: number }) {
   }
 }
 
-/* ─── Gradient stars — brand iconography ────────────────────────────────
-   Design spec:
-   • Filled stars: gradient fill + gradient stroke border with visible white
-     gap between them. Achieved by layering three paths per star:
-     1. White "gap" stroke (strokeWidth=4) — creates the separation
-     2. Gradient stroke border (strokeWidth=1.8) — the outline
-     3. Gradient fill — the colour inside
-   • Empty stars: stroke-only outline in muted ink/20, no fill.
-   • Star shape: slightly softened — inner valleys use rounded joins via
-     strokeLinejoin="round". Not fully smooth, just slightly.
-   • All stroke caps/joins: round — matching the brand iconography system.  */
+/* ─── Globe icon for website button ────────────────────────────────── */
+const GlobeIcon = ({ s = 18 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6" />
+    <path d="M12 2c-2.8 3-4 6-4 10s1.2 7 4 10M12 2c2.8 3 4 6 4 10s-1.2 7-4 10M2 12h20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+)
+
+/* ─── Social platform PNG icons ──────────────────────────────────────
+   Icons are loaded from /public/icons/social/ as PNG files.
+   Drop your PNGs there with these exact filenames and they render
+   inside the same hover-lift button as before.
+   The <img> is 20×20, object-contain, inheriting the button's colour
+   treatment via CSS filter on hover (white tint handled by the button
+   gradient overlay, not the image itself — so use full-colour PNGs). */
+function SocialPngIcon({ src, label }: { src: string; label: string }) {
+  return (
+    <img
+      src={src}
+      alt={label}
+      width={20}
+      height={20}
+      className="h-5 w-5 object-contain"
+      draggable={false}
+    />
+  )
+}
+
+/* Social links — website intentionally excluded (shown as a separate button below).
+   Set href to the real profile URL. Icon src points to your PNG in /public/icons/social/. */
+const SOCIAL_LINKS: { key: string; label: string; href: string; icon: ReactNode }[] = [
+  { key: 'instagram', label: 'Instagram',   href: '#', icon: <SocialPngIcon src="/icons/social/instagram.png" label="Instagram" /> },
+  { key: 'tiktok',    label: 'TikTok',      href: '#', icon: <SocialPngIcon src="/icons/social/tiktok.png"    label="TikTok" /> },
+  { key: 'youtube',   label: 'YouTube',     href: '#', icon: <SocialPngIcon src="/icons/social/youtube.png"   label="YouTube" /> },
+  { key: 'snapchat',  label: 'Snapchat',    href: '#', icon: <SocialPngIcon src="/icons/social/snapchat.png"  label="Snapchat" /> },
+  { key: 'twitter',   label: 'Twitter / X', href: '#', icon: <SocialPngIcon src="/icons/social/x.png"         label="Twitter / X" /> },
+  { key: 'linkedin',  label: 'LinkedIn',    href: '#', icon: <SocialPngIcon src="/icons/social/linkedin.png"  label="LinkedIn" /> },
+  { key: 'facebook',  label: 'Facebook',    href: '#', icon: <SocialPngIcon src="/icons/social/facebook.png"  label="Facebook" /> },
+]
+
+/* ─── Gradient stars ─────────────────────────────────────────────────── */
 function GradientStars({ rating, total = 5, size = 28 }: { rating: number; total?: number; size?: number }) {
   const fillId   = 'nex-star-fill'
   const strokeId = 'nex-star-stroke'
-  /* Slightly softer star: inner points pulled inward to r≈4.5 from centre,
-     outer points at r≈10.5. The small radial difference at the inner points
-     softens the concave valleys without making it blobby.                  */
   const STAR = 'M12 2l2.8 6.2 6.8.6-5 4.5 1.5 6.7L12 16.5l-6.1 3.5 1.5-6.7-5-4.5 6.8-.6z'
   return (
     <div className="flex items-center gap-2">
-      {/* Gradient defs — one for fill, one for stroke */}
       <svg width="0" height="0" style={{ position: 'absolute', pointerEvents: 'none' }}>
         <defs>
           <linearGradient id={fillId} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -288,56 +308,17 @@ function GradientStars({ rating, total = 5, size = 28 }: { rating: number; total
           </linearGradient>
         </defs>
       </svg>
-
       {Array.from({ length: total }).map((_, i) => (
         <svg key={i} width={size} height={size} viewBox="0 0 24 24" overflow="visible">
           {i < rating ? (
-            /* Filled star: white gap layer → gradient border → gradient fill */
             <>
-              {/* Layer 1: white gap — thick stroke creates visual separation */}
-              <path
-                d={STAR}
-                fill={`url(#${fillId})`}
-                stroke="white"
-                strokeWidth="3"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                paintOrder="stroke"
-              />
-              {/* Layer 2: gradient border on top of the white gap */}
-              <path
-                d={STAR}
-                fill="none"
-                stroke={`url(#${strokeId})`}
-                strokeWidth="1.6"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
+              <path d={STAR} fill={`url(#${fillId})`} stroke="white" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" paintOrder="stroke" />
+              <path d={STAR} fill="none" stroke={`url(#${strokeId})`} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
             </>
           ) : (
-            /* Empty star: gradient stroke outline only — brand colour, no fill.
-               Uses a separate gradient def so the outline is always the brand
-               palette even on unfilled stars.                                  */
             <>
-              {/* White gap beneath the gradient stroke so it reads cleanly */}
-              <path
-                d={STAR}
-                fill="none"
-                stroke="white"
-                strokeWidth="3"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-              {/* Gradient border — same stops, lower opacity for "empty" state */}
-              <path
-                d={STAR}
-                fill="none"
-                stroke={`url(#${strokeId})`}
-                strokeWidth="1.6"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                opacity="0.35"
-              />
+              <path d={STAR} fill="none" stroke="white" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+              <path d={STAR} fill="none" stroke={`url(#${strokeId})`} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" opacity="0.35" />
             </>
           )}
         </svg>
@@ -345,18 +326,6 @@ function GradientStars({ rating, total = 5, size = 28 }: { rating: number; total
     </div>
   )
 }
-
-/* Social icons — expanded set */
-const SOCIAL_LINKS: { key: string; label: string; href: string; icon: ReactNode }[] = [
-  { key: 'instagram', label: 'Instagram', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5.5" stroke="currentColor" strokeWidth="1.6" /><circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="1.6" /><circle cx="17.4" cy="6.6" r="1.3" fill="currentColor" /></svg>) },
-  { key: 'tiktok', label: 'TikTok', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 12a4 4 0 104 4V4a5 5 0 005 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>) },
-  { key: 'youtube', label: 'YouTube', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="4" stroke="currentColor" strokeWidth="1.6" /><path d="M10 9l5 3-5 3V9z" fill="currentColor" /></svg>) },
-  { key: 'snapchat', label: 'Snapchat', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.5 2 7 4.5 7 7v1.5c-.8.3-1.5.5-2 .5-.3 0-.5.2-.5.5 0 .8.8 1.5 2 1.8-.2.4-.5.7-.8.7-.2 0-.4.1-.4.3 0 .4.6.9 1.5 1.2.3.7.8 1.5 2.7 1.5.2 0 .4 0 .5.1l1 1.5 1-1.5c.1-.1.3-.1.5-.1 1.9 0 2.4-.8 2.7-1.5.9-.3 1.5-.8 1.5-1.2 0-.2-.2-.3-.4-.3-.3 0-.6-.3-.8-.7 1.2-.3 2-1 2-1.8 0-.3-.2-.5-.5-.5-.5 0-1.2-.2-2-.5V7c0-2.5-1.5-5-5-5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>) },
-  { key: 'twitter', label: 'Twitter / X', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4l16 16M4 20L20 4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" /></svg>) },
-  { key: 'linkedin', label: 'LinkedIn', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="4" stroke="currentColor" strokeWidth="1.6" /><path d="M7 10v7M7 7v.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M12 17v-4a2 2 0 014 0v4M12 10v7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>) },
-  { key: 'facebook', label: 'Facebook', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="1.6" /><path d="M13 21v-8h2.5l.5-3H13V8.5C13 7.7 13.4 7 14.5 7H16V4.5S15 4 13.5 4C11 4 10 5.7 10 7.5V10H7.5v3H10v8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>) },
-  { key: 'website', label: 'Website', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6" /><path d="M12 2c-2.8 3-4 6-4 10s1.2 7 4 10M12 2c2.8 3 4 6 4 10s-1.2 7-4 10M2 12h20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>) },
-]
 
 /* ─── Reveal ────────────────────────────────────────────────────────── */
 function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; delay?: number; className?: string }) {
@@ -368,7 +337,8 @@ function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; 
     io.observe(el); return () => io.disconnect()
   }, [])
   return (
-    <div ref={ref} style={{ transitionDelay: `${delay}ms` }} className={`transition-all duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'} ${className}`}>
+    <div ref={ref} style={{ transitionDelay: `${delay}ms` }}
+      className={`transition-all duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'} ${className}`}>
       {children}
     </div>
   )
@@ -399,7 +369,7 @@ function Stat({ to, dec, suffix, label }: { to: number; dec: number; suffix: str
   )
 }
 
-/* ─── Section head — gradient line kicker ───────────────────────────── */
+/* ─── Section head ──────────────────────────────────────────────────── */
 function SectionHead({ kicker, children, sub, className = '' }: { kicker: string; children: ReactNode; sub?: string; className?: string }) {
   return (
     <Reveal className={`text-center ${className}`}>
@@ -433,11 +403,148 @@ function NexLogo({ height = 28, className = '' }: { height?: number; className?:
   return <img src="/Nex.webp" alt="Nexfluence" height={height} className={`object-contain ${className}`} style={{ height }} />
 }
 
+/* ─── Brand Logo tile ────────────────────────────────────────────────
+   Used in the partnerships modal and in campaign review cards.
+   Priority: brandLogoUrl image → colour-tinted initials fallback.
+   The image version uses object-contain so logos with transparent
+   backgrounds render cleanly without cropping.                       */
+function BrandLogo({
+  name, color, logoUrl, initials, size = 56,
+}: { name: string; color: string; logoUrl?: string | null; initials?: string; size?: number }) {
+  const abbr = initials ?? name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  if (logoUrl) {
+    return (
+      <div
+        className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/10 bg-white shadow-sm"
+        style={{ width: size, height: size }}
+      >
+        <img
+          src={logoUrl}
+          alt={name}
+          width={size}
+          height={size}
+          className="h-full w-full object-contain p-1"
+          draggable={false}
+        />
+      </div>
+    )
+  }
+  return (
+    <div
+      className="flex flex-shrink-0 items-center justify-center rounded-xl font-extrabold text-white shadow-sm"
+      style={{ width: size, height: size, background: color, fontSize: size * 0.36 }}
+    >
+      {abbr}
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Partnerships Modal
+   Single modal showing ALL deals as cards — scrollable.
+   Opened by the one "View Brand Partnerships" button on the page.
+   ════════════════════════════════════════════════════════════════════ */
+function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  useEffect(() => {
+    if (!open) return
+    document.body.style.overflow = 'hidden'
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', esc)
+    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', esc) }
+  }, [open, onClose])
+
+  return (
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      className={`fixed inset-0 z-[600] flex items-center justify-center bg-ink/55 p-5 backdrop-blur-[6px] transition-opacity duration-200 ${open ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+    >
+      <div
+        role="dialog" aria-modal="true"
+        className={`max-h-[90vh] w-full max-w-[580px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-12px_rgba(10,6,18,0.35)] transition-all duration-300 ease-[cubic-bezier(0.34,1.5,0.64,1)] flex flex-col ${open ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-6 scale-95 opacity-0'}`}
+      >
+        {/* Sticky header */}
+        <div className="flex-shrink-0 flex items-center justify-between border-b border-primary/10 bg-white px-7 py-5">
+          <div>
+            <h3 className="text-lg font-extrabold tracking-[-0.02em] text-ink">Brand Partnerships</h3>
+            <p className="mt-0.5 text-[12px] text-ink/45">{EXCLUSIVE_DEALS.length} active {EXCLUSIVE_DEALS.length === 1 ? 'partnership' : 'partnerships'}</p>
+          </div>
+          <button onClick={onClose} aria-label="Close"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-sub text-ink/45 transition hover:bg-surface-card hover:text-ink text-[13px]">
+            ✕
+          </button>
+        </div>
+
+        {/* Scrollable cards */}
+        <div className="flex-1 overflow-y-auto px-7 py-6 space-y-4">
+          {EXCLUSIVE_DEALS.map(deal => (
+            <div
+              key={deal.id}
+              className={`rounded-2xl border bg-white p-5 ${CARD} ${deal.exclusive ? 'border-primary/20' : 'border-primary/10'}`}
+              style={{ background: `linear-gradient(135deg, ${deal.color}0a 0%, transparent 60%)` }}
+            >
+              {/* Card header: logo + name + badges */}
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <BrandLogo name={deal.brand} color={deal.color} logoUrl={deal.logo} initials={deal.logoText} size={48} />
+                  <div>
+                    <span className="text-[18px] font-black tracking-[-0.03em] block leading-tight" style={{ color: deal.color }}>{deal.logoText}</span>
+                    <span className="text-[12px] font-semibold text-ink/50">{deal.scope}</span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap justify-end gap-1.5">
+                  {deal.exclusive
+                    ? <span className={`rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] ${GRAD_BTN} text-white`}>Exclusive</span>
+                    : <span className="rounded-md border border-primary/20 bg-primary/[0.07] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-primary">Preferred</span>
+                  }
+                  <span className="rounded-md border border-primary/12 bg-primary/[0.05] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-primary/70">{deal.category}</span>
+                </div>
+              </div>
+
+              <p className="text-[13px] leading-[1.75] text-ink/65">{deal.description}</p>
+
+              {/* Meta row */}
+              <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-primary/8 pt-3">
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold text-ink/45">
+                  <CalendarIcon s={12} /> {deal.duration} · Since {deal.since}
+                </span>
+                {deal.blockedCategory && (
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-red-400/80">
+                    <LockIcon s={12} /> Blocks: {deal.blockedCategory}
+                  </span>
+                )}
+              </div>
+
+              {/* Signed-in confirmation strip */}
+              <div className="mt-3.5 flex items-center gap-2.5 rounded-lg border border-green-200 bg-green-50 px-3.5 py-2.5">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-green-500 text-white">
+                  <Check s={12} />
+                </span>
+                <span className="text-[12px] font-semibold text-green-800">
+                  {deal.exclusive ? 'Signed in — Exclusive Partner' : 'Signed in — Preferred Partner'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Sticky footer */}
+        <div className="flex-shrink-0 border-t border-primary/10 bg-white px-7 py-4">
+          <button onClick={onClose}
+            className={`w-full rounded-xl ${GRAD_BTN} py-3 text-[14px] font-bold text-white shadow-[0_8px_24px_-6px_rgba(139,49,232,0.4)] transition hover:-translate-y-0.5`}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ════════════════════════════════════════════════════════════════════
    PAGE
    ════════════════════════════════════════════════════════════════════ */
 export default function Page() {
   const [modal, setModal] = useState<'inquiry' | 'message' | null>(null)
+  const [partnershipsOpen, setPartnershipsOpen] = useState(false)
   const c = CREATOR
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 
@@ -449,7 +556,7 @@ export default function Page() {
 
       {/* ════════ HEADER ════════ */}
       <header className="relative">
-        {/* Cover image — overflow-hidden stays untouched */}
+        {/* Cover */}
         <div
           className="relative h-[260px] w-full overflow-hidden bg-gradient-to-br from-primary/30 via-primary-lt/25 to-magenta/30 sm:h-[320px] md:h-[360px]"
           style={c.coverUrl ? { backgroundImage: `url(${c.coverUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
@@ -458,30 +565,41 @@ export default function Page() {
           <div className="absolute inset-0 bg-gradient-to-b from-ink/10 via-transparent to-canvas/30" />
         </div>
 
-        {/* ── NAV — pill keeps its small natural height; logo floats on z-axis ──
-            THE FIX: the logo is NOT a flex child of the pill. If it were, its
-            height would force the pill (items-center) to grow to contain it.
-            Instead the logo is `position: absolute` relative to the pill, so
-            it is removed from layout flow entirely — it contributes ZERO to
-            the pill's height. The pill's height is driven only by the small
-            nav buttons (~48px). The logo (96px) is centered on the pill and
-            floats forward via z-50, leaking ~24px above and ~24px below the
-            pill edges without ever resizing it.
-            A non-rendered spacer (w-20) in the flex row reserves the centre
-            gap so the left/right nav groups never slide under the logo.      */}
+        {/* ── NAV PILL ──────────────────────────────────────────────────────
+            The pill itself has NO background and NO blur. Instead a separate
+            absolutely-positioned layer behind the buttons carries BOTH the
+            white fill and the backdrop-blur, and that whole layer is masked
+            with a horizontal gradient:
+              • Sides (0–22% / 78–100%): mask fully opaque → white + blur show
+              • Centre (34–66%): mask = 0 → layer is clipped away entirely,
+                so there is no fill AND no blur — the cover image is 100% clear
+              • 22–34% / 66–78%: smooth fade between the two
+            Putting the blur on the masked layer (not the pill) is the key:
+            where the mask hits 0 the blur disappears too, so the middle is
+            real transparency, not frosted/grey glass.                       */}
         <div
           className="absolute inset-x-0 z-40 flex justify-center px-4"
           style={{ top: 28 }}
         >
           <div className="w-full max-w-[600px]">
-
-            {/* Pill — height driven ONLY by nav buttons; overflow visible */}
             <div
-              className="relative flex w-full items-center justify-between rounded-2xl border border-white/40 bg-white/80 px-4 py-3 shadow-[0_8px_28px_-8px_rgba(10,6,18,0.25)] backdrop-blur-xl"
-              style={{ overflow: 'visible' }}
+              className="relative flex w-full items-center justify-between rounded-2xl px-4 py-3"
+              style={{ overflow: 'visible', border: 'none', boxShadow: 'none' }}
             >
-              {/* Left nav links */}
-              <div className="flex items-center gap-0.5">
+              {/* Masked fill + blur layer — sits behind the nav buttons.
+                  The mask clips both the white tint and the blur in the centre. */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-2xl backdrop-blur-xl"
+                style={{
+                  background: 'linear-gradient(90deg, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0.88) 30%, rgba(255,255,255,0) 42%, rgba(255,255,255,0) 58%, rgba(255,255,255,0.88) 70%, rgba(255,255,255,0.88) 100%)',
+                  WebkitMaskImage: 'linear-gradient(90deg, #000 0%, #000 30%, transparent 42%, transparent 58%, #000 70%, #000 100%)',
+                  maskImage: 'linear-gradient(90deg, #000 0%, #000 30%, transparent 42%, transparent 58%, #000 70%, #000 100%)',
+                }}
+              />
+
+              {/* Left nav */}
+              <div className="relative z-10 flex items-center gap-0.5">
                 {NAV_LEFT.map(n => (
                   <button key={n.label} onClick={n.action}
                     className="rounded-lg px-4 py-2 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary">
@@ -490,11 +608,11 @@ export default function Page() {
                 ))}
               </div>
 
-              {/* Centre spacer — reserves room for the logo, NO height of its own */}
+              {/* Centre spacer */}
               <div className="w-16 flex-shrink-0" aria-hidden="true" />
 
-              {/* Right nav links */}
-              <div className="flex items-center gap-0.5">
+              {/* Right nav */}
+              <div className="relative z-10 flex items-center gap-0.5">
                 {NAV_RIGHT.map(n => (
                   <button key={n.label} onClick={n.action}
                     className="rounded-lg px-4 py-2 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary">
@@ -503,11 +621,7 @@ export default function Page() {
                 ))}
               </div>
 
-              {/* ── LOGO — absolute to the pill, OUT of flex flow ──
-                  Centered on the pill (left-1/2 top-1/2 + translate -50%/-50%).
-                  Because it is absolute, it adds nothing to the pill height.
-                  96px tall on a ~48px pill → leaks 24px top + 24px bottom.
-                  z-50 + pointer-events tuning so it sits forward cleanly.   */}
+              {/* LOGO — absolute, out of flex flow */}
               <div className="pointer-events-none absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2">
                 <NexLogo
                   height={144}
@@ -521,15 +635,39 @@ export default function Page() {
         {/* SQUARE AVATAR */}
         <div className="mx-auto -mt-20 flex max-w-[1080px] flex-col items-center px-6 sm:-mt-24">
           <div
-            className={`relative z-20 h-36 w-36 overflow-hidden rounded-2xl border-4 border-canvas ${GRAD_BTN} shadow-[0_16px_44px_-12px_rgba(139,49,232,0.45)] sm:h-44 sm:w-44`}
+            className={`relative z-20 h-36 w-36 overflow-hidden rounded-2xl border-4 border-white ${GRAD_BTN} shadow-[0_16px_44px_-12px_rgba(139,49,232,0.45)] sm:h-44 sm:w-44`}
             style={c.avatarUrl ? { backgroundImage: `url(${c.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
           >
             {!c.avatarUrl && <span className="flex h-full w-full items-center justify-center text-5xl font-black text-white">{c.initials}</span>}
-            <span className="absolute bottom-2 left-2 rounded-md bg-green-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">Open</span>
           </div>
-          <h1 className="mt-5 text-[clamp(34px,6vw,56px)] font-black leading-none tracking-[-0.045em] text-ink">{c.name}</h1>
+          <h1 className="mt-5 inline-flex items-center gap-3 text-[clamp(34px,6vw,56px)] font-black leading-none tracking-[-0.045em] text-ink">
+            {c.name}
+            {/* Verified blue tick — matches the scale of the name */}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-label="Verified"
+              className="inline-block flex-shrink-0"
+              style={{ width: 'clamp(26px,3.6vw,38px)', height: 'clamp(26px,3.6vw,38px)', marginBottom: '0.06em' }}
+            >
+              {/* Filled blue badge */}
+              <path
+                d="M12 2l2.4 1.8 3-.4 1.2 2.8 2.8 1.2-.4 3L22 12l-1.8 2.4.4 3-2.8 1.2-1.2 2.8-3-.4L12 22l-2.4-1.8-3 .4-1.2-2.8-2.8-1.2.4-3L2 12l1.8-2.4-.4-3 2.8-1.2L7.4 2.6l3 .4z"
+                fill="#1D9BF0"
+              />
+              {/* White check */}
+              <path
+                d="M8 12.5l2.5 2.5 5.5-5.5"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </h1>
           <p className="mt-3 inline-flex items-center gap-1.5 text-[15px] font-medium text-ink/60"><span className="text-primary"><Pin /></span>Based in {c.location}</p>
 
+          {/* Social icons — accurate brand SVGs */}
           <div className="mt-5 flex flex-wrap justify-center gap-2.5">
             {SOCIAL_LINKS.map(s => (
               <a key={s.key} href={s.href} aria-label={s.label} title={s.label}
@@ -539,28 +677,35 @@ export default function Page() {
             ))}
           </div>
 
+          {/* ── Website button — separate pill below social icons ────────── */}
+          {c.websiteUrl && (
+            <a
+              href={c.websiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-2.5 rounded-xl border border-primary/15 bg-white px-5 py-2.5 text-[13.5px] font-semibold text-primary shadow-[0_2px_10px_-4px_rgba(139,49,232,0.18)] transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_8px_24px_-8px_rgba(139,49,232,0.30)]"
+            >
+              <GlobeIcon s={16} />
+              <span>ameliaroze.com</span>
+              {/* External link arrow */}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="opacity-40">
+                <path d="M7 17L17 7M17 7H7M17 7v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
+          )}
+
+          {/* ── Brand partnerships — single trigger button ───────────────
+              No deal cards on the page. One button opens the modal that
+              shows all deals as cards.                                   */}
           {EXCLUSIVE_DEALS.length > 0 && (
-            <div className="mt-8 w-full max-w-[860px]">
-              <p className="mb-4 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-ink/35">Brand partnerships & exclusivities</p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {EXCLUSIVE_DEALS.map(deal => (
-                  <div key={deal.id} className={`relative rounded-2xl border bg-white p-5 ${CARD} transition hover:-translate-y-0.5 ${deal.exclusive ? 'border-primary/20' : 'border-primary/10'}`}>
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <span className="text-[22px] font-black tracking-[-0.03em]" style={{ color: deal.color }}>{deal.logoText}</span>
-                      <div className="flex flex-wrap justify-end gap-1.5">
-                        {deal.exclusive && <span className={`rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] ${GRAD_BTN} text-white`}>Exclusive</span>}
-                        <span className="rounded-md border border-primary/12 bg-primary/[0.06] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-primary">{deal.category}</span>
-                      </div>
-                    </div>
-                    <p className="mb-3 text-[13.5px] font-semibold text-ink/80">{deal.scope}</p>
-                    <p className="text-[13px] leading-[1.75] text-ink/60">{deal.description}</p>
-                    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-primary/8 pt-3">
-                      <span className="flex items-center gap-1.5 text-[11px] font-semibold text-ink/45"><CalendarIcon s={12} /> {deal.duration} · Since {deal.since}</span>
-                      {deal.blockedCategory && <span className="flex items-center gap-1.5 text-[11px] font-semibold text-red-400/80"><LockIcon s={12} /> Blocks: {deal.blockedCategory}</span>}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="mt-8">
+              <button
+                onClick={() => setPartnershipsOpen(true)}
+                className={`inline-flex items-center gap-2.5 rounded-xl ${GRAD_BTN} px-6 py-3 text-[13.5px] font-bold text-white shadow-[0_8px_24px_-6px_rgba(139,49,232,0.45)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_30px_-6px_rgba(139,49,232,0.6)]`}
+              >
+                <Check s={14} />
+                View Brand Partnerships &amp; Exclusivities
+              </button>
             </div>
           )}
         </div>
@@ -603,32 +748,19 @@ export default function Page() {
           </Reveal>
 
           <div className="mt-5 grid auto-rows-[minmax(140px,auto)] grid-cols-2 gap-4 md:grid-cols-4">
-
-            {/* "What I talk about" — icon top-RIGHT (s=40, h-14 w-14), heading top-left, content bottom-left */}
             <Reveal className="col-span-2 row-span-2 md:col-span-2">
               <div className={`relative flex h-full flex-col rounded-2xl border border-primary/10 bg-white p-7 ${CARD}`}>
-                {/* Icon: top-right corner, 2× the size of others */}
                 <div className="absolute right-5 top-5 flex h-14 w-14 items-center justify-center rounded-xl border border-primary/12 bg-surface-sub text-primary">
                   <ChatBubbleIcon s={32} />
                 </div>
-                {/* Heading: top-left */}
-                <span className="inline-flex w-fit items-center rounded-lg bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">
-                  What I talk about
-                </span>
-                {/* Spacer pushes content to bottom */}
+                <span className="inline-flex w-fit items-center rounded-lg bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">What I talk about</span>
                 <div className="flex-1" />
-                {/* Content: bottom-left */}
                 <p className="text-[15px] leading-[1.8] text-ink/70">{DEMOGRAPHICS.talkAbout}</p>
               </div>
             </Reveal>
-
-            {/* Gender — lipstick */}
             <BentoStat delay={60} value={DEMOGRAPHICS.primaryGender.value} label={DEMOGRAPHICS.primaryGender.label} topRightIcon={<PersonIcon s={26} />} />
-            {/* Age — hourglass */}
             <BentoStat delay={120} value={DEMOGRAPHICS.primaryAge.value} label={DEMOGRAPHICS.primaryAge.label} topRightIcon={<HeartPulseIcon s={26} />} />
-            {/* Followers — eye */}
             <BentoStat delay={180} value={DEMOGRAPHICS.audience} label="Total followers" topRightIcon={<EyeIcon s={26} />} />
-            {/* Location — flag */}
             <BentoStat delay={240} value={DEMOGRAPHICS.primaryLocation.value} label={DEMOGRAPHICS.primaryLocation.label}
               topRightIcon={<CountryFlag code={DEMOGRAPHICS.primaryLocation.flagCode} className="h-[18px] w-[28px]" />} />
           </div>
@@ -681,13 +813,12 @@ export default function Page() {
         <div className="mx-auto max-w-[900px]">
           <div className="flex flex-col items-center gap-10 sm:flex-row sm:items-center sm:gap-14">
             <div className="flex-shrink-0">
-              <div className="h-44 w-44 overflow-hidden rounded-2xl border-4 border-white/10 shadow-[0_20px_50px_-12px_rgba(139,49,232,0.55)]"
+              <div className="h-44 w-44 overflow-hidden rounded-2xl border-4 border-white shadow-[0_20px_50px_-12px_rgba(139,49,232,0.55)]"
                 style={c.avatarUrl ? { backgroundImage: `url(${c.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
                 {!c.avatarUrl && <span className={`flex h-full w-full items-center justify-center text-5xl font-black text-white ${GRAD_BTN}`}>{c.initials}</span>}
               </div>
             </div>
             <div className="flex-1 text-center sm:text-left">
-              
               <h2 className="text-[clamp(26px,4.5vw,42px)] font-black leading-[1.08] tracking-[-0.04em] text-white">
                 Let's make something <span className={GRAD_TEXT}>that sells.</span>
               </h2>
@@ -714,17 +845,20 @@ export default function Page() {
         </div>
       </footer>
 
+      {/* Mobile sticky CTA */}
       <div className="fixed inset-x-0 bottom-0 z-[150] flex gap-2.5 border-t border-primary/10 bg-white/95 px-4 py-3 backdrop-blur-xl pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden">
         <button onClick={() => setModal('message')} className="flex-1 rounded-lg border-[1.5px] border-primary/15 bg-white py-3 text-sm font-bold text-ink">Message</button>
         <button onClick={() => setModal('inquiry')} className={`flex-[1.6] rounded-lg ${GRAD_BTN} py-3 text-sm font-bold text-white`}>Work with me</button>
       </div>
 
+      {/* Modals */}
       <ContactModal open={modal !== null} type={modal ?? 'message'} slug="amelia-roze" firstName={c.firstName} onClose={() => setModal(null)} />
+      <PartnershipsModal open={partnershipsOpen} onClose={() => setPartnershipsOpen(false)} />
     </div>
   )
 }
 
-/* ─── Bento stat — larger icon badge (h-14 w-14 p-3) ───────────────── */
+/* ─── Bento stat ────────────────────────────────────────────────────── */
 function BentoStat({ value, label, delay, topRightIcon }: { value: string; label: string; delay: number; topRightIcon?: ReactNode }) {
   return (
     <Reveal delay={delay}>
@@ -824,7 +958,6 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
               ))}
             </div>
           )}
-          {/* Key insight — SVG lightbulb replaces emoji */}
           {item.insight && (
             <div className="rounded-lg border border-primary/10 bg-primary/[0.03] px-4 py-3">
               <p className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-ink/40">
@@ -842,7 +975,7 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
         </div>
       </div>
 
-      {/* Campaign review card */}
+      {/* ── Campaign review card — brand logo replaces reviewer photo ──── */}
       {item.review && (
         <div className={`mt-4 w-full rounded-2xl border border-primary/10 bg-white px-7 py-6 ${CARD}`}>
           <div className="mb-4 flex items-center gap-4">
@@ -853,9 +986,14 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
           </div>
           <p className="text-[15.5px] leading-[1.85] text-ink/75 sm:text-[16px]">"{item.review.quote}"</p>
           <div className="mt-5 flex items-center gap-3 border-t border-primary/10 pt-4">
-            <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${GRAD_BTN} text-[16px] font-extrabold text-white`}>
-              {item.review.name[0]}
-            </div>
+            {/* Brand logo image — path set per-collaboration in COLLABORATIONS[].review.brandLogoUrl */}
+            <BrandLogo
+              name={item.review.company}
+              color={item.review.brandColor}
+              logoUrl={item.review.brandLogoUrl}
+              initials={item.review.brandInitials}
+              size={44}
+            />
             <div>
               <div className="text-[14px] font-bold text-ink">{item.review.name}</div>
               <div className="mt-0.5 text-[12px] text-ink/50">{item.review.role} · {item.review.company}</div>
