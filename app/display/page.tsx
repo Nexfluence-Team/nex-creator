@@ -449,56 +449,70 @@ export default function Page() {
 
       {/* ════════ HEADER ════════ */}
       <header className="relative">
+        {/* Cover image — overflow-hidden stays untouched */}
         <div
           className="relative h-[260px] w-full overflow-hidden bg-gradient-to-br from-primary/30 via-primary-lt/25 to-magenta/30 sm:h-[320px] md:h-[360px]"
           style={c.coverUrl ? { backgroundImage: `url(${c.coverUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
         >
           {!c.coverUrl && <span className="absolute inset-0 flex items-center justify-center text-[13px] font-semibold uppercase tracking-[0.2em] text-white/55">Cover image</span>}
           <div className="absolute inset-0 bg-gradient-to-b from-ink/10 via-transparent to-canvas/30" />
+        </div>
 
-          {/* ── NAV: pill with logo centered, popping out above (and slightly below)
-              New approach (per brief): pill keeps its natural height (~48px).
-              Logo is 68px tall — bigger than the pill — centered on the pill's
-              vertical midline. This means (68-48)/2 = 10px protrudes top AND
-              bottom, but visually the top protrusion matters (against the cover
-              image). The logo slot reserves width so nav links don't overlap.
-              overflow-visible on the pill is essential.                       */}
-          <div className="absolute inset-x-0 top-0 z-30 flex justify-center px-4 pt-5">
-            <div className="relative flex w-full max-w-[580px]">
+        {/* ── NAV — pill keeps its small natural height; logo floats on z-axis ──
+            THE FIX: the logo is NOT a flex child of the pill. If it were, its
+            height would force the pill (items-center) to grow to contain it.
+            Instead the logo is `position: absolute` relative to the pill, so
+            it is removed from layout flow entirely — it contributes ZERO to
+            the pill's height. The pill's height is driven only by the small
+            nav buttons (~48px). The logo (96px) is centered on the pill and
+            floats forward via z-50, leaking ~24px above and ~24px below the
+            pill edges without ever resizing it.
+            A non-rendered spacer (w-20) in the flex row reserves the centre
+            gap so the left/right nav groups never slide under the logo.      */}
+        <div
+          className="absolute inset-x-0 z-40 flex justify-center px-4"
+          style={{ top: 28 }}
+        >
+          <div className="w-full max-w-[600px]">
 
-              {/* Pill — natural height from padding, overflow-visible for logo */}
-              <div className="relative flex w-full items-center overflow-visible rounded-2xl border border-white/40 bg-white/80 px-4 py-3 shadow-[0_8px_28px_-8px_rgba(10,6,18,0.25)] backdrop-blur-xl">
+            {/* Pill — height driven ONLY by nav buttons; overflow visible */}
+            <div
+              className="relative flex w-full items-center justify-between rounded-2xl border border-white/40 bg-white/80 px-4 py-3 shadow-[0_8px_28px_-8px_rgba(10,6,18,0.25)] backdrop-blur-xl"
+              style={{ overflow: 'visible' }}
+            >
+              {/* Left nav links */}
+              <div className="flex items-center gap-0.5">
+                {NAV_LEFT.map(n => (
+                  <button key={n.label} onClick={n.action}
+                    className="rounded-lg px-4 py-2 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary">
+                    {n.label}
+                  </button>
+                ))}
+              </div>
 
-                {/* Left nav links */}
-                <div className="flex flex-1 items-center gap-0.5">
-                  {NAV_LEFT.map(n => (
-                    <button key={n.label} onClick={n.action}
-                      className="rounded-lg px-4 py-2 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary">
-                      {n.label}
-                    </button>
-                  ))}
-                </div>
+              {/* Centre spacer — reserves room for the logo, NO height of its own */}
+              <div className="w-16 flex-shrink-0" aria-hidden="true" />
 
-                {/* Center logo slot — logo is absolutely centered on the pill midline,
-                    taller than pill so it pops out of the top edge naturally          */}
-                <div className="relative flex-shrink-0" style={{ width: 72, height: '100%' }}>
-                  <div className="absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2">
-                    <NexLogo
-                      height={68}
-                      className="drop-shadow-[0_4px_18px_rgba(139,49,232,0.55)]"
-                    />
-                  </div>
-                </div>
+              {/* Right nav links */}
+              <div className="flex items-center gap-0.5">
+                {NAV_RIGHT.map(n => (
+                  <button key={n.label} onClick={n.action}
+                    className="rounded-lg px-4 py-2 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary">
+                    {n.label}
+                  </button>
+                ))}
+              </div>
 
-                {/* Right nav links */}
-                <div className="flex flex-1 items-center justify-end gap-0.5">
-                  {NAV_RIGHT.map(n => (
-                    <button key={n.label} onClick={n.action}
-                      className="rounded-lg px-4 py-2 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary">
-                      {n.label}
-                    </button>
-                  ))}
-                </div>
+              {/* ── LOGO — absolute to the pill, OUT of flex flow ──
+                  Centered on the pill (left-1/2 top-1/2 + translate -50%/-50%).
+                  Because it is absolute, it adds nothing to the pill height.
+                  96px tall on a ~48px pill → leaks 24px top + 24px bottom.
+                  z-50 + pointer-events tuning so it sits forward cleanly.   */}
+              <div className="pointer-events-none absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2">
+                <NexLogo
+                  height={144}
+                  className="pointer-events-auto drop-shadow-[0_6px_24px_rgba(139,49,232,0.65)]"
+                />
               </div>
             </div>
           </div>
