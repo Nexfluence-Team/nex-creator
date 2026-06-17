@@ -4,12 +4,6 @@ import { useState, useEffect, useRef, type ReactNode } from 'react'
 
 /* ════════════════════════════════════════════════════════════════════
    Creator portfolio — page.tsx  (Nexfluence v4, LIGHT)
-   Changes:
-   1. Nav pill: transparent gradient in the middle (white → transparent → white)
-   2. Exclusive deals: "Signed in" badge + clickable modal with brand logo
-   3. Campaign reviews: brand logo instead of reviewer photo
-   4. Social icons: accurate brand SVGs (Instagram, TikTok, YouTube, etc.)
-   5. Website button: separate pill below social icons with globe icon
    ════════════════════════════════════════════════════════════════════ */
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
@@ -35,7 +29,6 @@ const EXCLUSIVE_DEALS = [
     exclusive: true, color: '#E8112D', scope: 'Baltic-wide exclusivity',
     description: "Amelia is Red Bull's sole creator for energy drink content across Latvia, Lithuania & Estonia. No energy drink or stimulant brand competitors will be featured on any channel.",
     blockedCategory: 'All energy drink & stimulant brands', duration: 'Rolling annual contract',
-    /* Brand logo: text-based SVG logo with brand colour */
     logo: null,
   },
   {
@@ -135,6 +128,17 @@ const BUDGETS = ['Under €350', '€350–€890', '€890–€2,500', '€2,5
 const Check = ({ s = 16 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
     <path d="M5 12l4 4 10-10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+const Shield = ({ s = 16 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <path
+      d="M12 3L5 6v6c0 5 3.5 8.5 7 10 3.5-1.5 7-5 7-10V6l-7-3z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 )
 const Play = ({ s = 18 }: { s?: number }) => (
@@ -255,36 +259,18 @@ const GlobeIcon = ({ s = 18 }: { s?: number }) => (
   </svg>
 )
 
-/* ─── Social platform PNG icons ──────────────────────────────────────
-   Icons are loaded from /public/icons/social/ as PNG files.
-   Drop your PNGs there with these exact filenames and they render
-   inside the same hover-lift button as before.
-   The <img> is 20×20, object-contain, inheriting the button's colour
-   treatment via CSS filter on hover (white tint handled by the button
-   gradient overlay, not the image itself — so use full-colour PNGs). */
-function SocialPngIcon({ src, label }: { src: string; label: string }) {
-  return (
-    <img
-      src={src}
-      alt={label}
-      width={20}
-      height={20}
-      className="h-5 w-5 object-contain"
-      draggable={false}
-    />
-  )
-}
-
-/* Social links — website intentionally excluded (shown as a separate button below).
-   Set href to the real profile URL. Icon src points to your PNG in /public/icons/social/. */
-const SOCIAL_LINKS: { key: string; label: string; href: string; icon: ReactNode }[] = [
-  { key: 'instagram', label: 'Instagram',   href: '#', icon: <SocialPngIcon src="/Socials/Instagram.svg" label="Instagram" /> },
-  { key: 'tiktok',    label: 'TikTok',      href: '#', icon: <SocialPngIcon src="/Socials/TikTok.svg"    label="TikTok" /> },
-  { key: 'youtube',   label: 'YouTube',     href: '#', icon: <SocialPngIcon src="/Socials/YouTube.svg"   label="YouTube" /> },
-  { key: 'snapchat',  label: 'Snapchat',    href: '#', icon: <SocialPngIcon src="/Socials/Snapchat.svg"  label="Snapchat" /> },
-  { key: 'twitter',   label: 'Twitter / X', href: '#', icon: <SocialPngIcon src="/Socials/Twitter.svg"         label="Twitter / X" /> },
-  { key: 'linkedin',  label: 'LinkedIn',    href: '#', icon: <SocialPngIcon src="/Socials/LinkedIn.svg"  label="LinkedIn" /> },
-  { key: 'facebook',  label: 'Facebook',    href: '#', icon: <SocialPngIcon src="/Socials/Facebook.svg"  label="Facebook" /> },
+/* ─── Social platform icons ───────────────────────────────────────────
+   Rendered directly as <img> tags — no surrounding button container.
+   SVGs sourced from /Socials/. Smooth rounded corners via border-radius.
+   Hover: slight lift + opacity change. No square wrapper at all.        */
+const SOCIAL_LINKS: { key: string; label: string; href: string; src: string }[] = [
+  { key: 'instagram', label: 'Instagram',   href: '#', src: '/Socials/Instagram.svg' },
+  { key: 'tiktok',    label: 'TikTok',      href: '#', src: '/Socials/TikTok.svg'    },
+  { key: 'youtube',   label: 'YouTube',     href: '#', src: '/Socials/YouTube.svg'   },
+  { key: 'snapchat',  label: 'Snapchat',    href: '#', src: '/Socials/Snapchat.svg'  },
+  { key: 'twitter',   label: 'Twitter / X', href: '#', src: '/Socials/Twitter.svg'   },
+  { key: 'linkedin',  label: 'LinkedIn',    href: '#', src: '/Socials/LinkedIn.svg'  },
+  { key: 'facebook',  label: 'Facebook',    href: '#', src: '/Socials/Facebook.svg'  },
 ]
 
 /* ─── Gradient stars ─────────────────────────────────────────────────── */
@@ -403,11 +389,7 @@ function NexLogo({ height = 28, className = '' }: { height?: number; className?:
   return <img src="/Nex.webp" alt="Nexfluence" height={height} className={`object-contain ${className}`} style={{ height }} />
 }
 
-/* ─── Brand Logo tile ────────────────────────────────────────────────
-   Used in the partnerships modal and in campaign review cards.
-   Priority: brandLogoUrl image → colour-tinted initials fallback.
-   The image version uses object-contain so logos with transparent
-   backgrounds render cleanly without cropping.                       */
+/* ─── Brand Logo tile ────────────────────────────────────────────────── */
 function BrandLogo({
   name, color, logoUrl, initials, size = 56,
 }: { name: string; color: string; logoUrl?: string | null; initials?: string; size?: number }) {
@@ -418,14 +400,7 @@ function BrandLogo({
         className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/10 bg-white shadow-sm"
         style={{ width: size, height: size }}
       >
-        <img
-          src={logoUrl}
-          alt={name}
-          width={size}
-          height={size}
-          className="h-full w-full object-contain p-1"
-          draggable={false}
-        />
+        <img src={logoUrl} alt={name} width={size} height={size} className="h-full w-full object-contain p-1" draggable={false} />
       </div>
     )
   }
@@ -441,8 +416,6 @@ function BrandLogo({
 
 /* ════════════════════════════════════════════════════════════════════
    Partnerships Modal
-   Single modal showing ALL deals as cards — scrollable.
-   Opened by the one "View Brand Partnerships" button on the page.
    ════════════════════════════════════════════════════════════════════ */
 function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   useEffect(() => {
@@ -462,7 +435,6 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
         role="dialog" aria-modal="true"
         className={`max-h-[90vh] w-full max-w-[580px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_-12px_rgba(10,6,18,0.35)] transition-all duration-300 ease-[cubic-bezier(0.34,1.5,0.64,1)] flex flex-col ${open ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-6 scale-95 opacity-0'}`}
       >
-        {/* Sticky header */}
         <div className="flex-shrink-0 flex items-center justify-between border-b border-primary/10 bg-white px-7 py-5">
           <div>
             <h3 className="text-lg font-extrabold tracking-[-0.02em] text-ink">Brand Partnerships</h3>
@@ -473,8 +445,6 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
             ✕
           </button>
         </div>
-
-        {/* Scrollable cards */}
         <div className="flex-1 overflow-y-auto px-7 py-6 space-y-4">
           {EXCLUSIVE_DEALS.map(deal => (
             <div
@@ -482,7 +452,6 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
               className={`rounded-2xl border bg-white p-5 ${CARD} ${deal.exclusive ? 'border-primary/20' : 'border-primary/10'}`}
               style={{ background: `linear-gradient(135deg, ${deal.color}0a 0%, transparent 60%)` }}
             >
-              {/* Card header: logo + name + badges */}
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-3">
                   <BrandLogo name={deal.brand} color={deal.color} logoUrl={deal.logo} initials={deal.logoText} size={48} />
@@ -499,10 +468,7 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
                   <span className="rounded-md border border-primary/12 bg-primary/[0.05] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-primary/70">{deal.category}</span>
                 </div>
               </div>
-
               <p className="text-[13px] leading-[1.75] text-ink/65">{deal.description}</p>
-
-              {/* Meta row */}
               <div className="mt-3.5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-primary/8 pt-3">
                 <span className="flex items-center gap-1.5 text-[11px] font-semibold text-ink/45">
                   <CalendarIcon s={12} /> {deal.duration} · Since {deal.since}
@@ -513,8 +479,6 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
                   </span>
                 )}
               </div>
-
-              {/* Signed-in confirmation strip */}
               <div className="mt-3.5 flex items-center gap-2.5 rounded-lg border border-green-200 bg-green-50 px-3.5 py-2.5">
                 <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-green-500 text-white">
                   <Check s={12} />
@@ -526,8 +490,6 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
             </div>
           ))}
         </div>
-
-        {/* Sticky footer */}
         <div className="flex-shrink-0 border-t border-primary/10 bg-white px-7 py-4">
           <button onClick={onClose}
             className={`w-full rounded-xl ${GRAD_BTN} py-3 text-[14px] font-bold text-white shadow-[0_8px_24px_-6px_rgba(139,49,232,0.4)] transition hover:-translate-y-0.5`}>
@@ -565,29 +527,14 @@ export default function Page() {
           <div className="absolute inset-0 bg-gradient-to-b from-ink/10 via-transparent to-canvas/30" />
         </div>
 
-        {/* ── NAV PILL ──────────────────────────────────────────────────────
-            The pill itself has NO background and NO blur. Instead a separate
-            absolutely-positioned layer behind the buttons carries BOTH the
-            white fill and the backdrop-blur, and that whole layer is masked
-            with a horizontal gradient:
-              • Sides (0–22% / 78–100%): mask fully opaque → white + blur show
-              • Centre (34–66%): mask = 0 → layer is clipped away entirely,
-                so there is no fill AND no blur — the cover image is 100% clear
-              • 22–34% / 66–78%: smooth fade between the two
-            Putting the blur on the masked layer (not the pill) is the key:
-            where the mask hits 0 the blur disappears too, so the middle is
-            real transparency, not frosted/grey glass.                       */}
-        <div
-          className="absolute inset-x-0 z-40 flex justify-center px-4"
-          style={{ top: 28 }}
-        >
+        {/* ── NAV PILL ─────────────────────────────────────────────────── */}
+        <div className="absolute inset-x-0 z-40 flex justify-center px-4" style={{ top: 28 }}>
           <div className="w-full max-w-[600px]">
             <div
               className="relative flex w-full items-center justify-between rounded-2xl px-4 py-3"
               style={{ overflow: 'visible', border: 'none', boxShadow: 'none' }}
             >
-              {/* Masked fill + blur layer — sits behind the nav buttons.
-                  The mask clips both the white tint and the blur in the centre. */}
+              {/* Masked fill + blur layer — blur is ON this layer so it vanishes in the transparent centre */}
               <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 rounded-2xl backdrop-blur-xl"
@@ -597,7 +544,6 @@ export default function Page() {
                   maskImage: 'linear-gradient(90deg, #000 0%, #000 30%, transparent 42%, transparent 58%, #000 70%, #000 100%)',
                 }}
               />
-
               {/* Left nav */}
               <div className="relative z-10 flex items-center gap-0.5">
                 {NAV_LEFT.map(n => (
@@ -607,10 +553,8 @@ export default function Page() {
                   </button>
                 ))}
               </div>
-
               {/* Centre spacer */}
               <div className="w-16 flex-shrink-0" aria-hidden="true" />
-
               {/* Right nav */}
               <div className="relative z-10 flex items-center gap-0.5">
                 {NAV_RIGHT.map(n => (
@@ -620,19 +564,15 @@ export default function Page() {
                   </button>
                 ))}
               </div>
-
               {/* LOGO — absolute, out of flex flow */}
               <div className="pointer-events-none absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2">
-                <NexLogo
-                  height={144}
-                  className="pointer-events-auto drop-shadow-[0_6px_24px_rgba(139,49,232,0.65)]"
-                />
+                <NexLogo height={144} className="pointer-events-auto drop-shadow-[0_6px_24px_rgba(139,49,232,0.65)]" />
               </div>
             </div>
           </div>
         </div>
 
-        {/* SQUARE AVATAR */}
+        {/* AVATAR + NAME */}
         <div className="mx-auto -mt-20 flex max-w-[1080px] flex-col items-center px-6 sm:-mt-24">
           <div
             className={`relative z-20 h-36 w-36 overflow-hidden rounded-2xl border-4 border-white ${GRAD_BTN} shadow-[0_16px_44px_-12px_rgba(139,49,232,0.45)] sm:h-44 sm:w-44`}
@@ -640,70 +580,68 @@ export default function Page() {
           >
             {!c.avatarUrl && <span className="flex h-full w-full items-center justify-center text-5xl font-black text-white">{c.initials}</span>}
           </div>
-          <h1 className="mt-5 inline-flex items-center gap-3 text-[clamp(34px,6vw,56px)] font-black leading-none tracking-[-0.045em] text-ink">
-            {c.name}
-            {/* Verified blue tick — matches the scale of the name */}
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-label="Verified"
-              className="inline-block flex-shrink-0"
-              style={{ width: 'clamp(26px,3.6vw,38px)', height: 'clamp(26px,3.6vw,38px)', marginBottom: '0.06em' }}
-            >
-              {/* Filled blue badge */}
-              <path
-                d="M12 2l2.4 1.8 3-.4 1.2 2.8 2.8 1.2-.4 3L22 12l-1.8 2.4.4 3-2.8 1.2-1.2 2.8-3-.4L12 22l-2.4-1.8-3 .4-1.2-2.8-2.8-1.2.4-3L2 12l1.8-2.4-.4-3 2.8-1.2L7.4 2.6l3 .4z"
-                fill="#1D9BF0"
-              />
-              {/* White check */}
-              <path
-                d="M8 12.5l2.5 2.5 5.5-5.5"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </h1>
-          <p className="mt-3 inline-flex items-center gap-1.5 text-[15px] font-medium text-ink/60"><span className="text-primary"><Pin /></span>Based in {c.location}</p>
 
-          {/* Social icons — accurate brand SVGs */}
-          <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+          {/* ── Creator name + verified tick ────────────────────────────────
+              h1 is flex + items-center + justify-center so the name and tick
+              are vertically centred on each other AND the whole row is
+              horizontally centred within the column.                         */}
+          <h1 className="mt-5 flex w-full items-center justify-center gap-2.5 text-center text-[clamp(34px,6vw,56px)] font-black leading-none tracking-[-0.045em] text-ink">
+            <span>{c.name}</span>
+            <img src="/Tick.svg" alt="" className='h-8 w-8'/>
+          </h1>
+
+          <p className="mt-3 inline-flex items-center gap-1.5 text-[15px] font-medium text-ink/60">
+            <span className="text-primary"><Pin /></span>Based in {c.location}
+          </p>
+
+          {/* ── Social icons — uniform size, no container box ───────────────
+              Each platform SVG has different internal padding, so rendering
+              raw makes them look unequal. The fix: a fixed 40×40 flex frame
+              per icon, and the <img> fills the WHOLE frame (h-full w-full)
+              with object-contain. Because the frame is identical for every
+              icon and the image fills it edge-to-edge, every logo now reads
+              at the same visual size. No border / no background box.         */}
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3.5">
             {SOCIAL_LINKS.map(s => (
-              <a key={s.key} href={s.href} aria-label={s.label} title={s.label}
-                className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/12 bg-white text-primary transition hover:-translate-y-1 hover:border-transparent hover:bg-gradient-to-br hover:from-primary hover:to-primary-lt hover:text-white hover:shadow-[0_12px_28px_-8px_rgba(139,49,232,0.4)]">
-                {s.icon}
+              <a
+                key={s.key}
+                href={s.href}
+                aria-label={s.label}
+                title={s.label}
+                className="flex h-8 w-8 items-center justify-center transition-all duration-200 hover:-translate-y-1 hover:opacity-90 hover:drop-shadow-[0_6px_16px_rgba(139,49,232,0.35)]"
+              >
+                <img
+                  src={s.src}
+                  alt={s.label}
+                  draggable={false}
+                  className="block h-full w-full overflow-hidden rounded-md object-contain"
+                />
               </a>
             ))}
           </div>
 
-          {/* ── Website button — separate pill below social icons ────────── */}
+          {/* Website button */}
           {c.websiteUrl && (
             <a
               href={c.websiteUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-2.5 rounded-xl border border-primary/15 bg-white px-5 py-2.5 text-[13.5px] font-semibold text-primary shadow-[0_2px_10px_-4px_rgba(139,49,232,0.18)] transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_8px_24px_-8px_rgba(139,49,232,0.30)]"
+              className="mt-4 inline-flex align-items items-center gap-2.5 rounded-xl border border-primary/15 bg-white px-5 py-2.5 text-[13.5px] font-semibold text-primary shadow-[0_2px_10px_-4px_rgba(139,49,232,0.18)] transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_8px_24px_-8px_rgba(139,49,232,0.30)]"
             >
               <GlobeIcon s={16} />
-              <span>ameliaroze.com</span>
-              {/* External link arrow */}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="opacity-40">
-                <path d="M7 17L17 7M17 7H7M17 7v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <span> Visit Website</span>
+              
             </a>
           )}
 
-          {/* ── Brand partnerships — single trigger button ───────────────
-              No deal cards on the page. One button opens the modal that
-              shows all deals as cards.                                   */}
+          {/* Brand partnerships button */}
           {EXCLUSIVE_DEALS.length > 0 && (
             <div className="mt-8">
               <button
                 onClick={() => setPartnershipsOpen(true)}
                 className={`inline-flex items-center gap-2.5 rounded-xl ${GRAD_BTN} px-6 py-3 text-[13.5px] font-bold text-white shadow-[0_8px_24px_-6px_rgba(139,49,232,0.45)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_30px_-6px_rgba(139,49,232,0.6)]`}
               >
-                <Check s={14} />
+                <Shield s={14} />
                 View Brand Partnerships &amp; Exclusivities
               </button>
             </div>
@@ -746,7 +684,6 @@ export default function Page() {
               {STATS.map(s => <Stat key={s.label} {...s} />)}
             </div>
           </Reveal>
-
           <div className="mt-5 grid auto-rows-[minmax(140px,auto)] grid-cols-2 gap-4 md:grid-cols-4">
             <Reveal className="col-span-2 row-span-2 md:col-span-2">
               <div className={`relative flex h-full flex-col rounded-2xl border border-primary/10 bg-white p-7 ${CARD}`}>
@@ -975,7 +912,6 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
         </div>
       </div>
 
-      {/* ── Campaign review card — brand logo replaces reviewer photo ──── */}
       {item.review && (
         <div className={`mt-4 w-full rounded-2xl border border-primary/10 bg-white px-7 py-6 ${CARD}`}>
           <div className="mb-4 flex items-center gap-4">
@@ -986,7 +922,6 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
           </div>
           <p className="text-[15.5px] leading-[1.85] text-ink/75 sm:text-[16px]">"{item.review.quote}"</p>
           <div className="mt-5 flex items-center gap-3 border-t border-primary/10 pt-4">
-            {/* Brand logo image — path set per-collaboration in COLLABORATIONS[].review.brandLogoUrl */}
             <BrandLogo
               name={item.review.company}
               color={item.review.brandColor}
@@ -1121,4 +1056,4 @@ function ContactModal({ open, type, slug, firstName, onClose }: { open: boolean;
       </div>
     </div>
   )
-}
+} 
