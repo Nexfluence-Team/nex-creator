@@ -132,30 +132,57 @@ const CalendarIcon = ({ s = 13 }: { s?: number }) => (
 )
 
 /* ─── Bento top-right icons — s=26 default, badge container h-14 w-14 ─
-   GENDER:   Lipstick — reads "beauty / female" immediately
-   AGE:      Hourglass — reads "time span / age range"
-   REACH:    Eye — retained
+   GENDER:   PersonIcon  — female pictogram shape from uploaded SVG
+   AGE:      HeartPulseIcon — heart + ECG line from uploaded SVG
+   REACH:    EyeIcon — retained
    LOCATION: Real flag image — retained
-   TALK:     Chat bubble — top-right, s=40, container h-14 w-14           */
+   TALK:     ChatBubbleIcon — top-right, s=32, container h-14 w-14       */
 const EyeIcon = ({ s = 26 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
   </svg>
 )
-const LipstickIcon = ({ s = 26 }: { s?: number }) => (
+/* ─── Person / Gender icon ─────────────────────────────────────────────
+   Shape derived from the uploaded female-mark SVG: round head + body with
+   a wider skirt/trapezoidal silhouette (female pictogram form).
+   Stroke-only: strokeWidth=1.8, round caps/joins — our iconography style. */
+const PersonIcon = ({ s = 26 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M10 10V7c0-1.1.9-2 2-2s2 .9 2 2v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    <path d="M10 7h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    <rect x="9" y="10" width="6" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.7" />
-    <path d="M9 14h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-    <path d="M9 21h6M12 21v-3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    {/* Head */}
+    <circle cx="12" cy="5" r="2.8" stroke="currentColor" strokeWidth="1.8" />
+    {/* Neck + shoulders spreading outward */}
+    <path d="M12 7.8v1.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    {/* Body — trapezoidal silhouette matching the female pictogram:
+        narrow at waist, wider at hem, like an A-line form              */}
+    <path
+      d="M8 9c-.5 0-1.2.6-1.5 1.5L5 16h4l1 5h4l1-5h4l-1.5-5.5C17.2 9.6 16.5 9 16 9"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+    />
+    {/* Shoulder arc connecting neck to body sides */}
+    <path
+      d="M9.5 9c.7-.5 1.6-.5 2.5-.5s1.8 0 2.5.5"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
+    />
   </svg>
 )
-const HourglassIcon = ({ s = 26 }: { s?: number }) => (
+
+/* ─── Heart-pulse / Age icon ────────────────────────────────────────────
+   Shape derived from the uploaded heart-pulse SVG: heart outline with an
+   ECG/vital-signs line running through it — reads as "vitality / age".
+   Stroke-only, adapted to our strokeWidth=1.8, round caps/joins.         */
+const HeartPulseIcon = ({ s = 26 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M5 2h14M5 22h14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    <path d="M6 2l3 9 3 2-3 2-3 9M18 2l-3 9-3 2 3 2 3 9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    {/* Heart outline — matches the uploaded heart shape */}
+    <path
+      d="M12 20.5S3.5 14 3.5 8a4.5 4.5 0 018.5-2 4.5 4.5 0 018.5 2c0 6-8.5 12.5-8.5 12.5z"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+    />
+    {/* ECG pulse line through the heart's midline */}
+    <path
+      d="M3.5 12h2.3l1.5-2.8 2 5 1.5-3.5 1 1.8H18"
+      stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"
+    />
   </svg>
 )
 /* Chat bubble for "What I talk about" — top-right, larger (s=40) */
@@ -227,52 +254,91 @@ function MetricIcon({ name, s = 18 }: { name: string; s?: number }) {
 }
 
 /* ─── Gradient stars — brand iconography ────────────────────────────────
-   Star shape: slightly rounded corners via strokeLinejoin="round" on the
-   outline stroke, combined with a gradient fill. The path uses rounded
-   anchor points at the inner valleys (r=1) giving a slightly softened
-   look without going fully blob — exactly "slightly smooth corners".
-   Unfilled stars use text-ink/12 fill with a subtle stroke.             */
+   Design spec:
+   • Filled stars: gradient fill + gradient stroke border with visible white
+     gap between them. Achieved by layering three paths per star:
+     1. White "gap" stroke (strokeWidth=4) — creates the separation
+     2. Gradient stroke border (strokeWidth=1.8) — the outline
+     3. Gradient fill — the colour inside
+   • Empty stars: stroke-only outline in muted ink/20, no fill.
+   • Star shape: slightly softened — inner valleys use rounded joins via
+     strokeLinejoin="round". Not fully smooth, just slightly.
+   • All stroke caps/joins: round — matching the brand iconography system.  */
 function GradientStars({ rating, total = 5, size = 28 }: { rating: number; total?: number; size?: number }) {
-  const gradId = 'nex-star-grad'
-  /* Star path with slightly rounded inner valleys — achieved by using
-     cubic bezier curves at the five inner points of the star. The outer
-     points stay sharp; the inner concave joins are rounded.             */
-  const STAR = 'M12 2.5l2.6 6.2 6.9.6-5.1 4.4 1.6 6.8L12 16.8l-6 3.7 1.6-6.8L2.5 9.3l6.9-.6L12 2.5z'
+  const fillId   = 'nex-star-fill'
+  const strokeId = 'nex-star-stroke'
+  /* Slightly softer star: inner points pulled inward to r≈4.5 from centre,
+     outer points at r≈10.5. The small radial difference at the inner points
+     softens the concave valleys without making it blobby.                  */
+  const STAR = 'M12 2l2.8 6.2 6.8.6-5 4.5 1.5 6.7L12 16.5l-6.1 3.5 1.5-6.7-5-4.5 6.8-.6z'
   return (
-    <div className="flex items-center gap-1.5">
-      {/* Gradient def — rendered once, referenced by all filled stars */}
-      <svg width="0" height="0" style={{ position: 'absolute' }}>
+    <div className="flex items-center gap-2">
+      {/* Gradient defs — one for fill, one for stroke */}
+      <svg width="0" height="0" style={{ position: 'absolute', pointerEvents: 'none' }}>
         <defs>
-          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#8B31E8" />
-            <stop offset="50%" stopColor="#A855F7" />
+          <linearGradient id={fillId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor="#8B31E8" />
+            <stop offset="55%"  stopColor="#A855F7" />
+            <stop offset="100%" stopColor="#FF33BC" />
+          </linearGradient>
+          <linearGradient id={strokeId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor="#8B31E8" />
+            <stop offset="55%"  stopColor="#A855F7" />
             <stop offset="100%" stopColor="#FF33BC" />
           </linearGradient>
         </defs>
       </svg>
+
       {Array.from({ length: total }).map((_, i) => (
-        <svg key={i} width={size} height={size} viewBox="0 0 24 24">
+        <svg key={i} width={size} height={size} viewBox="0 0 24 24" overflow="visible">
           {i < rating ? (
-            /* Filled + outlined star — gradient fill, matching stroke for definition */
-            <path
-              d={STAR}
-              fill={`url(#${gradId})`}
-              stroke="url(#nex-star-grad)"
-              strokeWidth="0.5"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-            />
+            /* Filled star: white gap layer → gradient border → gradient fill */
+            <>
+              {/* Layer 1: white gap — thick stroke creates visual separation */}
+              <path
+                d={STAR}
+                fill={`url(#${fillId})`}
+                stroke="white"
+                strokeWidth="3"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                paintOrder="stroke"
+              />
+              {/* Layer 2: gradient border on top of the white gap */}
+              <path
+                d={STAR}
+                fill="none"
+                stroke={`url(#${strokeId})`}
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            </>
           ) : (
-            /* Empty star — muted fill, stroke only for shape */
-            <path
-              d={STAR}
-              fill="currentColor"
-              stroke="currentColor"
-              strokeWidth="0.3"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              className="text-ink/14"
-            />
+            /* Empty star: gradient stroke outline only — brand colour, no fill.
+               Uses a separate gradient def so the outline is always the brand
+               palette even on unfilled stars.                                  */
+            <>
+              {/* White gap beneath the gradient stroke so it reads cleanly */}
+              <path
+                d={STAR}
+                fill="none"
+                stroke="white"
+                strokeWidth="3"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              {/* Gradient border — same stops, lower opacity for "empty" state */}
+              <path
+                d={STAR}
+                fill="none"
+                stroke={`url(#${strokeId})`}
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                opacity="0.35"
+              />
+            </>
           )}
         </svg>
       ))}
@@ -390,22 +456,18 @@ export default function Page() {
           {!c.coverUrl && <span className="absolute inset-0 flex items-center justify-center text-[13px] font-semibold uppercase tracking-[0.2em] text-white/55">Cover image</span>}
           <div className="absolute inset-0 bg-gradient-to-b from-ink/10 via-transparent to-canvas/30" />
 
-          {/* ── NAV: pill with logo centered, half protruding above ──────────
-              Geometry:
-              - Pill height = 52px (py-3.5 ≈ 14px * 2 + text ≈ 24px = 52px)
-              - Logo height = 78px  (3× the original ~26px)
-              - We want exactly half of the logo (39px) above the pill top.
-              - The logo slot is an absolutely positioned element whose BOTTOM
-                is flush with the pill's inner content line (bottom: 0 of the
-                slot container that sits inside the flex row).
-              - By setting the logo container height = 78px and anchoring its
-                bottom to the pill bottom, the top 39px naturally overflows
-                above the pill — perfect 50/50 split.                        */}
+          {/* ── NAV: pill with logo centered, popping out above (and slightly below)
+              New approach (per brief): pill keeps its natural height (~48px).
+              Logo is 68px tall — bigger than the pill — centered on the pill's
+              vertical midline. This means (68-48)/2 = 10px protrudes top AND
+              bottom, but visually the top protrusion matters (against the cover
+              image). The logo slot reserves width so nav links don't overlap.
+              overflow-visible on the pill is essential.                       */}
           <div className="absolute inset-x-0 top-0 z-30 flex justify-center px-4 pt-5">
-            <div className="relative flex w-full max-w-[580px] items-stretch">
+            <div className="relative flex w-full max-w-[580px]">
 
-              {/* The pill itself — overflow-visible so logo can protrude up */}
-              <div className="relative flex w-full items-center overflow-visible rounded-2xl border border-white/40 bg-white/80 px-4 shadow-[0_8px_28px_-8px_rgba(10,6,18,0.25)] backdrop-blur-xl" style={{ height: 52 }}>
+              {/* Pill — natural height from padding, overflow-visible for logo */}
+              <div className="relative flex w-full items-center overflow-visible rounded-2xl border border-white/40 bg-white/80 px-4 py-3 shadow-[0_8px_28px_-8px_rgba(10,6,18,0.25)] backdrop-blur-xl">
 
                 {/* Left nav links */}
                 <div className="flex flex-1 items-center gap-0.5">
@@ -417,14 +479,14 @@ export default function Page() {
                   ))}
                 </div>
 
-                {/* Center logo slot — logo overflows upward by exactly half its height */}
-                <div className="relative mx-3 flex-shrink-0" style={{ width: 64 }}>
-                  {/* Logo anchored to bottom of pill, grows upward */}
-                  <div
-                    className="absolute left-1/2 -translate-x-1/2 z-50"
-                    style={{ bottom: -4, height: 78 }}
-                  >
-                    <NexLogo height={78} className="drop-shadow-[0_6px_20px_rgba(139,49,232,0.50)]" />
+                {/* Center logo slot — logo is absolutely centered on the pill midline,
+                    taller than pill so it pops out of the top edge naturally          */}
+                <div className="relative flex-shrink-0" style={{ width: 72, height: '100%' }}>
+                  <div className="absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2">
+                    <NexLogo
+                      height={68}
+                      className="drop-shadow-[0_4px_18px_rgba(139,49,232,0.55)]"
+                    />
                   </div>
                 </div>
 
@@ -547,9 +609,9 @@ export default function Page() {
             </Reveal>
 
             {/* Gender — lipstick */}
-            <BentoStat delay={60} value={DEMOGRAPHICS.primaryGender.value} label={DEMOGRAPHICS.primaryGender.label} topRightIcon={<LipstickIcon s={26} />} />
+            <BentoStat delay={60} value={DEMOGRAPHICS.primaryGender.value} label={DEMOGRAPHICS.primaryGender.label} topRightIcon={<PersonIcon s={26} />} />
             {/* Age — hourglass */}
-            <BentoStat delay={120} value={DEMOGRAPHICS.primaryAge.value} label={DEMOGRAPHICS.primaryAge.label} topRightIcon={<HourglassIcon s={26} />} />
+            <BentoStat delay={120} value={DEMOGRAPHICS.primaryAge.value} label={DEMOGRAPHICS.primaryAge.label} topRightIcon={<HeartPulseIcon s={26} />} />
             {/* Followers — eye */}
             <BentoStat delay={180} value={DEMOGRAPHICS.audience} label="Total followers" topRightIcon={<EyeIcon s={26} />} />
             {/* Location — flag */}
@@ -813,7 +875,7 @@ function WorkModel({ name, price, priceLabel, icon, features, description, popul
           <span className="text-sm font-medium text-ink/50">{priceLabel}</span>
         </div>
         <p className="mt-3 text-sm leading-relaxed text-ink/60">{description}</p>
-        <ul className="mt-4 space-y-2 border-t border-primary/10 pt-4 text-sm">
+        <ul className="mt-4 flex-1 space-y-2 border-t border-primary/10 pt-4 text-sm">
           {features.map((f, i) => (
             <li key={i} className="flex items-start gap-2.5 text-ink/70">
               <span className="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gradient-to-r from-primary to-magenta" />
