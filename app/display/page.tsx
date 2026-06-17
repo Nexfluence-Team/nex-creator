@@ -687,9 +687,7 @@ export default function Page() {
               </div>
             </div>
             <div className="flex-1 text-center sm:text-left">
-              <div className="mb-4 flex items-center justify-center sm:justify-start">
-                <NexLogo height={30} className="brightness-0 invert opacity-80" />
-              </div>
+              
               <h2 className="text-[clamp(26px,4.5vw,42px)] font-black leading-[1.08] tracking-[-0.04em] text-white">
                 Let's make something <span className={GRAD_TEXT}>that sells.</span>
               </h2>
@@ -710,7 +708,7 @@ export default function Page() {
           </div>
           <div className="mt-12 border-t border-white/8 py-6 text-center">
             <a href="/authenticate" className={`text-[13px] font-semibold ${GRAD_TEXT} underline-offset-4 hover:underline`}>
-              Create your own creator profile on Nexfluence →
+              Create Your Own Creator Profile on Nexus and Get Discovered by Brands
             </a>
           </div>
         </div>
