@@ -278,13 +278,13 @@ function SocialPngIcon({ src, label }: { src: string; label: string }) {
 /* Social links — website intentionally excluded (shown as a separate button below).
    Set href to the real profile URL. Icon src points to your PNG in /public/icons/social/. */
 const SOCIAL_LINKS: { key: string; label: string; href: string; icon: ReactNode }[] = [
-  { key: 'instagram', label: 'Instagram',   href: '#', icon: <SocialPngIcon src="/icons/social/instagram.png" label="Instagram" /> },
-  { key: 'tiktok',    label: 'TikTok',      href: '#', icon: <SocialPngIcon src="/icons/social/tiktok.png"    label="TikTok" /> },
-  { key: 'youtube',   label: 'YouTube',     href: '#', icon: <SocialPngIcon src="/icons/social/youtube.png"   label="YouTube" /> },
-  { key: 'snapchat',  label: 'Snapchat',    href: '#', icon: <SocialPngIcon src="/icons/social/snapchat.png"  label="Snapchat" /> },
-  { key: 'twitter',   label: 'Twitter / X', href: '#', icon: <SocialPngIcon src="/icons/social/x.png"         label="Twitter / X" /> },
-  { key: 'linkedin',  label: 'LinkedIn',    href: '#', icon: <SocialPngIcon src="/icons/social/linkedin.png"  label="LinkedIn" /> },
-  { key: 'facebook',  label: 'Facebook',    href: '#', icon: <SocialPngIcon src="/icons/social/facebook.png"  label="Facebook" /> },
+  { key: 'instagram', label: 'Instagram',   href: '#', icon: <SocialPngIcon src="/Socials/Instagram.svg" label="Instagram" /> },
+  { key: 'tiktok',    label: 'TikTok',      href: '#', icon: <SocialPngIcon src="/Socials/TikTok.svg"    label="TikTok" /> },
+  { key: 'youtube',   label: 'YouTube',     href: '#', icon: <SocialPngIcon src="/Socials/YouTube.svg"   label="YouTube" /> },
+  { key: 'snapchat',  label: 'Snapchat',    href: '#', icon: <SocialPngIcon src="/Socials/Snapchat.svg"  label="Snapchat" /> },
+  { key: 'twitter',   label: 'Twitter / X', href: '#', icon: <SocialPngIcon src="/Socials/Twitter.svg"         label="Twitter / X" /> },
+  { key: 'linkedin',  label: 'LinkedIn',    href: '#', icon: <SocialPngIcon src="/Socials/LinkedIn.svg"  label="LinkedIn" /> },
+  { key: 'facebook',  label: 'Facebook',    href: '#', icon: <SocialPngIcon src="/Socials/Facebook.svg"  label="Facebook" /> },
 ]
 
 /* ─── Gradient stars ─────────────────────────────────────────────────── */
