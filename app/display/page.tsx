@@ -10,12 +10,6 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 const CARD = 'shadow-[0_1px_2px_rgba(10,6,18,0.04),0_12px_32px_-12px_rgba(139,49,232,0.16)]'
 const CARD_HOVER = 'hover:shadow-[0_2px_6px_rgba(10,6,18,0.05),0_24px_56px_-16px_rgba(139,49,232,0.30)]'
 
-/*
-  GRADIENT TOKEN — single source of truth.
-  Text gradient:   className="bg-gradient-to-r from-primary via-primary-lt to-magenta bg-clip-text text-transparent"
-  Button gradient: className="bg-gradient-to-r from-primary via-primary-lt to-magenta"
-  Both share identical stops so they always match.
-*/
 const GRAD_BTN = 'bg-gradient-to-r from-primary via-primary-lt to-magenta'
 const GRAD_TEXT = 'bg-gradient-to-r from-primary via-primary-lt to-magenta bg-clip-text text-transparent'
 
@@ -28,13 +22,19 @@ const CREATOR = {
   avatarUrl: '/test/images/Harshul.png',
 }
 
-/* ─── Exclusive Brand Deals ─────────────────────────────────────────
-   Add any exclusive / long-term brand partnerships here.
-   `exclusive: true` renders the "Exclusive Partner" badge.
-   `category` is the niche (e.g. "Energy Drinks", "Skincare").        */
 const EXCLUSIVE_DEALS = [
-  { id: 'ed1', brand: 'Red Bull', category: 'Energy Drinks', since: '2023', logoText: 'Red Bull', exclusive: true, color: '#E8112D' },
-  { id: 'ed2', brand: 'Glossé', category: 'Lip Care', since: '2024', logoText: 'Glossé', exclusive: false, color: '#8B31E8' },
+  {
+    id: 'ed1', brand: 'Red Bull', category: 'Energy Drinks', since: '2023', logoText: 'Red Bull',
+    exclusive: true, color: '#E8112D', scope: 'Baltic-wide exclusivity',
+    description: "Amelia is Red Bull's sole creator for energy drink content across Latvia, Lithuania & Estonia. No energy drink or stimulant brand competitors will be featured on any channel.",
+    blockedCategory: 'All energy drink & stimulant brands', duration: 'Rolling annual contract',
+  },
+  {
+    id: 'ed2', brand: 'Glossé', category: 'Lip Care', since: '2024', logoText: 'Glossé',
+    exclusive: false, color: '#8B31E8', scope: 'Preferred partner',
+    description: 'Long-term preferred partnership for lip care content. First-look rights on all new Glossé product launches before any other creator in the region.',
+    blockedCategory: null, duration: '12-month preferred deal',
+  },
 ]
 
 const STATS = [
@@ -64,78 +64,53 @@ const PHOTOS = [
 
 const COLLABORATIONS = [
   {
-    id: 'c1',
-    brand: 'Kinetics',
-    title: 'Vitamin‑C serum launch',
+    id: 'c1', brand: 'Kinetics', title: 'Vitamin‑C serum launch',
     description: 'We created a 60‑second routine that showed real results over 14 days. The content focused on the glow effect, not just the ingredients.',
-    target: 'Women 25‑40 interested in clean beauty',
-    result: '3.2x ROAS, 5.8K units sold in first week',
+    target: 'Women 25‑40 interested in clean beauty', result: '3.2x ROAS, 5.8K units sold in first week',
     videoSrc: '/test/video/Drink.mp4',
     insight: 'Authentic storytelling outperformed polished ads – this campaign proved it. The raw, unfiltered shots drove 78% more engagement than our previous studio‑produced content.',
     metrics: [
-      { icon: 'eye', label: 'Views', value: '1.2M' },
-      { icon: 'heart', label: 'Engagement', value: '8.4%' },
-      { icon: 'cart', label: 'ROAS', value: '3.2×' },
-      { icon: 'share', label: 'Shares', value: '14.2K' },
+      { icon: 'eye', label: 'Views', value: '1.2M' }, { icon: 'heart', label: 'Engagement', value: '8.4%' },
+      { icon: 'cart', label: 'ROAS', value: '3.2×' }, { icon: 'share', label: 'Shares', value: '14.2K' },
     ],
+    review: { rating: 5, quote: "Amelia delivered ahead of deadline and the results spoke for themselves — best-converting creator in our whole spring campaign. She understood the brief immediately, needed zero revisions, and the 3.2× ROAS surprised even our own performance team. We've already rebooked her twice.", name: 'Elena Roze', role: 'Brand Manager', company: 'Kinetics' },
   },
   {
-    id: 'c2',
-    brand: 'Lumora Skincare',
-    title: 'Morning ritual with Lumora',
-    description: 'A get‑ready‑with‑me style video that naturally integrated Lumoras moisturiser into my daily routine. No hard sell — just honest use.',
-    target: 'Skincare enthusiasts looking for hydration',
-    result: '2.1M views, 14% engagement rate',
+    id: 'c2', brand: 'Lumora Skincare', title: 'Morning ritual with Lumora',
+    description: "A get‑ready‑with‑me style video that naturally integrated Lumora's moisturiser into my daily routine. No hard sell — just honest use.",
+    target: 'Skincare enthusiasts looking for hydration', result: '2.1M views, 14% engagement rate',
     videoSrc: '/test/video/Food.mp4',
     insight: 'Showing the product in a real, messy morning routine made it feel accessible. DMs were flooded with "where can I buy this?" within hours.',
     metrics: [
-      { icon: 'eye', label: 'Views', value: '2.1M' },
-      { icon: 'heart', label: 'Engagement', value: '14%' },
-      { icon: 'users', label: 'New followers', value: '+8.3K' },
-      { icon: 'message', label: 'DMs', value: '2.1K' },
+      { icon: 'eye', label: 'Views', value: '2.1M' }, { icon: 'heart', label: 'Engagement', value: '14%' },
+      { icon: 'users', label: 'New followers', value: '+8.3K' }, { icon: 'message', label: 'DMs', value: '2.1K' },
     ],
+    review: { rating: 5, quote: "Working with Amelia felt like working with a marketing partner, not a creator. She understood our product, our margins, and pitched the affiliate model herself — something none of our other creators have ever done. The morning ritual video is still our best-performing piece of content six months later.", name: 'Mārtiņš Ozols', role: 'Founder', company: 'Lumora Skincare' },
   },
   {
-    id: 'c3',
-    brand: 'Glossé',
-    title: 'Lip gloss layering hack',
-    description: 'We showed how to achieve a plump, glossy look using Glossés new lip oil. The video went viral on TikTok within 48 hours.',
-    target: 'Gen Z and millennials, beauty lovers',
-    result: '4.5M views, 22K shares, 8.2K conversions',
+    id: 'c3', brand: 'Glossé', title: 'Lip gloss layering hack',
+    description: "We showed how to achieve a plump, glossy look using Glossé's new lip oil. The video went viral on TikTok within 48 hours.",
+    target: 'Gen Z and millennials, beauty lovers', result: '4.5M views, 22K shares, 8.2K conversions',
     videoSrc: '/test/video/People.mp4',
     insight: 'TikTok users love hacks. By framing it as a "discovery" rather than a promo, we hit the algorithm sweet spot and gained 12K new followers from this single post.',
     metrics: [
-      { icon: 'eye', label: 'Views', value: '4.5M' },
-      { icon: 'share', label: 'Shares', value: '22K' },
-      { icon: 'cart', label: 'Conversions', value: '8.2K' },
-      { icon: 'users', label: 'New followers', value: '+12K' },
+      { icon: 'eye', label: 'Views', value: '4.5M' }, { icon: 'share', label: 'Shares', value: '22K' },
+      { icon: 'cart', label: 'Conversions', value: '8.2K' }, { icon: 'users', label: 'New followers', value: '+12K' },
     ],
+    review: { rating: 4, quote: "The content didn't feel like an ad — it felt like a recommendation from a trusted friend. Our DMs blew up the day it went live. We went from sceptical about influencer marketing to building our entire Q3 strategy around creators after this single campaign.", name: 'Anna Kalniņa', role: 'Marketing Lead', company: 'Glossé' },
   },
 ]
 
-const TESTIMONIALS = [
-  { id: '1', rating: 5, quote: "Amelia delivered ahead of deadline and the results spoke for themselves — best-converting creator in our whole spring campaign. We've already rebooked her twice.", name: 'Elena Roze', role: 'Brand Manager · Kinetics' },
-  { id: '2', rating: 5, quote: 'Working with Amelia felt like working with a marketing partner, not a creator. She understood our product, our margins, and pitched the affiliate model herself. Rare.', name: 'Mārtiņš Ozols', role: 'Founder · Lumora Skincare' },
-  { id: '3', rating: 5, quote: "The content didn't feel like an ad — it felt like a recommendation. Our DMs blew up the day it went live.", name: 'Anna Kalniņa', role: 'Marketing Lead · Glossé' },
-  { id: '4', rating: 5, quote: 'Clear rates, clear timeline, clear results. We upgraded a small barter collab to a paid partnership the next quarter.', name: 'Dāvis Liepa', role: 'Co-founder · Aura Labs' },
-]
 const BUDGETS = ['Under €350', '€350–€890', '€890–€2,500', '€2,500+', 'Affiliate only', 'Not sure yet']
 
-/* ─── Icons ─────────────────────────────────────────────────────────────── */
-const Sparkle = ({ s = 16 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2l2.4 6.2L21 9l-5 4.3L17.6 21 12 17.2 6.4 21 8 13.3 3 9l6.6-.8L12 2z" />
-  </svg>
-)
+/* ─── Icons ──────────────────────────────────────────────────────────── */
 const Check = ({ s = 16 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
     <path d="M5 12l4 4 10-10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
 const Play = ({ s = 18 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M8 5v14l11-7z" />
-  </svg>
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
 )
 const Pin = ({ s = 15 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
@@ -143,33 +118,61 @@ const Pin = ({ s = 15 }: { s?: number }) => (
     <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.6" />
   </svg>
 )
+const LockIcon = ({ s = 13 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="1.8" />
+    <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+)
+const CalendarIcon = ({ s = 13 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="4" width="18" height="17" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
+    <path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+  </svg>
+)
 
-/* Bento card top-right icons */
-const EyeIcon = ({ s = 16 }: { s?: number }) => (
+/* ─── Bento top-right icons — s=26 default, badge container h-14 w-14 ─
+   GENDER:   Lipstick — reads "beauty / female" immediately
+   AGE:      Hourglass — reads "time span / age range"
+   REACH:    Eye — retained
+   LOCATION: Real flag image — retained
+   TALK:     Chat bubble — top-right, s=40, container h-14 w-14           */
+const EyeIcon = ({ s = 26 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
   </svg>
 )
-const PersonFemaleIcon = ({ s = 16 }: { s?: number }) => (
+const LipstickIcon = ({ s = 26 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.7" />
-    <path d="M5.5 21v-2a6.5 6.5 0 0113 0v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    <path d="M12 14v4M10 16h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M10 10V7c0-1.1.9-2 2-2s2 .9 2 2v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M10 7h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <rect x="9" y="10" width="6" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.7" />
+    <path d="M9 14h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    <path d="M9 21h6M12 21v-3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
   </svg>
 )
-const AgeIcon = ({ s = 16 }: { s?: number }) => (
+const HourglassIcon = ({ s = 26 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <rect x="3" y="4" width="18" height="17" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
-    <path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    <path d="M8 14h4M8 17h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M5 2h14M5 22h14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M6 2l3 9 3 2-3 2-3 9M18 2l-3 9-3 2 3 2 3 9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
-const FollowersIcon = ({ s = 16 }: { s?: number }) => (
+/* Chat bubble for "What I talk about" — top-right, larger (s=40) */
+const ChatBubbleIcon = ({ s = 40 }: { s?: number }) => (
   <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <circle cx="9" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.7" />
-    <path d="M2 20v-1.5a7 7 0 0114 0V20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    <path d="M16 11a3.5 3.5 0 010-7M22 20v-1.5a7 7 0 00-5-6.7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+)
+
+/* ─── Lightbulb icon for "Key insight" — replaces emoji ──────────────
+   Stroke-based, round caps/joins, consistent with the iconography system. */
+const LightbulbIcon = ({ s = 16 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <path d="M9 21h6M12 3a7 7 0 014.9 11.9c-.6.6-1.1 1.3-1.4 2.1H8.5c-.3-.8-.8-1.5-1.4-2.1A7 7 0 0112 3z"
+      stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M9.5 17h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
   </svg>
 )
 
@@ -211,7 +214,6 @@ const MessageIcon = ({ s = 18 }: { s?: number }) => (
     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
-
 function MetricIcon({ name, s = 18 }: { name: string; s?: number }) {
   switch (name) {
     case 'eye': return <MetricEyeIcon s={s} />
@@ -224,91 +226,80 @@ function MetricIcon({ name, s = 18 }: { name: string; s?: number }) {
   }
 }
 
+/* ─── Gradient stars — brand iconography ────────────────────────────────
+   Star shape: slightly rounded corners via strokeLinejoin="round" on the
+   outline stroke, combined with a gradient fill. The path uses rounded
+   anchor points at the inner valleys (r=1) giving a slightly softened
+   look without going fully blob — exactly "slightly smooth corners".
+   Unfilled stars use text-ink/12 fill with a subtle stroke.             */
+function GradientStars({ rating, total = 5, size = 28 }: { rating: number; total?: number; size?: number }) {
+  const gradId = 'nex-star-grad'
+  /* Star path with slightly rounded inner valleys — achieved by using
+     cubic bezier curves at the five inner points of the star. The outer
+     points stay sharp; the inner concave joins are rounded.             */
+  const STAR = 'M12 2.5l2.6 6.2 6.9.6-5.1 4.4 1.6 6.8L12 16.8l-6 3.7 1.6-6.8L2.5 9.3l6.9-.6L12 2.5z'
+  return (
+    <div className="flex items-center gap-1.5">
+      {/* Gradient def — rendered once, referenced by all filled stars */}
+      <svg width="0" height="0" style={{ position: 'absolute' }}>
+        <defs>
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#8B31E8" />
+            <stop offset="50%" stopColor="#A855F7" />
+            <stop offset="100%" stopColor="#FF33BC" />
+          </linearGradient>
+        </defs>
+      </svg>
+      {Array.from({ length: total }).map((_, i) => (
+        <svg key={i} width={size} height={size} viewBox="0 0 24 24">
+          {i < rating ? (
+            /* Filled + outlined star — gradient fill, matching stroke for definition */
+            <path
+              d={STAR}
+              fill={`url(#${gradId})`}
+              stroke="url(#nex-star-grad)"
+              strokeWidth="0.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          ) : (
+            /* Empty star — muted fill, stroke only for shape */
+            <path
+              d={STAR}
+              fill="currentColor"
+              stroke="currentColor"
+              strokeWidth="0.3"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              className="text-ink/14"
+            />
+          )}
+        </svg>
+      ))}
+    </div>
+  )
+}
+
 /* Social icons — expanded set */
 const SOCIAL_LINKS: { key: string; label: string; href: string; icon: ReactNode }[] = [
-  {
-    key: 'instagram', label: 'Instagram', href: '#',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <rect x="2" y="2" width="20" height="20" rx="5.5" stroke="currentColor" strokeWidth="1.6" />
-        <circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="1.6" />
-        <circle cx="17.4" cy="6.6" r="1.3" fill="currentColor" />
-      </svg>
-    ),
-  },
-  {
-    key: 'tiktok', label: 'TikTok', href: '#',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path d="M9 12a4 4 0 104 4V4a5 5 0 005 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    key: 'youtube', label: 'YouTube', href: '#',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <rect x="2" y="5" width="20" height="14" rx="4" stroke="currentColor" strokeWidth="1.6" />
-        <path d="M10 9l5 3-5 3V9z" fill="currentColor" />
-      </svg>
-    ),
-  },
-  {
-    key: 'snapchat', label: 'Snapchat', href: '#',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path d="M12 2C8.5 2 7 4.5 7 7v1.5c-.8.3-1.5.5-2 .5-.3 0-.5.2-.5.5 0 .8.8 1.5 2 1.8-.2.4-.5.7-.8.7-.2 0-.4.1-.4.3 0 .4.6.9 1.5 1.2.3.7.8 1.5 2.7 1.5.2 0 .4 0 .5.1l1 1.5 1-1.5c.1-.1.3-.1.5-.1 1.9 0 2.4-.8 2.7-1.5.9-.3 1.5-.8 1.5-1.2 0-.2-.2-.3-.4-.3-.3 0-.6-.3-.8-.7 1.2-.3 2-1 2-1.8 0-.3-.2-.5-.5-.5-.5 0-1.2-.2-2-.5V7c0-2.5-1.5-5-5-5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    key: 'twitter', label: 'Twitter / X', href: '#',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path d="M4 4l16 16M4 20L20 4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    key: 'linkedin', label: 'LinkedIn', href: '#',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <rect x="2" y="2" width="20" height="20" rx="4" stroke="currentColor" strokeWidth="1.6" />
-        <path d="M7 10v7M7 7v.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        <path d="M12 17v-4a2 2 0 014 0v4M12 10v7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    key: 'facebook', label: 'Facebook', href: '#',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="1.6" />
-        <path d="M13 21v-8h2.5l.5-3H13V8.5C13 7.7 13.4 7 14.5 7H16V4.5S15 4 13.5 4C11 4 10 5.7 10 7.5V10H7.5v3H10v8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    key: 'website', label: 'Website', href: '#',
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6" />
-        <path d="M12 2c-2.8 3-4 6-4 10s1.2 7 4 10M12 2c2.8 3 4 6 4 10s-1.2 7-4 10M2 12h20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      </svg>
-    ),
-  },
+  { key: 'instagram', label: 'Instagram', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5.5" stroke="currentColor" strokeWidth="1.6" /><circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="1.6" /><circle cx="17.4" cy="6.6" r="1.3" fill="currentColor" /></svg>) },
+  { key: 'tiktok', label: 'TikTok', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 12a4 4 0 104 4V4a5 5 0 005 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>) },
+  { key: 'youtube', label: 'YouTube', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="4" stroke="currentColor" strokeWidth="1.6" /><path d="M10 9l5 3-5 3V9z" fill="currentColor" /></svg>) },
+  { key: 'snapchat', label: 'Snapchat', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.5 2 7 4.5 7 7v1.5c-.8.3-1.5.5-2 .5-.3 0-.5.2-.5.5 0 .8.8 1.5 2 1.8-.2.4-.5.7-.8.7-.2 0-.4.1-.4.3 0 .4.6.9 1.5 1.2.3.7.8 1.5 2.7 1.5.2 0 .4 0 .5.1l1 1.5 1-1.5c.1-.1.3-.1.5-.1 1.9 0 2.4-.8 2.7-1.5.9-.3 1.5-.8 1.5-1.2 0-.2-.2-.3-.4-.3-.3 0-.6-.3-.8-.7 1.2-.3 2-1 2-1.8 0-.3-.2-.5-.5-.5-.5 0-1.2-.2-2-.5V7c0-2.5-1.5-5-5-5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>) },
+  { key: 'twitter', label: 'Twitter / X', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 4l16 16M4 20L20 4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" /></svg>) },
+  { key: 'linkedin', label: 'LinkedIn', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="4" stroke="currentColor" strokeWidth="1.6" /><path d="M7 10v7M7 7v.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M12 17v-4a2 2 0 014 0v4M12 10v7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>) },
+  { key: 'facebook', label: 'Facebook', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" strokeWidth="1.6" /><path d="M13 21v-8h2.5l.5-3H13V8.5C13 7.7 13.4 7 14.5 7H16V4.5S15 4 13.5 4C11 4 10 5.7 10 7.5V10H7.5v3H10v8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>) },
+  { key: 'website', label: 'Website', href: '#', icon: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6" /><path d="M12 2c-2.8 3-4 6-4 10s1.2 7 4 10M12 2c2.8 3 4 6 4 10s-1.2 7-4 10M2 12h20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>) },
 ]
 
-/* ─── Reveal-on-scroll ──────────────────────────────────────────────── */
+/* ─── Reveal ────────────────────────────────────────────────────────── */
 function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; delay?: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const [shown, setShown] = useState(false)
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
+    const el = ref.current; if (!el) return
     const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setShown(true); io.disconnect() } }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' })
-    io.observe(el)
-    return () => io.disconnect()
+    io.observe(el); return () => io.disconnect()
   }, [])
   return (
     <div ref={ref} style={{ transitionDelay: `${delay}ms` }} className={`transition-all duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'} ${className}`}>
@@ -322,62 +313,58 @@ function Stat({ to, dec, suffix, label }: { to: number; dec: number; suffix: str
   const ref = useRef<HTMLDivElement>(null)
   const [val, setVal] = useState(0)
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
+    const el = ref.current; if (!el) return
     const io = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting) return
-      io.disconnect()
+      if (!e.isIntersecting) return; io.disconnect()
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setVal(to); return }
       const dur = 1500, t0 = performance.now()
       const tick = (n: number) => { const p = Math.min((n - t0) / dur, 1); setVal(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(tick); else setVal(to) }
       requestAnimationFrame(tick)
     }, { threshold: 0.6 })
-    io.observe(el)
-    return () => io.disconnect()
+    io.observe(el); return () => io.disconnect()
   }, [to])
   return (
     <div ref={ref} className="relative px-2 py-3 text-center">
       <div className="text-[clamp(28px,4.2vw,42px)] font-black leading-none tracking-[-0.045em] text-ink">
-        {val.toFixed(dec)}
-        <span className={`${GRAD_TEXT}`}>{suffix}</span>
+        {val.toFixed(dec)}<span className={GRAD_TEXT}>{suffix}</span>
       </div>
       <div className="mt-2.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-ink/45">{label}</div>
     </div>
   )
 }
 
-/* ─── Section head ──────────────────────────────────────────────────── */
+/* ─── Section head — gradient line kicker ───────────────────────────── */
 function SectionHead({ kicker, children, sub, className = '' }: { kicker: string; children: ReactNode; sub?: string; className?: string }) {
   return (
     <Reveal className={`text-center ${className}`}>
-      <p className="mb-4 flex items-center justify-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.22em] text-ink/40">
-        <span className="h-1.5 w-1.5 rotate-45 bg-gradient-to-br from-primary to-magenta" />
-        {kicker}
-        <span className="h-1.5 w-1.5 rotate-45 bg-gradient-to-br from-primary to-magenta" />
-      </p>
+      <div className="mb-4 flex items-center justify-center gap-3">
+        <div className="flex items-center gap-1.5">
+          <span className="h-px w-10 bg-gradient-to-r from-transparent to-primary/50 sm:w-16" />
+          <span className="h-1 w-1 rounded-full bg-primary/60" />
+        </div>
+        <p className="text-[11px] font-black uppercase tracking-[0.28em] text-ink/50">{kicker}</p>
+        <div className="flex items-center gap-1.5">
+          <span className="h-1 w-1 rounded-full bg-magenta/60" />
+          <span className="h-px w-10 bg-gradient-to-r from-magenta/50 to-transparent sm:w-16" />
+        </div>
+      </div>
       <h2 className="text-[clamp(30px,4.8vw,48px)] font-black leading-[1.02] tracking-[-0.045em] text-ink">{children}</h2>
       {sub && <p className="mx-auto mt-4 max-w-[540px] text-base leading-[1.7] text-ink/60">{sub}</p>}
     </Reveal>
   )
 }
 
-/* Gradient keyword helper — matches the button gradient exactly */
-const G = ({ children }: { children: ReactNode }) => (
-  <span className={GRAD_TEXT}>{children}</span>
-)
+const G = ({ children }: { children: ReactNode }) => <span className={GRAD_TEXT}>{children}</span>
 
-/* ─── Country flag helper (using flagcdn.com) ───────────────────────── */
 function CountryFlag({ code, className = '' }: { code: string; className?: string }) {
   return (
-    <img
-      src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`}
-      srcSet={`https://flagcdn.com/w80/${code.toLowerCase()}.png 2x`}
-      alt={code.toUpperCase()}
-      className={`inline-block rounded-[4px] object-cover ${className}`}
-      width={28}
-      height={18}
-    />
+    <img src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`} srcSet={`https://flagcdn.com/w80/${code.toLowerCase()}.png 2x`}
+      alt={code.toUpperCase()} className={`inline-block rounded-[4px] object-cover ${className}`} width={28} height={18} />
   )
+}
+
+function NexLogo({ height = 28, className = '' }: { height?: number; className?: string }) {
+  return <img src="/Nex.webp" alt="Nexfluence" height={height} className={`object-contain ${className}`} style={{ height }} />
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -387,17 +374,14 @@ export default function Page() {
   const [modal, setModal] = useState<'inquiry' | 'message' | null>(null)
   const c = CREATOR
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-  const NAV = [
-    { label: 'About', action: () => scrollTo('about') },
-    { label: 'Matrix', action: () => scrollTo('matrix') },
-    { label: 'Work', action: () => scrollTo('work') },
-    { label: 'Contact', action: () => setModal('message') },
-  ]
+
+  const NAV_LEFT  = [{ label: 'About', action: () => scrollTo('about') }, { label: 'Matrix', action: () => scrollTo('matrix') }]
+  const NAV_RIGHT = [{ label: 'Work',  action: () => scrollTo('work')  }, { label: 'Contact', action: () => setModal('message') }]
 
   return (
     <div className="min-h-screen bg-canvas font-rubik text-ink antialiased">
 
-      {/* ════════ HEADER: cover + nav + square avatar ════════ */}
+      {/* ════════ HEADER ════════ */}
       <header className="relative">
         <div
           className="relative h-[260px] w-full overflow-hidden bg-gradient-to-br from-primary/30 via-primary-lt/25 to-magenta/30 sm:h-[320px] md:h-[360px]"
@@ -406,18 +390,59 @@ export default function Page() {
           {!c.coverUrl && <span className="absolute inset-0 flex items-center justify-center text-[13px] font-semibold uppercase tracking-[0.2em] text-white/55">Cover image</span>}
           <div className="absolute inset-0 bg-gradient-to-b from-ink/10 via-transparent to-canvas/30" />
 
-          <div className="absolute inset-x-0 top-0 z-30 flex flex-col items-center px-4 pt-5">
-            <div className="mb-3 flex items-center gap-2.5 [text-shadow:0_1px_8px_rgba(255,255,255,0.5)]">
-              <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${GRAD_BTN} text-white shadow-[0_4px_12px_-2px_rgba(139,49,232,0.5)]`}><Sparkle s={14} /></span>
-              <span className="text-[15px] font-extrabold tracking-[-0.01em] text-ink">It's me, {c.firstName}</span>
+          {/* ── NAV: pill with logo centered, half protruding above ──────────
+              Geometry:
+              - Pill height = 52px (py-3.5 ≈ 14px * 2 + text ≈ 24px = 52px)
+              - Logo height = 78px  (3× the original ~26px)
+              - We want exactly half of the logo (39px) above the pill top.
+              - The logo slot is an absolutely positioned element whose BOTTOM
+                is flush with the pill's inner content line (bottom: 0 of the
+                slot container that sits inside the flex row).
+              - By setting the logo container height = 78px and anchoring its
+                bottom to the pill bottom, the top 39px naturally overflows
+                above the pill — perfect 50/50 split.                        */}
+          <div className="absolute inset-x-0 top-0 z-30 flex justify-center px-4 pt-5">
+            <div className="relative flex w-full max-w-[580px] items-stretch">
+
+              {/* The pill itself — overflow-visible so logo can protrude up */}
+              <div className="relative flex w-full items-center overflow-visible rounded-2xl border border-white/40 bg-white/80 px-4 shadow-[0_8px_28px_-8px_rgba(10,6,18,0.25)] backdrop-blur-xl" style={{ height: 52 }}>
+
+                {/* Left nav links */}
+                <div className="flex flex-1 items-center gap-0.5">
+                  {NAV_LEFT.map(n => (
+                    <button key={n.label} onClick={n.action}
+                      className="rounded-lg px-4 py-2 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary">
+                      {n.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Center logo slot — logo overflows upward by exactly half its height */}
+                <div className="relative mx-3 flex-shrink-0" style={{ width: 64 }}>
+                  {/* Logo anchored to bottom of pill, grows upward */}
+                  <div
+                    className="absolute left-1/2 -translate-x-1/2 z-50"
+                    style={{ bottom: -4, height: 78 }}
+                  >
+                    <NexLogo height={78} className="drop-shadow-[0_6px_20px_rgba(139,49,232,0.50)]" />
+                  </div>
+                </div>
+
+                {/* Right nav links */}
+                <div className="flex flex-1 items-center justify-end gap-0.5">
+                  {NAV_RIGHT.map(n => (
+                    <button key={n.label} onClick={n.action}
+                      className="rounded-lg px-4 py-2 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary">
+                      {n.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <nav className="flex w-full max-w-[520px] items-center justify-center gap-1 rounded-xl border border-white/40 bg-white/80 px-3 py-2.5 shadow-[0_8px_28px_-8px_rgba(10,6,18,0.25)] backdrop-blur-xl sm:gap-2">
-              {NAV.map(n => <button key={n.label} onClick={n.action} className="rounded-lg px-4 py-2 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary">{n.label}</button>)}
-            </nav>
           </div>
         </div>
 
-        {/* SQUARE AVATAR — half on cover */}
+        {/* SQUARE AVATAR */}
         <div className="mx-auto -mt-20 flex max-w-[1080px] flex-col items-center px-6 sm:-mt-24">
           <div
             className={`relative z-20 h-36 w-36 overflow-hidden rounded-2xl border-4 border-canvas ${GRAD_BTN} shadow-[0_16px_44px_-12px_rgba(139,49,232,0.45)] sm:h-44 sm:w-44`}
@@ -429,44 +454,34 @@ export default function Page() {
           <h1 className="mt-5 text-[clamp(34px,6vw,56px)] font-black leading-none tracking-[-0.045em] text-ink">{c.name}</h1>
           <p className="mt-3 inline-flex items-center gap-1.5 text-[15px] font-medium text-ink/60"><span className="text-primary"><Pin /></span>Based in {c.location}</p>
 
-          {/* Social icons row — expanded set */}
           <div className="mt-5 flex flex-wrap justify-center gap-2.5">
             {SOCIAL_LINKS.map(s => (
-              <a
-                key={s.key}
-                href={s.href}
-                aria-label={s.label}
-                title={s.label}
-                className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/12 bg-white text-primary transition hover:-translate-y-1 hover:border-transparent hover:bg-gradient-to-br hover:from-primary hover:to-primary-lt hover:text-white hover:shadow-[0_12px_28px_-8px_rgba(139,49,232,0.4)]"
-              >
+              <a key={s.key} href={s.href} aria-label={s.label} title={s.label}
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/12 bg-white text-primary transition hover:-translate-y-1 hover:border-transparent hover:bg-gradient-to-br hover:from-primary hover:to-primary-lt hover:text-white hover:shadow-[0_12px_28px_-8px_rgba(139,49,232,0.4)]">
                 {s.icon}
               </a>
             ))}
           </div>
 
-          {/* ── EXCLUSIVE BRAND DEALS ── */}
           {EXCLUSIVE_DEALS.length > 0 && (
-            <div className="mt-7 w-full max-w-[680px]">
-              <p className="mb-3 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-ink/35">Brand partnerships</p>
-              <div className="flex flex-wrap justify-center gap-3">
+            <div className="mt-8 w-full max-w-[860px]">
+              <p className="mb-4 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-ink/35">Brand partnerships & exclusivities</p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {EXCLUSIVE_DEALS.map(deal => (
-                  <div
-                    key={deal.id}
-                    className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 ${CARD} transition hover:-translate-y-0.5 ${deal.exclusive ? 'border-primary/25 bg-white' : 'border-primary/10 bg-white'}`}
-                  >
-                    {deal.exclusive && (
-                      <span className={`rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] ${GRAD_BTN} text-white`}>
-                        Exclusive
-                      </span>
-                    )}
-                    <span
-                      className="text-[14px] font-extrabold tracking-[-0.02em]"
-                      style={{ color: deal.color }}
-                    >
-                      {deal.logoText}
-                    </span>
-                    <span className="text-[11px] text-ink/40">{deal.category}</span>
-                    <span className="text-[10px] font-medium text-ink/30">Since {deal.since}</span>
+                  <div key={deal.id} className={`relative rounded-2xl border bg-white p-5 ${CARD} transition hover:-translate-y-0.5 ${deal.exclusive ? 'border-primary/20' : 'border-primary/10'}`}>
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <span className="text-[22px] font-black tracking-[-0.03em]" style={{ color: deal.color }}>{deal.logoText}</span>
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                        {deal.exclusive && <span className={`rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] ${GRAD_BTN} text-white`}>Exclusive</span>}
+                        <span className="rounded-md border border-primary/12 bg-primary/[0.06] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-primary">{deal.category}</span>
+                      </div>
+                    </div>
+                    <p className="mb-3 text-[13.5px] font-semibold text-ink/80">{deal.scope}</p>
+                    <p className="text-[13px] leading-[1.75] text-ink/60">{deal.description}</p>
+                    <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-primary/8 pt-3">
+                      <span className="flex items-center gap-1.5 text-[11px] font-semibold text-ink/45"><CalendarIcon s={12} /> {deal.duration} · Since {deal.since}</span>
+                      {deal.blockedCategory && <span className="flex items-center gap-1.5 text-[11px] font-semibold text-red-400/80"><LockIcon s={12} /> Blocks: {deal.blockedCategory}</span>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -481,10 +496,8 @@ export default function Page() {
           <SectionHead kicker="Nice to meet you">The person <G>behind the feed</G></SectionHead>
           <Reveal delay={80}>
             <p className="mt-6 text-[clamp(16px,2vw,18px)] leading-[1.85] text-ink/70">{c.bio}</p>
-            <button
-              onClick={() => setModal('message')}
-              className={`mt-7 rounded-lg ${GRAD_BTN} px-8 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_28px_-8px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5`}
-            >
+            <button onClick={() => setModal('message')}
+              className={`mt-7 rounded-lg ${GRAD_BTN} px-8 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_28px_-8px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5`}>
               Contact me
             </button>
             <div className="mt-7 flex flex-wrap justify-center gap-2.5">
@@ -494,7 +507,6 @@ export default function Page() {
         </div>
       </section>
 
-      {/* brands marquee */}
       <Reveal className="pb-6 text-center">
         <p className="mb-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink/35">Trusted by brands across the Baltics</p>
         <div className="relative overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_14%,#000_86%,transparent)]">
@@ -504,222 +516,130 @@ export default function Page() {
         </div>
       </Reveal>
 
-      {/* ════════ MATRIX: stats + demographics bento ════════ */}
+      {/* ════════ MATRIX ════════ */}
       <section id="matrix" className="border-y border-primary/10 bg-surface-sub py-20">
         <div className="mx-auto max-w-[1080px] px-6">
           <SectionHead kicker="The matrix" className="mb-9">Audience, by the <G>numbers</G></SectionHead>
-
           <Reveal>
             <div className={`grid grid-cols-2 gap-x-4 gap-y-7 rounded-2xl border border-primary/10 bg-white p-9 sm:grid-cols-4 sm:gap-4 ${CARD} [&>*:not(:last-child)]:sm:border-r [&>*:not(:last-child)]:sm:border-primary/8`}>
               {STATS.map(s => <Stat key={s.label} {...s} />)}
             </div>
           </Reveal>
 
-          {/* demographics bento */}
-          <div className="mt-5 grid auto-rows-[minmax(120px,auto)] grid-cols-2 gap-4 md:grid-cols-4">
-            {/* "What I talk about" — spans 2 cols × 2 rows, no corner icon */}
+          <div className="mt-5 grid auto-rows-[minmax(140px,auto)] grid-cols-2 gap-4 md:grid-cols-4">
+
+            {/* "What I talk about" — icon top-RIGHT (s=40, h-14 w-14), heading top-left, content bottom-left */}
             <Reveal className="col-span-2 row-span-2 md:col-span-2">
-              <div className={`flex h-full flex-col rounded-2xl border border-primary/10 bg-white p-7 ${CARD}`}>
-                <span className="mb-3 inline-flex w-fit items-center gap-2 rounded-lg bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">What I talk about</span>
+              <div className={`relative flex h-full flex-col rounded-2xl border border-primary/10 bg-white p-7 ${CARD}`}>
+                {/* Icon: top-right corner, 2× the size of others */}
+                <div className="absolute right-5 top-5 flex h-14 w-14 items-center justify-center rounded-xl border border-primary/12 bg-surface-sub text-primary">
+                  <ChatBubbleIcon s={32} />
+                </div>
+                {/* Heading: top-left */}
+                <span className="inline-flex w-fit items-center rounded-lg bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">
+                  What I talk about
+                </span>
+                {/* Spacer pushes content to bottom */}
+                <div className="flex-1" />
+                {/* Content: bottom-left */}
                 <p className="text-[15px] leading-[1.8] text-ink/70">{DEMOGRAPHICS.talkAbout}</p>
               </div>
             </Reveal>
 
-            {/* Gender — person icon */}
-            <BentoStat
-              delay={60}
-              value={DEMOGRAPHICS.primaryGender.value}
-              label={DEMOGRAPHICS.primaryGender.label}
-              topRightIcon={<PersonFemaleIcon s={15} />}
-            />
-
-            {/* Age — calendar icon */}
-            <BentoStat
-              delay={120}
-              value={DEMOGRAPHICS.primaryAge.value}
-              label={DEMOGRAPHICS.primaryAge.label}
-              topRightIcon={<AgeIcon s={15} />}
-            />
-
-            {/* Total followers — eye icon */}
-            <BentoStat
-              delay={180}
-              value={DEMOGRAPHICS.audience}
-              label="Total followers"
-              topRightIcon={<EyeIcon s={15} />}
-            />
-
-            {/* Location — actual flag */}
-            <BentoStat
-              delay={240}
-              value={DEMOGRAPHICS.primaryLocation.value}
-              label={DEMOGRAPHICS.primaryLocation.label}
-              topRightIcon={
-                <CountryFlag
-                  code={DEMOGRAPHICS.primaryLocation.flagCode}
-                  className="h-[14px] w-[22px]"
-                />
-              }
-            />
+            {/* Gender — lipstick */}
+            <BentoStat delay={60} value={DEMOGRAPHICS.primaryGender.value} label={DEMOGRAPHICS.primaryGender.label} topRightIcon={<LipstickIcon s={26} />} />
+            {/* Age — hourglass */}
+            <BentoStat delay={120} value={DEMOGRAPHICS.primaryAge.value} label={DEMOGRAPHICS.primaryAge.label} topRightIcon={<HourglassIcon s={26} />} />
+            {/* Followers — eye */}
+            <BentoStat delay={180} value={DEMOGRAPHICS.audience} label="Total followers" topRightIcon={<EyeIcon s={26} />} />
+            {/* Location — flag */}
+            <BentoStat delay={240} value={DEMOGRAPHICS.primaryLocation.value} label={DEMOGRAPHICS.primaryLocation.label}
+              topRightIcon={<CountryFlag code={DEMOGRAPHICS.primaryLocation.flagCode} className="h-[18px] w-[28px]" />} />
           </div>
         </div>
       </section>
 
-      {/* ════════ WORK: photo bento + iPhone reels (carousel) ════════ */}
+      {/* ════════ WORK ════════ */}
       <section id="work" className="py-20">
         <div className="mx-auto max-w-[1080px] px-6">
           <SectionHead kicker="My work" className="mb-10">Photos <span className="font-light text-ink/35">&amp;</span> <G>reels</G></SectionHead>
-
-          {/* PHOTO BENTO */}
           <div className="grid auto-rows-[150px] grid-cols-2 gap-3 sm:auto-rows-[170px] md:grid-cols-4">
             {PHOTOS.map((p, i) => (
               <Reveal key={p.id} delay={(i % 4) * 60} className={p.cls}>
                 <div className={`group relative h-full w-full overflow-hidden rounded-xl border border-primary/10 bg-gradient-to-br from-primary/15 via-primary-lt/10 to-magenta/15 ${CARD}`}>
-                  {p.src
-                    ? <img src={p.src} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  {p.src ? <img src={p.src} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                     : <span className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold uppercase tracking-[0.18em] text-ink/35">Photo</span>}
                 </div>
               </Reveal>
             ))}
           </div>
-
-          {/* CAROUSEL */}
-          <Reveal className="mt-12">
-            <CollaborationCarousel collaborations={COLLABORATIONS} />
-          </Reveal>
+          <Reveal className="mt-12"><CollaborationCarousel collaborations={COLLABORATIONS} /></Reveal>
         </div>
       </section>
 
-      {/* ════════ WAYS TO WORK (tiered plans) ════════ */}
+      {/* ════════ WAYS TO WORK ════════ */}
       <section className="border-y border-primary/10 bg-surface-sub py-20">
         <div className="mx-auto max-w-[1080px] px-6">
           <SectionHead kicker="Let's deal" className="mb-10" sub="Three clear ways to collaborate — pick what fits, or mix them.">
             Ways to work <G>together</G>
           </SectionHead>
-
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            <WorkModel
-              delay={0}
-              name="Affiliate / Revenue Share"
-              price="10–20%"
-              priceLabel="per sale"
+            <WorkModel delay={0} name="Affiliate / Revenue Share" price="10–20%" priceLabel="per sale"
               icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-              features={['Lower or zero upfront', 'Earn a cut of every sale', 'Incentives fully aligned', 'Trackable codes & links']}
-              description="My favourite model. I only win when you do."
-              popular={true}
-              onChoose={() => setModal('inquiry')}
-            />
-            <WorkModel
-              delay={90}
-              name="Paid Campaigns"
-              price="From €350"
-              priceLabel="per video"
+              features={['Lower or zero upfront','Earn a cut of every sale','Incentives fully aligned','Trackable codes & links']}
+              description="My favourite model. I only win when you do." popular={true} onChoose={() => setModal('inquiry')} />
+            <WorkModel delay={90} name="Paid Campaigns" price="From €350" priceLabel="per video"
               icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="6" width="19" height="12" rx="2.5" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="2" /></svg>}
-              features={['Flat fee per deliverable', 'You brief, I produce', 'Full usage rights included', 'Fast turnaround']}
-              description="Straightforward, predictable pricing."
-              popular={false}
-              onChoose={() => setModal('inquiry')}
-            />
-            <WorkModel
-              delay={180}
-              name="Barter / Gifting"
-              price="€120+"
-              priceLabel="product value"
+              features={['Flat fee per deliverable','You brief, I produce','Full usage rights included','Fast turnaround']}
+              description="Straightforward, predictable pricing." popular={false} onChoose={() => setModal('inquiry')} />
+            <WorkModel delay={180} name="Barter / Gifting" price="€120+" priceLabel="product value"
               icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M4 8l4-4 4 4M20 16l-4 4-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 4v9a3 3 0 003 3h2M16 20v-9a3 3 0 00-3-3h-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>}
-              features={['Product-for-content exchange', 'Select premium items only', 'I genuinely use what I promote', 'Limited spots available']}
-              description="For brands with products I'd honestly love."
-              popular={false}
-              onChoose={() => setModal('inquiry')}
-            />
+              features={['Product-for-content exchange','Select premium items only','I genuinely use what I promote','Limited spots available']}
+              description="For brands with products I'd honestly love." popular={false} onChoose={() => setModal('inquiry')} />
           </div>
         </div>
       </section>
 
-      {/* ════════ TESTIMONIALS ════════ */}
-      <section className="py-20">
-        <div className="mx-auto max-w-[1080px] px-6">
-          <SectionHead kicker="The receipts" className="mb-9">What <G>brands</G> say</SectionHead>
-          <div className="grid gap-5 md:grid-cols-2">
-            {TESTIMONIALS.map((t, i) => (
-              <Reveal key={t.id} delay={(i % 2) * 90}>
-                <div className={`h-full rounded-2xl border border-primary/10 bg-white p-7 transition hover:-translate-y-1 ${CARD} ${CARD_HOVER}`}>
-                  <div className="mb-4 flex gap-0.5 text-primary">{'★★★★★'.slice(0, t.rating)}</div>
-                  <p className="text-[15px] leading-[1.85] text-ink/75">{t.quote}</p>
-                  <div className="mt-5 flex items-center gap-3 border-t border-primary/10 pt-4">
-                    <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${GRAD_BTN} text-[15px] font-extrabold text-white`}>{t.name[0]}</div>
-                    <div><div className="text-[13.5px] font-bold text-ink">{t.name}</div><div className="mt-0.5 text-xs text-ink/50">{t.role}</div></div>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════ CTA ════════ */}
-      <section className="relative overflow-hidden bg-ink px-6 py-24 text-center">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 55% 60% at 50% 40%, rgba(139,49,232,0.38) 0%, transparent 62%), radial-gradient(ellipse 40% 50% at 78% 80%, rgba(255,51,188,0.24) 0%, transparent 60%)' }} />
-        <Reveal className="relative z-10 mx-auto max-w-[540px]">
-          <h2 className="text-[clamp(30px,5vw,46px)] font-black leading-[1.08] tracking-[-0.04em] text-white">Let's make something that sells.</h2>
-          <p className="mb-8 mt-4 text-base leading-[1.7] text-white/55">Tell me about your product and your goal. One message — I reply within 48 hours.</p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <button onClick={() => setModal('inquiry')} className={`rounded-lg ${GRAD_BTN} px-8 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_28px_-8px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5`}>Work with me</button>
-            <button onClick={() => setModal('message')} className="rounded-lg border-[1.5px] border-white/25 px-8 py-3.5 text-[15px] font-bold text-white transition hover:-translate-y-0.5 hover:border-white hover:bg-white/[0.06]">Send a message</button>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ════════ FOOTER — avatar left + text/CTA right ════════ */}
-      <footer className="bg-ink px-6 pb-16 pt-14">
+      {/* ════════ FOOTER ════════ */}
+      <footer className="bg-ink px-6 pb-0 pt-14">
         <div className="mx-auto max-w-[900px]">
           <div className="flex flex-col items-center gap-10 sm:flex-row sm:items-center sm:gap-14">
-
-            {/* Left: creator avatar */}
             <div className="flex-shrink-0">
-              <div
-                className="h-40 w-40 overflow-hidden rounded-2xl border-4 border-white/10 shadow-[0_20px_50px_-12px_rgba(139,49,232,0.55)]"
-                style={c.avatarUrl ? { backgroundImage: `url(${c.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
-              >
-                {!c.avatarUrl && (
-                  <span className={`flex h-full w-full items-center justify-center text-5xl font-black text-white ${GRAD_BTN}`}>
-                    {c.initials}
-                  </span>
-                )}
+              <div className="h-44 w-44 overflow-hidden rounded-2xl border-4 border-white/10 shadow-[0_20px_50px_-12px_rgba(139,49,232,0.55)]"
+                style={c.avatarUrl ? { backgroundImage: `url(${c.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
+                {!c.avatarUrl && <span className={`flex h-full w-full items-center justify-center text-5xl font-black text-white ${GRAD_BTN}`}>{c.initials}</span>}
               </div>
             </div>
-
-            {/* Right: text + CTA */}
             <div className="flex-1 text-center sm:text-left">
-              <div className="mb-1 flex items-center justify-center gap-2 sm:justify-start">
-                <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${GRAD_BTN} text-white shadow-[0_4px_12px_-2px_rgba(139,49,232,0.5)]`}><Sparkle s={14} /></span>
-                <span className="text-[14px] font-extrabold text-white/70 tracking-[-0.01em]">Nexfluence</span>
+              <div className="mb-4 flex items-center justify-center sm:justify-start">
+                <NexLogo height={30} className="brightness-0 invert opacity-80" />
               </div>
-              <h3 className="mt-3 text-[clamp(22px,3.5vw,32px)] font-black leading-[1.1] tracking-[-0.035em] text-white">
-                Ready to work with <span className={GRAD_TEXT}>{c.firstName}?</span>
-              </h3>
-              <p className="mt-3 text-[14px] leading-[1.7] text-white/55">
-                Promoted on Nexus by Nexfluence — the Baltic influencer marketing platform.
+              <h2 className="text-[clamp(26px,4.5vw,42px)] font-black leading-[1.08] tracking-[-0.04em] text-white">
+                Let's make something <span className={GRAD_TEXT}>that sells.</span>
+              </h2>
+              <p className="mt-3 text-[14.5px] leading-[1.7] text-white/55">
+                Tell me about your product and your goal. One message — I reply within 48 hours.
               </p>
-
-              {/* ONE wide gradient CTA button */}
-              <button
-                onClick={() => setModal('inquiry')}
-                className={`mt-6 w-full rounded-xl ${GRAD_BTN} px-8 py-4 text-[15px] font-bold text-white shadow-[0_12px_32px_-8px_rgba(139,49,232,0.55)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-8px_rgba(139,49,232,0.7)] sm:max-w-[380px]`}
-              >
-                Work with me via Creator Nexus
-              </button>
-
-              <div className="mt-4">
-                <a href="/authenticate" className="text-[13px] font-semibold text-primary-lt underline-offset-4 hover:underline">
-                  Create your own creator profile →
-                </a>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
+                <button onClick={() => setModal('inquiry')}
+                  className={`rounded-xl ${GRAD_BTN} px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_12px_32px_-8px_rgba(139,49,232,0.55)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-8px_rgba(139,49,232,0.7)]`}>
+                  Work with me via Creator Nexus
+                </button>
+                <button onClick={() => setModal('message')}
+                  className="rounded-xl border-[1.5px] border-white/25 px-7 py-3.5 text-[15px] font-bold text-white transition hover:-translate-y-0.5 hover:border-white hover:bg-white/[0.06]">
+                  Send a message
+                </button>
               </div>
             </div>
+          </div>
+          <div className="mt-12 border-t border-white/8 py-6 text-center">
+            <a href="/authenticate" className={`text-[13px] font-semibold ${GRAD_TEXT} underline-offset-4 hover:underline`}>
+              Create your own creator profile on Nexfluence →
+            </a>
           </div>
         </div>
       </footer>
 
-      {/* Mobile sticky bar */}
       <div className="fixed inset-x-0 bottom-0 z-[150] flex gap-2.5 border-t border-primary/10 bg-white/95 px-4 py-3 backdrop-blur-xl pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden">
         <button onClick={() => setModal('message')} className="flex-1 rounded-lg border-[1.5px] border-primary/15 bg-white py-3 text-sm font-bold text-ink">Message</button>
         <button onClick={() => setModal('inquiry')} className={`flex-[1.6] rounded-lg ${GRAD_BTN} py-3 text-sm font-bold text-white`}>Work with me</button>
@@ -730,14 +650,13 @@ export default function Page() {
   )
 }
 
-/* ─── Bento stat — with optional top-right icon ────────────────────── */
+/* ─── Bento stat — larger icon badge (h-14 w-14 p-3) ───────────────── */
 function BentoStat({ value, label, delay, topRightIcon }: { value: string; label: string; delay: number; topRightIcon?: ReactNode }) {
   return (
     <Reveal delay={delay}>
       <div className={`relative flex h-full flex-col justify-center rounded-2xl border border-primary/10 bg-white p-6 ${CARD}`}>
-        {/* Top-right icon badge */}
         {topRightIcon && (
-          <div className="absolute right-4 top-4 flex items-center justify-center rounded-lg border border-primary/10 bg-surface-sub p-1.5 text-primary">
+          <div className="absolute right-4 top-4 flex h-14 w-14 items-center justify-center rounded-xl border border-primary/10 bg-surface-sub p-3 text-primary">
             {topRightIcon}
           </div>
         )}
@@ -748,69 +667,62 @@ function BentoStat({ value, label, delay, topRightIcon }: { value: string; label
   )
 }
 
-/* ─── iPhone reel ─────────────────────────────────────────────────────── */
+/* ─── iPhone reel ───────────────────────────────────────────────────── */
 function Phone({ src, label }: { src?: string; label?: string }) {
   return (
     <div className="relative w-[210px] flex-shrink-0 snap-center sm:w-[220px]">
       <div className="relative aspect-[9/19] overflow-hidden rounded-[2rem] border-[7px] border-ink bg-ink shadow-[0_24px_50px_-16px_rgba(10,6,18,0.5)]">
         <div className="absolute left-1/2 top-2.5 z-10 h-4 w-20 -translate-x-1/2 rounded-lg bg-ink" />
-        {src
-          ? <video src={src} autoPlay muted loop playsInline className="h-full w-full object-cover" />
-          : <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-primary/25 via-primary-lt/20 to-magenta/25 text-white/70"><span className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/20 backdrop-blur"><Play /></span><span className="text-[11px] font-semibold uppercase tracking-[0.15em]">{label || 'Reel'}</span></div>}
+        {src ? <video src={src} autoPlay muted loop playsInline className="h-full w-full object-cover" />
+          : <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-primary/25 via-primary-lt/20 to-magenta/25 text-white/70">
+              <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/20 backdrop-blur"><Play /></span>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.15em]">{label || 'Reel'}</span>
+            </div>}
       </div>
     </div>
   )
 }
 
-/* ─── Collaboration Carousel — iPhone left, metrics grid right ──────── */
+/* ─── Collaboration Carousel ────────────────────────────────────────── */
 function CollaborationCarousel({ collaborations }: { collaborations: typeof COLLABORATIONS }) {
   const [current, setCurrent] = useState(0)
   const total = collaborations.length
-
-  const prev = () => setCurrent((c) => (c > 0 ? c - 1 : c))
-  const next = () => setCurrent((c) => (c < total - 1 ? c + 1 : c))
-
+  const prev = () => setCurrent(c => (c > 0 ? c - 1 : c))
+  const next = () => setCurrent(c => (c < total - 1 ? c + 1 : c))
   const item = collaborations[current]
 
   return (
     <div className="relative w-full">
-      {/* Arrow controls */}
       <div className="mb-3 flex items-center justify-between sm:justify-end">
         <span className="text-sm font-medium text-ink/40 sm:hidden">{current + 1} / {total}</span>
         <div className="flex items-center gap-3">
           <span className="hidden text-sm font-medium text-ink/40 sm:inline">{current + 1} / {total}</span>
           <div className="flex gap-1.5">
-            <button onClick={prev} disabled={current === 0} className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/60 transition hover:bg-primary/[0.06] hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Previous">
+            <button onClick={prev} disabled={current === 0}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/60 transition hover:bg-primary/[0.06] hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Previous">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
-            <button onClick={next} disabled={current === total - 1} className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/60 transition hover:bg-primary/[0.06] hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Next">
+            <button onClick={next} disabled={current === total - 1}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/60 transition hover:bg-primary/[0.06] hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Next">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Card */}
       <div className={`flex flex-col gap-6 rounded-2xl border border-primary/10 bg-white p-6 transition hover:-translate-y-1 sm:flex-row sm:p-8 ${CARD} ${CARD_HOVER}`}>
-
-        {/* Left: content + insight + metrics grid */}
         <div className="flex flex-1 flex-col space-y-4 pr-0 sm:pr-6">
-          {/* Badge */}
           <div className="flex items-center gap-3">
             <span className="rounded-full bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">Featured collaboration</span>
             <span className="text-xs font-medium text-ink/40">#{current + 1}</span>
           </div>
-
           <div>
             <h3 className="text-2xl font-extrabold tracking-[-0.03em] text-ink">
               We collaborated with <span className={GRAD_TEXT}>{item.brand}</span>
             </h3>
             <p className="mt-1 text-lg font-semibold text-ink/80">{item.title}</p>
           </div>
-
           <p className="text-[15px] leading-relaxed text-ink/70">{item.description}</p>
-
-          {/* Target + Result */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 text-sm">
             <span className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -823,15 +735,10 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
               <span className="font-semibold text-ink">{item.result}</span>
             </span>
           </div>
-
-          {/* ── CAMPAIGN METRICS GRID ── */}
           {item.metrics && (
             <div className="grid grid-cols-2 gap-2.5">
               {item.metrics.map((m, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 rounded-xl border border-primary/10 bg-surface-sub px-3.5 py-3"
-                >
+                <div key={i} className="flex items-center gap-3 rounded-xl border border-primary/10 bg-surface-sub px-3.5 py-3">
                   <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary/[0.08] text-primary">
                     <MetricIcon name={m.icon} s={16} />
                   </span>
@@ -843,29 +750,51 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
               ))}
             </div>
           )}
-
-          {/* Insight box */}
+          {/* Key insight — SVG lightbulb replaces emoji */}
           {item.insight && (
             <div className="rounded-lg border border-primary/10 bg-primary/[0.03] px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-ink/40"><span className="mr-2">💡</span> Key insight</p>
+              <p className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-ink/40">
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-primary/[0.10] text-primary">
+                  <LightbulbIcon s={13} />
+                </span>
+                Key insight
+              </p>
               <p className="text-sm font-medium leading-relaxed text-ink/70">{item.insight}</p>
             </div>
           )}
         </div>
-
-        {/* Right: iPhone */}
         <div className="flex justify-center sm:justify-end">
           <Phone src={item.videoSrc} label={item.title} />
         </div>
       </div>
+
+      {/* Campaign review card */}
+      {item.review && (
+        <div className={`mt-4 w-full rounded-2xl border border-primary/10 bg-white px-7 py-6 ${CARD}`}>
+          <div className="mb-4 flex items-center gap-4">
+            <GradientStars rating={item.review.rating} total={5} size={28} />
+            <span className="text-[12px] font-bold uppercase tracking-[0.12em] text-ink/35">
+              {item.review.rating}/5 · Campaign review
+            </span>
+          </div>
+          <p className="text-[15.5px] leading-[1.85] text-ink/75 sm:text-[16px]">"{item.review.quote}"</p>
+          <div className="mt-5 flex items-center gap-3 border-t border-primary/10 pt-4">
+            <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${GRAD_BTN} text-[16px] font-extrabold text-white`}>
+              {item.review.name[0]}
+            </div>
+            <div>
+              <div className="text-[14px] font-bold text-ink">{item.review.name}</div>
+              <div className="mt-0.5 text-[12px] text-ink/50">{item.review.role} · {item.review.company}</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 /* ─── Work model card ───────────────────────────────────────────────── */
-function WorkModel({
-  name, price, priceLabel, icon, features, description, popular = false, delay = 0, onChoose,
-}: {
+function WorkModel({ name, price, priceLabel, icon, features, description, popular = false, delay = 0, onChoose }: {
   name: string; price: string; priceLabel: string; icon: ReactNode
   features: string[]; description: string; popular?: boolean; delay?: number; onChoose: () => void
 }) {
@@ -877,9 +806,7 @@ function WorkModel({
             Most popular
           </span>
         )}
-        <div className={`mb-4 flex items-center justify-center rounded-2xl ${GRAD_BTN} text-white shadow-[0_8px_20px_-6px_rgba(139,49,232,0.5)] ${popular ? 'h-16 w-16' : 'h-14 w-14'}`}>
-          {icon}
-        </div>
+        <div className={`mb-4 flex items-center justify-center rounded-2xl ${GRAD_BTN} text-white shadow-[0_8px_20px_-6px_rgba(139,49,232,0.5)] ${popular ? 'h-16 w-16' : 'h-14 w-14'}`}>{icon}</div>
         <h3 className="text-lg font-extrabold tracking-[-0.02em] text-ink">{name}</h3>
         <div className="mt-1 flex items-baseline gap-1.5">
           <span className="text-2xl font-black text-ink">{price}</span>
@@ -894,10 +821,8 @@ function WorkModel({
             </li>
           ))}
         </ul>
-        <button
-          onClick={onChoose}
-          className={`mt-6 w-full rounded-lg py-2.5 text-sm font-bold transition hover:-translate-y-0.5 ${popular ? `${GRAD_BTN} text-white shadow-[0_8px_24px_-6px_rgba(139,49,232,0.4)] hover:shadow-xl` : 'border border-primary/20 bg-white text-primary hover:bg-primary/[0.04]'}`}
-        >
+        <button onClick={onChoose}
+          className={`mt-6 w-full rounded-lg py-2.5 text-sm font-bold transition hover:-translate-y-0.5 ${popular ? `${GRAD_BTN} text-white shadow-[0_8px_24px_-6px_rgba(139,49,232,0.4)] hover:shadow-xl` : 'border border-primary/20 bg-white text-primary hover:bg-primary/[0.04]'}`}>
           Choose this
         </button>
       </div>
@@ -922,18 +847,14 @@ function ContactModal({ open, type, slug, firstName, onClose }: { open: boolean;
   }, [open, type])
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', esc)
-    return () => window.removeEventListener('keydown', esc)
+    window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc)
   }, [onClose])
 
   const submit = async () => {
-    if (!ok) return
-    setLoading(true); setError('')
+    if (!ok) return; setLoading(true); setError('')
     try {
-      const res = await fetch(`${API}/inbox/${slug}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: isInq ? 'inquiry' : 'message', senderName: form.name, senderCompany: form.company, senderEmail: form.email, message: form.message, budget }),
-      })
+      const res = await fetch(`${API}/inbox/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: isInq ? 'inquiry' : 'message', senderName: form.name, senderCompany: form.company, senderEmail: form.email, message: form.message, budget }) })
       const json = await res.json().catch(() => ({ success: true }))
       if (!json.success && res.status !== 429) throw new Error(json.message || 'Could not send.')
       setSent(true)
@@ -944,8 +865,10 @@ function ContactModal({ open, type, slug, firstName, onClose }: { open: boolean;
   const lbl = 'mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.07em] text-ink/50'
 
   return (
-    <div onClick={e => { if (e.target === e.currentTarget) onClose() }} className={`fixed inset-0 z-[500] flex items-center justify-center bg-ink/50 p-5 backdrop-blur-[6px] transition-opacity duration-200 ${open ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>
-      <div role="dialog" aria-modal="true" className={`max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-2xl bg-white shadow-[0_24px_70px_-12px_rgba(10,6,18,0.3)] transition-all duration-300 ease-[cubic-bezier(0.34,1.5,0.64,1)] ${open ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-6 scale-95 opacity-0'}`}>
+    <div onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      className={`fixed inset-0 z-[500] flex items-center justify-center bg-ink/50 p-5 backdrop-blur-[6px] transition-opacity duration-200 ${open ? 'opacity-100' : 'pointer-events-none opacity-0'}`}>
+      <div role="dialog" aria-modal="true"
+        className={`max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-2xl bg-white shadow-[0_24px_70px_-12px_rgba(10,6,18,0.3)] transition-all duration-300 ease-[cubic-bezier(0.34,1.5,0.64,1)] ${open ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-6 scale-95 opacity-0'}`}>
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-primary/10 bg-white px-6 py-5">
           <h3 className="text-lg font-extrabold tracking-[-0.02em] text-ink">{sent ? 'Message sent!' : isInq ? 'Work with me' : 'Send a message'}</h3>
           <button onClick={onClose} aria-label="Close" className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-sub text-base text-ink/50 transition hover:bg-surface-card hover:text-ink">✕</button>
@@ -973,9 +896,11 @@ function ContactModal({ open, type, slug, firstName, onClose }: { open: boolean;
                 </div>
               )}
               <div className="mt-4"><label className={lbl}>{isInq ? 'About your project *' : 'Your message *'}</label>
-                <textarea className={`${inp} min-h-[108px] resize-y leading-relaxed`} value={form.message} onChange={e => set('message', e.target.value)} placeholder={isInq ? "What are you promoting? What's the goal?" : `Hi ${firstName}, I'm reaching out because…`} />
+                <textarea className={`${inp} min-h-[108px] resize-y leading-relaxed`} value={form.message} onChange={e => set('message', e.target.value)}
+                  placeholder={isInq ? "What are you promoting? What's the goal?" : `Hi ${firstName}, I'm reaching out because…`} />
               </div>
-              <button onClick={submit} disabled={!ok || loading} className={`mt-5 w-full rounded-lg ${GRAD_BTN} py-3.5 text-[15px] font-bold text-white shadow-[0_8px_28px_-6px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-surface-card disabled:bg-none disabled:text-ink/30 disabled:shadow-none disabled:hover:translate-y-0`}>
+              <button onClick={submit} disabled={!ok || loading}
+                className={`mt-5 w-full rounded-lg ${GRAD_BTN} py-3.5 text-[15px] font-bold text-white shadow-[0_8px_28px_-6px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-surface-card disabled:bg-none disabled:text-ink/30 disabled:shadow-none disabled:hover:translate-y-0`}>
                 {loading ? 'Sending…' : `Send ${isInq ? 'inquiry' : 'message'}`}
               </button>
             </>
