@@ -3,7 +3,10 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 
 /* ════════════════════════════════════════════════════════════════════
-   Creator portfolio — page.tsx  (Nexfluence v4, LIGHT)
+   Brand portfolio — page.tsx  (Nexfluence v4, LIGHT)
+   Adapted from the creator profile template. Key structural change:
+   per-campaign reviews are GONE — reviews live in their own standalone,
+   auto-advancing slideshow section, decoupled from any single campaign.
    ════════════════════════════════════════════════════════════════════ */
 
 const API = process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:5000'
@@ -13,181 +16,112 @@ const CARD_HOVER = 'hover:shadow-[0_2px_6px_rgba(10,6,18,0.05),0_24px_56px_-16px
 const GRAD_BTN = 'bg-gradient-to-r from-primary via-primary-lt to-magenta'
 const GRAD_TEXT = 'bg-gradient-to-r from-primary via-primary-lt to-magenta bg-clip-text text-transparent'
 
-const CREATOR = {
-  name: 'Amelia Roze', firstName: 'Amelia', initials: 'AR',
-  location: 'Riga, Latvia',
-  bio: "I'm a beauty & lifestyle creator who turns everyday rituals into content that sells. My videos feel like a friend's recommendation, not an ad — which is exactly why my audience acts on them. I work with brands that care about real engagement, not vanity reach.",
-  genres: ['Beauty', 'Skincare', 'Lifestyle', 'Wellness'],
-  coverUrl: '/test/images/Header.png',
-  avatarUrl: '/test/images/Harshul.png',
-  websiteUrl: 'https://ameliaroze.com',
+const BRAND = {
+  name: 'Kinetics', initials: 'KI',
+  location: 'Riga, Latvia · Shipping Baltic-wide',
+  bio: "We make clean, science-backed sports nutrition for people who train hard and don't have time for hype. Every formula is third-party tested and every claim is one we'll actually show you the study for. We partner with creators who use what they post about — not models holding a shaker bottle.",
+  categories: ['Sports Nutrition', 'Energy', 'Performance', 'Recovery'],
+  coverUrl: '/test/images/Kinetics-Leader.png',
+  avatarUrl: '/test/images/Harshul.png', // TODO: swap for the brand's own logo asset
+  websiteUrl: 'https://kinetics.lv',
 }
 
-const EXCLUSIVE_DEALS = [
+const EXCLUSIVE_CREATORS = [
   {
-    id: 'ed1', brand: 'Red Bull', category: 'Energy Drinks', since: '2023', logoText: 'Red Bull',
-    exclusive: true, color: '#E8112D', scope: 'Baltic-wide exclusivity',
-    description: "Amelia is Red Bull's sole creator for energy drink content across Latvia, Lithuania & Estonia. No energy drink or stimulant brand competitors will be featured on any channel.",
-    blockedCategory: 'All energy drink & stimulant brands', duration: 'Rolling annual contract',
-    logo: null,
+    id: 'ec1', name: 'Amelia Roze', handle: '@amelia.roze', niche: 'Beauty & Lifestyle', since: '2023',
+    exclusive: true, color: '#8B31E8', scope: 'Baltic-wide brand ambassador',
+    description: "Amelia is Kinetics' exclusive ambassador for beauty-meets-wellness content across Latvia, Lithuania & Estonia. No other supplement or sports nutrition brand appears on her channels.",
+    blockedCategory: 'All competing sports nutrition & supplement brands', duration: 'Rolling annual contract',
+    avatarUrl: '/test/images/Harshul.png',
   },
   {
-    id: 'ed2', brand: 'Glossé', category: 'Lip Care', since: '2024', logoText: 'Glossé',
-    exclusive: false, color: '#8B31E8', scope: 'Preferred partner',
-    description: 'Long-term preferred partnership for lip care content. First-look rights on all new Glossé product launches before any other creator in the region.',
+    id: 'ec2', name: 'Markus Tamm', handle: '@markustamm', niche: 'Fitness & Training', since: '2024',
+    exclusive: false, color: '#2563EB', scope: 'Preferred partner',
+    description: 'Long-term preferred partnership for strength-training content. First access to every new product drop before any other creator in the region.',
     blockedCategory: null, duration: '12-month preferred deal',
-    logo: null,
+    avatarUrl: null,
   },
 ]
 
-/* ─── Per-platform metrics ───────────────────────────────────────────
-   Each platform owns its own stat set and demographic snapshot.
-   "instagram" is flagged isPrimary — it's the default selection and
-   gets its own labeled group inside the dropdown.
-
-   PLATFORM_DATA is keyed by the PlatformKey union (not a generic
-   string index signature) so that PLATFORM_DATA[someKnownKey] always
-   resolves to PlatformEntry — never PlatformEntry | undefined. This
-   keeps the code clean under noUncheckedIndexedAccess.                */
-type PlatformKey = 'instagram' | 'tiktok' | 'youtube' | 'snapchat' | 'twitter' | 'linkedin' | 'facebook'
-
-type PlatformStat = { to: number; dec: number; suffix: string; label: string }
-type PlatformDemographics = {
-  audience: string
-  primaryGender: { value: string; label: string }
-  primaryAge: { value: string; label: string }
-  primaryLocation: { value: string; label: string; flagCode: string }
-  talkAbout: string
+/* ─── Per-campaign-type performance ──────────────────────────────────
+   Mirrors the creator page's per-platform metrics, but sliced by HOW
+   we pay creators rather than which app they post to. Icons are reused
+   from the "Ways to partner" cards below so the iconography stays
+   consistent across the whole page.                                   */
+type CampaignKey = 'affiliate' | 'paid' | 'barter'
+type CampaignStat = { to: number; dec: number; suffix: string; label: string }
+type CampaignDemographics = {
+  totalValue: { value: string; label: string }
+  primaryNiche: { value: string; label: string }
+  avgDuration: { value: string; label: string }
+  topLocation: { value: string; label: string; flagCode: string }
+  whatWeLookFor: string
 }
-type PlatformEntry = {
-  key: PlatformKey
+type CampaignTypeEntry = {
+  key: CampaignKey
   label: string
-  icon: string
+  icon: ReactNode
   isPrimary: boolean
-  stats: PlatformStat[]
-  demographics: PlatformDemographics
+  stats: CampaignStat[]
+  demographics: CampaignDemographics
 }
 
-const PLATFORM_DATA: Record<PlatformKey, PlatformEntry> = {
-  instagram: {
-    key: 'instagram', label: 'Instagram', icon: '/Socials/Instagram.svg', isPrimary: true,
+const CAMPAIGN_TYPE_DATA: Record<CampaignKey, CampaignTypeEntry> = {
+  affiliate: {
+    key: 'affiliate', label: 'Affiliate / Revenue Share', icon: <Shield s={16} />, isPrimary: true,
     stats: [
-      { to: 142, dec: 0, suffix: 'K', label: 'Combined reach' },
-      { to: 6.8, dec: 1, suffix: '%', label: 'Avg engagement' },
-      { to: 3.4, dec: 1, suffix: 'M', label: 'Monthly views' },
-      { to: 48, dec: 0, suffix: '+', label: 'Brand campaigns' },
+      { to: 86, dec: 0, suffix: 'K€', label: 'Sales generated' },
+      { to: 4.2, dec: 1, suffix: '%', label: 'Avg conversion' },
+      { to: 34, dec: 0, suffix: '', label: 'Active affiliates' },
+      { to: 15, dec: 0, suffix: '%', label: 'Avg commission' },
     ],
     demographics: {
-      audience: '142K',
-      primaryGender: { value: '78%', label: 'Female audience' },
-      primaryAge: { value: '25–34', label: 'Primary age group' },
-      primaryLocation: { value: 'Latvia', label: 'Top location · 64%', flagCode: 'lv' },
-      talkAbout: "I create honest beauty and skincare content — morning routines, product results filmed over real time, and lifestyle vlogs from around Riga. My audience trusts me because I only feature what I'd actually rebuy, so when I recommend something, they act on it.",
+      totalValue: { value: '34', label: 'Active affiliate creators' },
+      primaryNiche: { value: 'Beauty & Wellness', label: 'Top creator niche' },
+      avgDuration: { value: '9 mo', label: 'Avg partnership length' },
+      topLocation: { value: 'Latvia', label: 'Top creator base · 58%', flagCode: 'lv' },
+      whatWeLookFor: "We look for creators whose audience already trains, recovers, or cares about clean nutrition — not just big numbers. Honest before/after content consistently outperforms polished ads with our audience.",
     },
   },
-  tiktok: {
-    key: 'tiktok', label: 'TikTok', icon: '/Socials/TikTok.svg', isPrimary: false,
+  paid: {
+    key: 'paid', label: 'Paid Campaigns', icon: <ZapIcon s={16} />, isPrimary: false,
     stats: [
-      { to: 96, dec: 0, suffix: 'K', label: 'Followers' },
-      { to: 11.2, dec: 1, suffix: '%', label: 'Avg engagement' },
-      { to: 5.1, dec: 1, suffix: 'M', label: 'Monthly views' },
-      { to: 14, dec: 0, suffix: '', label: 'Viral videos (1M+)' },
+      { to: 62, dec: 0, suffix: '', label: 'Campaigns run' },
+      { to: 410, dec: 0, suffix: 'K', label: 'Avg reach / campaign' },
+      { to: 7.6, dec: 1, suffix: '%', label: 'Avg engagement' },
+      { to: 48, dec: 0, suffix: 'K€', label: 'Paid to creators' },
     ],
     demographics: {
-      audience: '96K',
-      primaryGender: { value: '71%', label: 'Female audience' },
-      primaryAge: { value: '18–24', label: 'Primary age group' },
-      primaryLocation: { value: 'Lithuania', label: 'Top location · 41%', flagCode: 'lt' },
-      talkAbout: 'Quick get-ready-with-me clips, trend remixes, and one-take skincare hacks — TikTok is where I test ideas fast and let the algorithm tell me what actually resonates before it goes anywhere else.',
+      totalValue: { value: '62', label: 'Paid campaigns to date' },
+      primaryNiche: { value: 'Fitness & Training', label: 'Top creator niche' },
+      avgDuration: { value: '3 wk', label: 'Avg campaign length' },
+      topLocation: { value: 'Lithuania', label: 'Top creator base · 44%', flagCode: 'lt' },
+      whatWeLookFor: "Flat-fee partners get a clear brief, a fixed budget, and full creative freedom on delivery. We pay on approval, not on results — no chasing invoices after the post goes live.",
     },
   },
-  youtube: {
-    key: 'youtube', label: 'YouTube', icon: '/Socials/YouTube.svg', isPrimary: false,
+  barter: {
+    key: 'barter', label: 'Barter / Gifting', icon: <HandshakeIcon s={16} />, isPrimary: false,
     stats: [
-      { to: 38, dec: 0, suffix: 'K', label: 'Subscribers' },
-      { to: 6.4, dec: 1, suffix: ' min', label: 'Avg view duration' },
-      { to: 22, dec: 0, suffix: 'K', label: 'Watch hours / mo' },
-      { to: 12, dec: 0, suffix: '', label: 'Sponsored videos' },
+      { to: 210, dec: 0, suffix: '', label: 'Products gifted' },
+      { to: 2.4, dec: 1, suffix: '', label: 'Content pieces / gift' },
+      { to: 41, dec: 0, suffix: '%', label: 'Creator retention' },
+      { to: 19, dec: 0, suffix: 'K', label: 'Avg organic reach' },
     ],
     demographics: {
-      audience: '38K',
-      primaryGender: { value: '69%', label: 'Female audience' },
-      primaryAge: { value: '25–34', label: 'Primary age group' },
-      primaryLocation: { value: 'Latvia', label: 'Top location · 58%', flagCode: 'lv' },
-      talkAbout: 'Long-form routine breakdowns, full product deep-dives, and month-long skincare experiments — YouTube is where my audience comes for the complete story behind a recommendation, not just the highlight.',
-    },
-  },
-  snapchat: {
-    key: 'snapchat', label: 'Snapchat', icon: '/Socials/Snapchat.svg', isPrimary: false,
-    stats: [
-      { to: 24, dec: 0, suffix: 'K', label: 'Subscribers' },
-      { to: 64, dec: 0, suffix: '%', label: 'Story completion' },
-      { to: 31, dec: 0, suffix: 'K', label: 'Avg daily views' },
-      { to: 6, dec: 0, suffix: '', label: 'Takeover campaigns' },
-    ],
-    demographics: {
-      audience: '24K',
-      primaryGender: { value: '82%', label: 'Female audience' },
-      primaryAge: { value: '16–21', label: 'Primary age group' },
-      primaryLocation: { value: 'Estonia', label: 'Top location · 37%', flagCode: 'ee' },
-      talkAbout: "Raw, unfiltered day-in-the-life snaps and first impressions of new products — no polish, no second takes. It's my youngest, fastest-reacting audience, and they let me know immediately if something's worth it.",
-    },
-  },
-  twitter: {
-    key: 'twitter', label: 'Twitter / X', icon: '/Socials/Twitter.svg', isPrimary: false,
-    stats: [
-      { to: 18, dec: 0, suffix: 'K', label: 'Followers' },
-      { to: 4.1, dec: 1, suffix: '%', label: 'Avg engagement' },
-      { to: 890, dec: 0, suffix: 'K', label: 'Monthly impressions' },
-      { to: 9, dec: 0, suffix: '', label: 'Sponsored threads' },
-    ],
-    demographics: {
-      audience: '18K',
-      primaryGender: { value: '54%', label: 'Female audience' },
-      primaryAge: { value: '25–34', label: 'Primary age group' },
-      primaryLocation: { value: 'Latvia', label: 'Top location · 49%', flagCode: 'lv' },
-      talkAbout: 'Hot takes on new launches, honest mini-reviews, and behind-the-scenes threads from brand shoots — X is where my more opinionated, unfiltered side comes out between the polished posts elsewhere.',
-    },
-  },
-  linkedin: {
-    key: 'linkedin', label: 'LinkedIn', icon: '/Socials/LinkedIn.svg', isPrimary: false,
-    stats: [
-      { to: 9.2, dec: 1, suffix: 'K', label: 'Followers' },
-      { to: 3.6, dec: 1, suffix: '%', label: 'Avg engagement' },
-      { to: 210, dec: 0, suffix: 'K', label: 'Post impressions / mo' },
-      { to: 7, dec: 0, suffix: '', label: 'Brand partnerships' },
-    ],
-    demographics: {
-      audience: '9.2K',
-      primaryGender: { value: '61%', label: 'Female audience' },
-      primaryAge: { value: '28–40', label: 'Primary age group' },
-      primaryLocation: { value: 'Latvia', label: 'Top location · 52%', flagCode: 'lv' },
-      talkAbout: 'Creator economy insights, brand collaboration breakdowns, and what actually drives ROI for beauty partnerships — this is where I speak directly to marketing teams, not just consumers.',
-    },
-  },
-  facebook: {
-    key: 'facebook', label: 'Facebook', icon: '/Socials/Facebook.svg', isPrimary: false,
-    stats: [
-      { to: 52, dec: 0, suffix: 'K', label: 'Followers' },
-      { to: 5.4, dec: 1, suffix: '%', label: 'Avg engagement' },
-      { to: 1.1, dec: 1, suffix: 'M', label: 'Monthly video views' },
-      { to: 21, dec: 0, suffix: '', label: 'Brand campaigns' },
-    ],
-    demographics: {
-      audience: '52K',
-      primaryGender: { value: '84%', label: 'Female audience' },
-      primaryAge: { value: '35–44', label: 'Primary age group' },
-      primaryLocation: { value: 'Latvia', label: 'Top location · 71%', flagCode: 'lv' },
-      talkAbout: "Longer captions, community discussions, and routine recommendations for an audience that's been with me since the beginning — Facebook skews older and more loyal than anywhere else I post.",
+      totalValue: { value: '210+', label: 'Products gifted to creators' },
+      primaryNiche: { value: 'Lifestyle & Wellness', label: 'Top creator niche' },
+      avgDuration: { value: '1 box', label: 'Typical gift size' },
+      topLocation: { value: 'Estonia', label: 'Top creator base · 33%', flagCode: 'ee' },
+      whatWeLookFor: "Reserved for creators who'd genuinely use our products without a deal on the table. We send a curated starter box and let the content happen naturally — zero quota, zero obligation.",
     },
   },
 }
 
-const PLATFORM_LIST: PlatformEntry[] = Object.values(PLATFORM_DATA)
+const CAMPAIGN_TYPE_LIST: CampaignTypeEntry[] = Object.values(CAMPAIGN_TYPE_DATA)
 
-const BRANDS = ['Lumora', 'Kinetics', 'Glossé', 'Nordic Skin', 'Bēta Beauty', 'Aura Labs']
+const CREATORS = ['Amelia Roze', 'Markus Tamm', 'Elīna Krūmiņa', 'Jonas Petrauskas', 'Liis Saar', 'Kristaps Bērziņš']
 
-const PHOTOS = [
+const CAMPAIGN_PHOTOS = [
   { id: 'p1', src: '/test/images/Lecture.png', cls: 'col-span-2 md:col-span-2 md:row-span-2' },
   { id: 'p2', src: '/test/images/Listening.png', cls: 'col-span-2 md:col-span-2 md:row-span-1' },
   { id: 'p3', src: '/test/images/Kinetics-Leader.png', cls: 'col-span-1' },
@@ -197,203 +131,227 @@ const PHOTOS = [
   { id: 'p7', src: '/test/images/Kinetics-phone.png', cls: 'col-span-2 md:col-span-2' },
 ]
 
-const COLLABORATIONS = [
+/* ─── Campaigns ──────────────────────────────────────────────────────
+   Same shape as the creator page's COLLABORATIONS, with one deliberate
+   removal: no `review` field. Reviews are no longer tied to a single
+   campaign — see REVIEWS + ReviewsCarousel further down.               */
+const CAMPAIGNS = [
   {
-    id: 'c1', brand: 'Kinetics', title: 'Vitamin‑C serum launch',
-    description: 'We created a 60‑second routine that showed real results over 14 days. The content focused on the glow effect, not just the ingredients.',
-    target: 'Women 25‑40 interested in clean beauty', result: '3.2x ROAS, 5.8K units sold in first week',
+    id: 'cm1', creator: 'Amelia Roze', handle: '@amelia.roze', niche: 'Beauty & Lifestyle',
+    title: 'Vitamin-C recovery stack launch',
+    description: 'A 60-second routine showing real recovery results over 14 days of training. The content focused on how the stack felt the next morning, not just the ingredient list.',
+    target: 'Women 25–40 interested in clean recovery', result: '3.2x ROAS, 5.8K units sold in first week',
     videoSrc: '/test/video/Drink.mp4',
-    insight: 'Authentic storytelling outperformed polished ads – this campaign proved it. The raw, unfiltered shots drove 78% more engagement than our previous studio‑produced content.',
+    insight: 'Authentic, lived-in storytelling outperformed our polished studio ads — this campaign proved it. Unfiltered, real-time shots drove 78% more engagement than anything we produced in-house.',
     metrics: [
       { icon: 'eye', label: 'Views', value: '1.2M' }, { icon: 'heart', label: 'Engagement', value: '8.4%' },
       { icon: 'cart', label: 'ROAS', value: '3.2×' }, { icon: 'share', label: 'Shares', value: '14.2K' },
     ],
-    review: {
-      rating: 5,
-      quote: "Amelia delivered ahead of deadline and the results spoke for themselves — best-converting creator in our whole spring campaign. She understood the brief immediately, needed zero revisions, and the 3.2× ROAS surprised even our own performance team. We've already rebooked her twice.",
-      name: 'Elena Roze', role: 'Brand Manager', company: 'Kinetics',
-      brandColor: '#2563EB', brandInitials: 'KI',
-      brandLogoUrl: '/brands/Burger King.jpg',
-    },
   },
   {
-    id: 'c2', brand: 'Lumora Skincare', title: 'Morning ritual with Lumora',
-    description: "A get‑ready‑with‑me style video that naturally integrated Lumora's moisturiser into my daily routine. No hard sell — just honest use.",
-    target: 'Skincare enthusiasts looking for hydration', result: '2.1M views, 14% engagement rate',
+    id: 'cm2', creator: 'Markus Tamm', handle: '@markustamm', niche: 'Fitness & Training',
+    title: 'Pre-workout, race-day tested',
+    description: "A training-camp diary integrating our pre-workout blend into Markus's actual race prep — no studio, no script, just the weeks leading up to a half-marathon.",
+    target: 'Endurance athletes and serious lifters', result: '2.1M views, 14% engagement rate',
     videoSrc: '/test/video/Food.mp4',
-    insight: 'Showing the product in a real, messy morning routine made it feel accessible. DMs were flooded with "where can I buy this?" within hours.',
+    insight: "Showing the product inside a real, messy training block made it feel earned rather than sold. DMs were flooded with 'where do you get this?' within hours of the race-day post.",
     metrics: [
       { icon: 'eye', label: 'Views', value: '2.1M' }, { icon: 'heart', label: 'Engagement', value: '14%' },
       { icon: 'users', label: 'New followers', value: '+8.3K' }, { icon: 'message', label: 'DMs', value: '2.1K' },
     ],
-    review: {
-      rating: 5,
-      quote: "Working with Amelia felt like working with a marketing partner, not a creator. She understood our product, our margins, and pitched the affiliate model herself — something none of our other creators have ever done. The morning ritual video is still our best-performing piece of content six months later.",
-      name: 'Mārtiņš Ozols', role: 'Founder', company: 'Lumora Skincare',
-      brandColor: '#059669', brandInitials: 'LS',
-      brandLogoUrl: '/brands/Nike.jpg',
-    },
   },
   {
-    id: 'c3', brand: 'Glossé', title: 'Lip gloss layering hack',
-    description: "We showed how to achieve a plump, glossy look using Glossé's new lip oil. The video went viral on TikTok within 48 hours.",
-    target: 'Gen Z and millennials, beauty lovers', result: '4.5M views, 22K shares, 8.2K conversions',
+    id: 'cm3', creator: 'Liis Saar', handle: '@liis.moves', niche: 'Wellness',
+    title: 'Electrolyte hack for hot yoga',
+    description: "We showed how Liis layers our electrolyte mix before hot yoga sessions to avoid the mid-class crash. The video went viral on TikTok within 48 hours.",
+    target: 'Gen Z and millennial wellness audiences', result: '4.5M views, 22K shares, 8.2K conversions',
     videoSrc: '/test/video/People.mp4',
-    insight: 'TikTok users love hacks. By framing it as a "discovery" rather than a promo, we hit the algorithm sweet spot and gained 12K new followers from this single post.',
+    insight: "TikTok audiences love a discovered hack, not an ad. Framing it that way hit the algorithm sweet spot and brought 12K new followers from a single post.",
     metrics: [
       { icon: 'eye', label: 'Views', value: '4.5M' }, { icon: 'share', label: 'Shares', value: '22K' },
       { icon: 'cart', label: 'Conversions', value: '8.2K' }, { icon: 'users', label: 'New followers', value: '+12K' },
     ],
-    review: {
-      rating: 4,
-      quote: "The content didn't feel like an ad — it felt like a recommendation from a trusted friend. Our DMs blew up the day it went live. We went from sceptical about influencer marketing to building our entire Q3 strategy around creators after this single campaign.",
-      name: 'Anna Kalniņa', role: 'Marketing Lead', company: 'Glossé',
-      brandColor: '#8B31E8', brandInitials: 'GL',
-      brandLogoUrl: '/brands/RedBull.webp',
-    },
   },
 ]
 
-const BUDGETS = ['Under €350', '€350–€890', '€890–€2,500', '€2,500+', 'Affiliate only', 'Not sure yet']
+/* ─── Reviews — standalone, decoupled from any single campaign ──────── */
+const REVIEWS = [
+  {
+    id: 'r1', name: 'Amelia Roze', handle: '@amelia.roze', niche: 'Beauty & Lifestyle', followers: '142K',
+    avatarUrl: '/test/images/Harshul.png', color: '#8B31E8', initials: 'AR', rating: 5, date: 'May 2026',
+    quote: "Kinetics is the rare brand that briefs like a marketer, not a vending machine. They told me the goal, trusted my read on my own audience, and paid on delivery — no waiting on results to get my invoice cleared. I've turned down bigger budgets for a worse process.",
+  },
+  {
+    id: 'r2', name: 'Markus Tamm', handle: '@markustamm', niche: 'Fitness & Training', followers: '68K',
+    avatarUrl: null, color: '#2563EB', initials: 'MT', rating: 5, date: 'Apr 2026',
+    quote: "I've worked with a lot of supplement brands and most want you to perform enthusiasm you don't feel. Kinetics sent me the lab results before I ever posted. That's the only reason the content felt real, because it was.",
+  },
+  {
+    id: 'r3', name: 'Elīna Krūmiņa', handle: '@elina.kr', niche: 'Wellness', followers: '51K',
+    avatarUrl: null, color: '#059669', initials: 'EK', rating: 4, date: 'Mar 2026',
+    quote: "Fast replies, fair commission, and they never once asked me to say something I wouldn't actually say. The only thing I'd change is more lead time on briefs — but the partnership itself has been genuinely easy.",
+  },
+  {
+    id: 'r4', name: 'Jonas Petrauskas', handle: '@jonas.fit', niche: 'Strength Training', followers: '94K',
+    avatarUrl: null, color: '#D97706', initials: 'JP', rating: 5, date: 'Feb 2026',
+    quote: "The affiliate dashboard alone makes Kinetics worth it — I can see conversions in real time instead of guessing at a flat fee's worth. First brand that's made me more by being transparent than by hiding the numbers.",
+  },
+]
+
+const COLLAB_TYPES = ['Affiliate / Revenue share', 'Paid campaign', 'Barter / Gifting', 'Not sure yet']
 
 /* ─── Icons ──────────────────────────────────────────────────────────── */
-const Check = ({ s = 16 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M5 12l4 4 10-10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-)
-const Shield = ({ s = 16 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path
-      d="M12 3L5 6v6c0 5 3.5 8.5 7 10 3.5-1.5 7-5 7-10V6l-7-3z"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-)
-const StarIcon = ({ s = 14 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2.5l2.95 6.46 7.05.66-5.32 4.78 1.6 6.9L12 17.6l-6.28 3.7 1.6-6.9-5.32-4.78 7.05-.66L12 2.5z" />
-  </svg>
-)
-/* Feeling-based icons for the "Ways to work together" cards — chosen for what
-   each offer feels like to a brand, not for money/payment imagery. */
-const ZapIcon = ({ s = 28 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M4 14a1 1 0 01-.78-1.63l9.9-10.2a.5.5 0 01.86.46l-1.92 6.02A1 1 0 0013 10h7a1 1 0 01.78 1.63l-9.9 10.2a.5.5 0 01-.86-.46l1.92-6.02A1 1 0 0011 14z"
-      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-)
-const HandshakeIcon = ({ s = 28 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M11 17l2 2a1 1 0 103-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M14 14l2.5 2.5a1 1 0 103-3l-3.88-3.88a3 3 0 00-4.24 0l-.88.88a1 1 0 11-3-3l2.81-2.81a5.79 5.79 0 017.06-.87l.47.28a2 2 0 001.42.25L21 4"
-      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M21 3l1 11h-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M3 3l-1 11 6.5 6.5a1 1 0 103-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M3 4h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-)
-const Play = ({ s = 18 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-)
-const Pin = ({ s = 15 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z" stroke="currentColor" strokeWidth="1.6" />
-    <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.6" />
-  </svg>
-)
-const LockIcon = ({ s = 13 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="1.8" />
-    <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-  </svg>
-)
-const CalendarIcon = ({ s = 13 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <rect x="3" y="4" width="18" height="17" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
-    <path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-  </svg>
-)
-
-/* ─── Bento icons ────────────────────────────────────────────────────── */
-const EyeIcon = ({ s = 26 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
-  </svg>
-)
-const PersonIcon = ({ s = 26 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="5" r="2.8" stroke="currentColor" strokeWidth="1.8" />
-    <path d="M12 7.8v1.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <path d="M8 9c-.5 0-1.2.6-1.5 1.5L5 16h4l1 5h4l1-5h4l-1.5-5.5C17.2 9.6 16.5 9 16 9"
-      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M9.5 9c.7-.5 1.6-.5 2.5-.5s1.8 0 2.5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-  </svg>
-)
-const HeartPulseIcon = ({ s = 26 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M12 20.5S3.5 14 3.5 8a4.5 4.5 0 018.5-2 4.5 4.5 0 018.5 2c0 6-8.5 12.5-8.5 12.5z"
-      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M3.5 12h2.3l1.5-2.8 2 5 1.5-3.5 1 1.8H18"
-      stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-)
-const ChatBubbleIcon = ({ s = 40 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
-)
-const LightbulbIcon = ({ s = 16 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M9 21h6M12 3a7 7 0 014.9 11.9c-.6.6-1.1 1.3-1.4 2.1H8.5c-.3-.8-.8-1.5-1.4-2.1A7 7 0 0112 3z"
-      stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M9.5 17h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
-)
-
-/* ─── Metric card icons ─────────────────────────────────────────────── */
-const MetricEyeIcon = ({ s = 18 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
-  </svg>
-)
-const HeartIcon = ({ s = 18 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-)
-const CartIcon = ({ s = 18 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-)
-const ShareIcon = ({ s = 18 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <circle cx="18" cy="5" r="3" stroke="currentColor" strokeWidth="1.8" />
-    <circle cx="6" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
-    <circle cx="18" cy="19" r="3" stroke="currentColor" strokeWidth="1.8" />
-    <path d="M8.6 10.7l6.8-4M8.6 13.3l6.8 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-  </svg>
-)
-const UsersIcon = ({ s = 18 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
-    <path d="M2 20v-1a7 7 0 0114 0v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    <path d="M16 11a3 3 0 000-6M22 20v-1a7 7 0 00-5-6.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-  </svg>
-)
-const MessageIcon = ({ s = 18 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-)
+function Check({ s = 16 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M5 12l4 4 10-10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function Shield({ s = 16 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M12 3L5 6v6c0 5 3.5 8.5 7 10 3.5-1.5 7-5 7-10V6l-7-3z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function StarIcon({ s = 14 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2.5l2.95 6.46 7.05.66-5.32 4.78 1.6 6.9L12 17.6l-6.28 3.7 1.6-6.9-5.32-4.78 7.05-.66L12 2.5z" />
+    </svg>
+  )
+}
+function ZapIcon({ s = 28 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M4 14a1 1 0 01-.78-1.63l9.9-10.2a.5.5 0 01.86.46l-1.92 6.02A1 1 0 0013 10h7a1 1 0 01.78 1.63l-9.9 10.2a.5.5 0 01-.86-.46l1.92-6.02A1 1 0 0011 14z"
+        stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function HandshakeIcon({ s = 28 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M11 17l2 2a1 1 0 103-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 14l2.5 2.5a1 1 0 103-3l-3.88-3.88a3 3 0 00-4.24 0l-.88.88a1 1 0 11-3-3l2.81-2.81a5.79 5.79 0 017.06-.87l.47.28a2 2 0 001.42.25L21 4"
+        stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M21 3l1 11h-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 3l-1 11 6.5 6.5a1 1 0 103-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 4h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function Play({ s = 18 }: { s?: number }) {
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+}
+function Pin({ s = 15 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  )
+}
+function LockIcon({ s = 13 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  )
+}
+function CalendarIcon({ s = 13 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="4" width="18" height="17" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}
+function EyeIcon({ s = 26 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  )
+}
+function PersonIcon({ s = 26 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="5" r="2.8" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 7.8v1.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M8 9c-.5 0-1.2.6-1.5 1.5L5 16h4l1 5h4l1-5h4l-1.5-5.5C17.2 9.6 16.5 9 16 9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9.5 9c.7-.5 1.6-.5 2.5-.5s1.8 0 2.5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  )
+}
+function ChatBubbleIcon({ s = 40 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 10h8M8 14h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+function LightbulbIcon({ s = 16 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M9 21h6M12 3a7 7 0 014.9 11.9c-.6.6-1.1 1.3-1.4 2.1H8.5c-.3-.8-.8-1.5-1.4-2.1A7 7 0 0112 3z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9.5 17h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+function MetricEyeIcon({ s = 18 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  )
+}
+function HeartIcon({ s = 18 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function CartIcon({ s = 18 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function ShareIcon({ s = 18 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <circle cx="18" cy="5" r="3" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="6" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="18" cy="19" r="3" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8.6 10.7l6.8-4M8.6 13.3l6.8 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  )
+}
+function UsersIcon({ s = 18 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M2 20v-1a7 7 0 0114 0v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M16 11a3 3 0 000-6M22 20v-1a7 7 0 00-5-6.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  )
+}
+function MessageIcon({ s = 18 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
 function MetricIcon({ name, s = 18 }: { name: string; s?: number }) {
   switch (name) {
     case 'eye': return <MetricEyeIcon s={s} />
@@ -405,46 +363,42 @@ function MetricIcon({ name, s = 18 }: { name: string; s?: number }) {
     default: return <MetricEyeIcon s={s} />
   }
 }
+function GlobeIcon({ s = 18 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 2c-2.8 3-4 6-4 10s1.2 7 4 10M12 2c2.8 3 4 6 4 10s-1.2 7-4 10M2 12h20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
 
-/* ─── Globe icon for website button ────────────────────────────────── */
-const GlobeIcon = ({ s = 18 }: { s?: number }) => (
-  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.6" />
-    <path d="M12 2c-2.8 3-4 6-4 10s1.2 7 4 10M12 2c2.8 3 4 6 4 10s-1.2 7-4 10M2 12h20" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-  </svg>
-)
-
-/* ─── Social platform icons ───────────────────────────────────────────
-   Rendered directly as <img> tags — no surrounding button container.
-   SVGs sourced from /Socials/. Smooth rounded corners via border-radius.
-   Hover: slight lift + opacity change. No square wrapper at all.        */
+/* ─── Social platform icons ──────────────────────────────────────────── */
 const SOCIAL_LINKS: { key: string; label: string; href: string; src: string }[] = [
-  { key: 'instagram', label: 'Instagram',   href: '#', src: '/Socials/Instagram.svg' },
-  { key: 'tiktok',    label: 'TikTok',      href: '#', src: '/Socials/TikTok.svg'    },
-  { key: 'youtube',   label: 'YouTube',     href: '#', src: '/Socials/YouTube.svg'   },
-  { key: 'snapchat',  label: 'Snapchat',    href: '#', src: '/Socials/Snapchat.svg'  },
-  { key: 'twitter',   label: 'Twitter / X', href: '#', src: '/Socials/Twitter.svg'   },
-  { key: 'linkedin',  label: 'LinkedIn',    href: '#', src: '/Socials/LinkedIn.svg'  },
-  { key: 'facebook',  label: 'Facebook',    href: '#', src: '/Socials/Facebook.svg'  },
+  { key: 'instagram', label: 'Instagram', href: '#', src: '/Socials/Instagram.svg' },
+  { key: 'tiktok', label: 'TikTok', href: '#', src: '/Socials/TikTok.svg' },
+  { key: 'youtube', label: 'YouTube', href: '#', src: '/Socials/YouTube.svg' },
+  { key: 'linkedin', label: 'LinkedIn', href: '#', src: '/Socials/LinkedIn.svg' },
+  { key: 'facebook', label: 'Facebook', href: '#', src: '/Socials/Facebook.svg' },
 ]
 
-/* ─── Gradient stars ─────────────────────────────────────────────────── */
-function GradientStars({ rating, total = 5, size = 28 }: { rating: number; total?: number; size?: number }) {
-  const fillId   = 'nex-star-fill'
-  const strokeId = 'nex-star-stroke'
+/* ─── Gradient stars (unique ids per instance — multiple reviews can
+   be mounted simultaneously in the sliding track) ──────────────────── */
+function GradientStars({ rating, total = 5, size = 28, idSuffix = '' }: { rating: number; total?: number; size?: number; idSuffix?: string }) {
+  const fillId = `nex-star-fill${idSuffix}`
+  const strokeId = `nex-star-stroke${idSuffix}`
   const STAR = 'M12 2l2.8 6.2 6.8.6-5 4.5 1.5 6.7L12 16.5l-6.1 3.5 1.5-6.7-5-4.5 6.8-.6z'
   return (
     <div className="flex items-center gap-2">
       <svg width="0" height="0" style={{ position: 'absolute', pointerEvents: 'none' }}>
         <defs>
           <linearGradient id={fillId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor="#8B31E8" />
-            <stop offset="55%"  stopColor="#A855F7" />
+            <stop offset="0%" stopColor="#8B31E8" />
+            <stop offset="55%" stopColor="#A855F7" />
             <stop offset="100%" stopColor="#FF33BC" />
           </linearGradient>
           <linearGradient id={strokeId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stopColor="#8B31E8" />
-            <stop offset="55%"  stopColor="#A855F7" />
+            <stop offset="0%" stopColor="#8B31E8" />
+            <stop offset="55%" stopColor="#A855F7" />
             <stop offset="100%" stopColor="#FF33BC" />
           </linearGradient>
         </defs>
@@ -548,59 +502,49 @@ function NexLogo({ className = '' }: { className?: string }) {
   )
 }
 
-/* ─── Brand Logo tile ────────────────────────────────────────────────── */
-function BrandLogo({
-  name, color, logoUrl, initials, size = 56,
-}: { name: string; color: string; logoUrl?: string | null; initials?: string; size?: number }) {
+/* ─── Person avatar (circle) — used for creators, never a square logo
+   tile, so it's visually distinct from the brand's own square mark.    */
+function PersonAvatar({ name, color, avatarUrl, initials, size = 56 }: { name: string; color: string; avatarUrl?: string | null; initials?: string; size?: number }) {
   const abbr = initials ?? name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
-  if (logoUrl) {
+  if (avatarUrl) {
     return (
-      <div
-        className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/10 bg-white shadow-sm"
-        style={{ width: size, height: size }}
-      >
+      <div className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white shadow-sm" style={{ width: size, height: size }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logoUrl} alt={name} width={size} height={size} className="h-full w-full object-contain p-1" draggable={false} />
+        <img src={avatarUrl} alt={name} width={size} height={size} className="h-full w-full object-cover" draggable={false} />
       </div>
     )
   }
   return (
-    <div
-      className="flex flex-shrink-0 items-center justify-center rounded-xl font-extrabold text-white shadow-sm"
-      style={{ width: size, height: size, background: color, fontSize: size * 0.36 }}
-    >
+    <div className="flex flex-shrink-0 items-center justify-center rounded-full font-extrabold text-white shadow-sm" style={{ width: size, height: size, background: color, fontSize: size * 0.36 }}>
       {abbr}
     </div>
   )
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   Platform Dropdown — selects which platform's metrics drive the
-   Matrix section. Default = the entry flagged isPrimary (Instagram).
-   `current` is passed in already-resolved from the caller (which owns
-   the PlatformKey -> PlatformEntry lookup), so this component never
-   has to derive a "maybe undefined" value via .find() or array[0].     */
-function PlatformRow({ p, isSelected, onSelect }: { p: PlatformEntry; isSelected: boolean; onSelect: (key: PlatformKey) => void }) {
+   Campaign-type dropdown — selects which payout model drives the
+   Matrix section. Default = the entry flagged isPrimary (Affiliate).
+   ════════════════════════════════════════════════════════════════════ */
+function CampaignTypeRow({ p, isSelected, onSelect }: { p: CampaignTypeEntry; isSelected: boolean; onSelect: (key: CampaignKey) => void }) {
   return (
     <button
       onClick={() => onSelect(p.key)}
       className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] font-semibold transition hover:bg-primary/[0.06] ${isSelected ? 'bg-primary/[0.07] text-primary' : 'text-ink/75'}`}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={p.icon} alt="" className="h-[18px] w-[18px] flex-shrink-0 rounded-md object-contain" />
+      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-md bg-primary/[0.08] text-primary">{p.icon}</span>
       <span className="flex-1">{p.label}</span>
       {isSelected && <span className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${GRAD_BTN}`} />}
     </button>
   )
 }
 
-function PlatformDropdown({
-  platforms, current, selected, onSelect,
-}: { platforms: PlatformEntry[]; current: PlatformEntry; selected: PlatformKey; onSelect: (key: PlatformKey) => void }) {
+function CampaignTypeDropdown({
+  types, current, selected, onSelect,
+}: { types: CampaignTypeEntry[]; current: CampaignTypeEntry; selected: CampaignKey; onSelect: (key: CampaignKey) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const primary = platforms.filter(p => p.isPrimary)
-  const others = platforms.filter(p => !p.isPrimary)
+  const primary = types.filter(t => t.isPrimary)
+  const others = types.filter(t => !t.isPrimary)
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
@@ -610,20 +554,19 @@ function PlatformDropdown({
     return () => { document.removeEventListener('mousedown', onClick); window.removeEventListener('keydown', onEsc) }
   }, [])
 
-  const choose = (key: PlatformKey) => { onSelect(key); setOpen(false) }
+  const choose = (key: CampaignKey) => { onSelect(key); setOpen(false) }
 
   return (
-    <div ref={ref} className="relative z-30 w-[260px]">
+    <div ref={ref} className="relative z-30 w-[280px]">
       <button
         onClick={() => setOpen(o => !o)}
         className={`flex w-full items-center gap-2.5 rounded-xl border bg-white px-4 py-2.5 text-[13px] font-semibold text-ink shadow-sm transition hover:-translate-y-0.5 ${CARD} ${open ? 'border-primary/30' : 'border-primary/12'}`}
       >
         <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-[0.1em] text-ink/40">Showing</span>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={current.icon} alt="" className="h-[18px] w-[18px] flex-shrink-0 rounded-md object-contain" />
+        <span className="flex h-[20px] w-[20px] flex-shrink-0 items-center justify-center text-primary">{current.icon}</span>
         <span className="flex-1 truncate text-ink">{current.label}</span>
         {current.isPrimary && (
-          <span className="flex-shrink-0 text-primary" title="Primary platform" aria-label="Primary platform">
+          <span className="flex-shrink-0 text-primary" title="Most-used model" aria-label="Most-used model">
             <StarIcon s={14} />
           </span>
         )}
@@ -634,13 +577,11 @@ function PlatformDropdown({
 
       {open && (
         <div className={`absolute right-0 top-[calc(100%+8px)] w-full overflow-hidden rounded-2xl border border-primary/10 bg-white ${CARD}`}>
-          <div className="px-4 pb-2 pt-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-ink/35">Primary platform</div>
-          {primary.map(p => <PlatformRow key={p.key} p={p} isSelected={selected === p.key} onSelect={choose} />)}
+          <div className="px-4 pb-2 pt-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-ink/35">Primary model</div>
+          {primary.map(p => <CampaignTypeRow key={p.key} p={p} isSelected={selected === p.key} onSelect={choose} />)}
           <div className="mx-4 my-1.5 h-px bg-primary/8" />
-          <div className="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-ink/35">Other platforms</div>
-          <div className="max-h-[260px] overflow-y-auto pb-2">
-            {others.map(p => <PlatformRow key={p.key} p={p} isSelected={selected === p.key} onSelect={choose} />)}
-          </div>
+          <div className="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-ink/35">Other models</div>
+          {others.map(p => <CampaignTypeRow key={p.key} p={p} isSelected={selected === p.key} onSelect={choose} />)}
         </div>
       )}
     </div>
@@ -648,9 +589,9 @@ function PlatformDropdown({
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   Partnerships Modal
+   Creator Partnerships Modal
    ════════════════════════════════════════════════════════════════════ */
-function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function CreatorPartnershipsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   useEffect(() => {
     if (!open) return
     document.body.style.overflow = 'hidden'
@@ -670,8 +611,8 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
       >
         <div className="flex-shrink-0 flex items-center justify-between border-b border-primary/10 bg-white px-7 py-5">
           <div>
-            <h3 className="text-lg font-extrabold tracking-[-0.02em] text-ink">Brand Partnerships</h3>
-            <p className="mt-0.5 text-[12px] text-ink/45">{EXCLUSIVE_DEALS.length} active {EXCLUSIVE_DEALS.length === 1 ? 'partnership' : 'partnerships'}</p>
+            <h3 className="text-lg font-extrabold tracking-[-0.02em] text-ink">Creator Partnerships</h3>
+            <p className="mt-0.5 text-[12px] text-ink/45">{EXCLUSIVE_CREATORS.length} active {EXCLUSIVE_CREATORS.length === 1 ? 'partnership' : 'partnerships'}</p>
           </div>
           <button onClick={onClose} aria-label="Close"
             className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-sub text-ink/45 transition hover:bg-surface-card hover:text-ink text-[13px]">
@@ -679,7 +620,7 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-7 py-6 space-y-4">
-          {EXCLUSIVE_DEALS.map(deal => (
+          {EXCLUSIVE_CREATORS.map(deal => (
             <div
               key={deal.id}
               className={`rounded-2xl border bg-white p-5 ${CARD} ${deal.exclusive ? 'border-primary/20' : 'border-primary/10'}`}
@@ -687,10 +628,10 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
             >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-3">
-                  <BrandLogo name={deal.brand} color={deal.color} logoUrl={deal.logo} initials={deal.logoText} size={48} />
+                  <PersonAvatar name={deal.name} color={deal.color} avatarUrl={deal.avatarUrl} size={48} />
                   <div>
-                    <span className="text-[18px] font-black tracking-[-0.03em] block leading-tight" style={{ color: deal.color }}>{deal.logoText}</span>
-                    <span className="text-[12px] font-semibold text-ink/50">{deal.scope}</span>
+                    <span className="text-[16px] font-black tracking-[-0.02em] block leading-tight text-ink">{deal.name}</span>
+                    <span className="text-[12px] font-semibold text-ink/50">{deal.handle} · {deal.scope}</span>
                   </div>
                 </div>
                 <div className="flex flex-wrap justify-end gap-1.5">
@@ -698,7 +639,7 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
                     ? <span className={`rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] ${GRAD_BTN} text-white`}>Exclusive</span>
                     : <span className="rounded-md border border-primary/20 bg-primary/[0.07] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-primary">Preferred</span>
                   }
-                  <span className="rounded-md border border-primary/12 bg-primary/[0.05] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-primary/70">{deal.category}</span>
+                  <span className="rounded-md border border-primary/12 bg-primary/[0.05] px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-primary/70">{deal.niche}</span>
                 </div>
               </div>
               <p className="text-[13px] leading-[1.75] text-ink/65">{deal.description}</p>
@@ -717,7 +658,7 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
                   <Check s={12} />
                 </span>
                 <span className="text-[12px] font-semibold text-green-800">
-                  {deal.exclusive ? 'Signed in — Exclusive Partner' : 'Signed in — Preferred Partner'}
+                  {deal.exclusive ? 'Signed in — Exclusive Ambassador' : 'Signed in — Preferred Partner'}
                 </span>
               </div>
             </div>
@@ -738,15 +679,15 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
    PAGE
    ════════════════════════════════════════════════════════════════════ */
 export default function Page() {
-  const [modal, setModal] = useState<'inquiry' | 'message' | null>(null)
+  const [modal, setModal] = useState<'apply' | 'message' | null>(null)
   const [partnershipsOpen, setPartnershipsOpen] = useState(false)
-  const [platformKey, setPlatformKey] = useState<PlatformKey>('instagram')
-  const platform = PLATFORM_DATA[platformKey]
-  const c = CREATOR
+  const [campaignKey, setCampaignKey] = useState<CampaignKey>('affiliate')
+  const campaign = CAMPAIGN_TYPE_DATA[campaignKey]
+  const b = BRAND
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 
-  const NAV_LEFT  = [{ label: 'About', action: () => scrollTo('about') }, { label: 'Matrix', action: () => scrollTo('matrix') }]
-  const NAV_RIGHT = [{ label: 'Work',  action: () => scrollTo('work')  }, { label: 'Contact', action: () => setModal('message') }]
+  const NAV_LEFT = [{ label: 'About', action: () => scrollTo('about') }, { label: 'Performance', action: () => scrollTo('matrix') }]
+  const NAV_RIGHT = [{ label: 'Campaigns', action: () => scrollTo('work') }, { label: 'Contact', action: () => setModal('message') }]
 
   return (
     <div className="min-h-screen bg-canvas font-rubik text-ink antialiased">
@@ -756,20 +697,16 @@ export default function Page() {
         {/* Cover */}
         <div
           className="relative h-[260px] w-full overflow-hidden bg-gradient-to-br from-primary/30 via-primary-lt/25 to-magenta/30 sm:h-[320px] md:h-[360px]"
-          style={c.coverUrl ? { backgroundImage: `url(${c.coverUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+          style={b.coverUrl ? { backgroundImage: `url(${b.coverUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
         >
-          {!c.coverUrl && <span className="absolute inset-0 flex items-center justify-center text-[13px] font-semibold uppercase tracking-[0.2em] text-white/55">Cover image</span>}
+          {!b.coverUrl && <span className="absolute inset-0 flex items-center justify-center text-[13px] font-semibold uppercase tracking-[0.2em] text-white/55">Cover image</span>}
           <div className="absolute inset-0 bg-gradient-to-b from-ink/10 via-transparent to-canvas/30" />
         </div>
 
         {/* ── NAV PILL ─────────────────────────────────────────────────── */}
         <div className="absolute inset-x-0 z-40 flex justify-center px-4" style={{ top: 28 }}>
           <div className="w-full max-w-[600px]">
-            <div
-              className="relative flex w-full items-center justify-between rounded-2xl px-4 py-3"
-              style={{ overflow: 'visible', border: 'none', boxShadow: 'none' }}
-            >
-              {/* Masked fill + blur layer — blur is ON this layer so it vanishes in the transparent centre */}
+            <div className="relative flex w-full items-center justify-between rounded-2xl px-4 py-3" style={{ overflow: 'visible', border: 'none', boxShadow: 'none' }}>
               <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 rounded-2xl backdrop-blur-xl"
@@ -779,7 +716,6 @@ export default function Page() {
                   maskImage: 'linear-gradient(90deg, #000 0%, #000 30%, transparent 42%, transparent 58%, #000 70%, #000 100%)',
                 }}
               />
-              {/* Left nav */}
               <div className="relative z-10 flex items-center gap-0.5">
                 {NAV_LEFT.map(n => (
                   <button key={n.label} onClick={n.action}
@@ -788,18 +724,15 @@ export default function Page() {
                   </button>
                 ))}
               </div>
-              {/* Centre spacer */}
               <div className="w-16 flex-shrink-0" aria-hidden="true" />
-              {/* Right nav */}
               <div className="relative z-10 flex items-center gap-0.5">
-                {NAV_RIGHT.map(n => ( 
+                {NAV_RIGHT.map(n => (
                   <button key={n.label} onClick={n.action}
                     className="rounded-lg px-1.5 py-2 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary sm:px-4">
                     {n.label}
                   </button>
                 ))}
               </div>
-              {/* LOGO — absolute, out of flex flow */}
               <div className="pointer-events-none absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2">
                 <NexLogo className="h-10 sm:h-[120px] pointer-events-auto drop-shadow-[0_6px_24px_rgba(139,49,232,0.65)]" />
               </div>
@@ -811,19 +744,19 @@ export default function Page() {
         <div className="mx-auto -mt-20 flex max-w-[1080px] flex-col items-center px-6 sm:-mt-24">
           <div
             className={`relative z-20 h-36 w-36 overflow-hidden rounded-2xl border-4 border-white ${GRAD_BTN} shadow-[0_16px_44px_-12px_rgba(139,49,232,0.45)] sm:h-44 sm:w-44`}
-            style={c.avatarUrl ? { backgroundImage: `url(${c.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+            style={b.avatarUrl ? { backgroundImage: `url(${b.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
           >
-            {!c.avatarUrl && <span className="flex h-full w-full items-center justify-center text-5xl font-black text-white">{c.initials}</span>}
+            {!b.avatarUrl && <span className="flex h-full w-full items-center justify-center text-5xl font-black text-white">{b.initials}</span>}
           </div>
 
           <h1 className="mt-5 flex w-full items-center justify-center gap-2.5 text-center text-[clamp(34px,6vw,56px)] font-black leading-none tracking-[-0.045em] text-ink">
-            <span>{c.name}</span>
+            <span>{b.name}</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/Tick.svg" alt="" className='h-8 w-8'/>
+            <img src="/Tick.svg" alt="" className='h-8 w-8' />
           </h1>
 
           <p className="mt-3 inline-flex items-center gap-1.5 text-[15px] font-medium text-ink/60">
-            <span className="text-primary"><Pin /></span>Based in {c.location}
+            <span className="text-primary"><Pin /></span>{b.location}
           </p>
 
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3.5">
@@ -836,37 +769,31 @@ export default function Page() {
                 className="flex h-8 w-8 items-center justify-center transition-all duration-200 hover:-translate-y-1 hover:opacity-90 hover:drop-shadow-[0_6px_16px_rgba(139,49,232,0.35)]"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={s.src}
-                  alt={s.label}
-                  draggable={false}
-                  className="block h-full w-full overflow-hidden rounded-md object-contain"
-                />
+                <img src={s.src} alt={s.label} draggable={false} className="block h-full w-full overflow-hidden rounded-md object-contain" />
               </a>
             ))}
           </div>
 
-          {c.websiteUrl && (
+          {b.websiteUrl && (
             <a
-              href={c.websiteUrl}
+              href={b.websiteUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-4 inline-flex align-items items-center gap-2.5 rounded-xl border border-primary/15 bg-white px-5 py-2.5 text-[13.5px] font-semibold text-primary shadow-[0_2px_10px_-4px_rgba(139,49,232,0.18)] transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_8px_24px_-8px_rgba(139,49,232,0.30)]"
             >
               <GlobeIcon s={16} />
               <span> Visit Website</span>
-              
             </a>
           )}
 
-          {EXCLUSIVE_DEALS.length > 0 && (
+          {EXCLUSIVE_CREATORS.length > 0 && (
             <div className="mt-8">
               <button
                 onClick={() => setPartnershipsOpen(true)}
                 className={`inline-flex items-center gap-2.5 rounded-xl ${GRAD_BTN} px-6 py-3 text-[13.5px] font-bold text-white shadow-[0_8px_24px_-6px_rgba(139,49,232,0.45)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_30px_-6px_rgba(139,49,232,0.6)]`}
               >
                 <Shield s={14} />
-                View Brand Partnerships &amp; Exclusivities
+                View Creator Partnerships &amp; Exclusivities
               </button>
             </div>
           )}
@@ -876,25 +803,25 @@ export default function Page() {
       {/* ════════ ABOUT ════════ */}
       <section id="about" className="py-16">
         <div className="mx-auto max-w-[640px] px-6 text-center">
-          <SectionHead kicker="Nice to meet you">The person <G>behind the feed</G></SectionHead>
+          <SectionHead kicker="Nice to meet you">The brand <G>behind the bottle</G></SectionHead>
           <Reveal delay={80}>
-            <p className="mt-6 text-[clamp(16px,2vw,18px)] leading-[1.85] text-ink/70">{c.bio}</p>
-            <button onClick={() => setModal('message')}
+            <p className="mt-6 text-[clamp(16px,2vw,18px)] leading-[1.85] text-ink/70">{b.bio}</p>
+            <button onClick={() => setModal('apply')}
               className={`mt-7 rounded-lg ${GRAD_BTN} px-8 py-3.5 text-[15px] font-bold text-white shadow-[0_10px_28px_-8px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5`}>
-              Contact me
+              Partner with us
             </button>
             <div className="mt-7 flex flex-wrap justify-center gap-2.5">
-              {c.genres.map(g => <span key={g} className="rounded-lg border border-primary/15 bg-white px-4 py-2 text-[13px] font-semibold text-primary">{g}</span>)}
+              {b.categories.map(g => <span key={g} className="rounded-lg border border-primary/15 bg-white px-4 py-2 text-[13px] font-semibold text-primary">{g}</span>)}
             </div>
           </Reveal>
         </div>
       </section>
 
       <Reveal className="pb-6 text-center">
-        <p className="mb-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink/35">Trusted by brands across the Baltics</p>
+        <p className="mb-6 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink/35">Trusted by creators across the Baltics</p>
         <div className="relative overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_14%,#000_86%,transparent)]">
           <div className="flex w-max gap-16 animate-marquee hover:[animation-play-state:paused]">
-            {[...BRANDS, ...BRANDS].map((b, i) => <span key={i} className="whitespace-nowrap text-[22px] font-extrabold tracking-[-0.03em] text-ink/35 transition hover:text-primary">{b}</span>)}
+            {[...CREATORS, ...CREATORS].map((nm, i) => <span key={i} className="whitespace-nowrap text-[22px] font-extrabold tracking-[-0.03em] text-ink/35 transition hover:text-primary">{nm}</span>)}
           </div>
         </div>
       </Reveal>
@@ -902,14 +829,14 @@ export default function Page() {
       {/* ════════ MATRIX ════════ */}
       <section id="matrix" className="border-y border-primary/10 bg-surface-sub py-20">
         <div className="mx-auto max-w-[1080px] px-6">
-          <SectionHead kicker="The matrix" className="mb-9">Audience, by the <G>numbers</G></SectionHead>
+          <SectionHead kicker="The matrix" className="mb-9">Performance, by the <G>numbers</G></SectionHead>
           <div className="mb-6 flex justify-end">
-            <PlatformDropdown platforms={PLATFORM_LIST} current={platform} selected={platformKey} onSelect={setPlatformKey} />
+            <CampaignTypeDropdown types={CAMPAIGN_TYPE_LIST} current={campaign} selected={campaignKey} onSelect={setCampaignKey} />
           </div>
-          <div key={platformKey}>
+          <div key={campaignKey}>
             <Reveal>
               <div className={`grid grid-cols-2 gap-x-4 gap-y-7 rounded-2xl border border-primary/10 bg-white p-6 sm:grid-cols-4 sm:gap-4 sm:p-9 ${CARD} [&>*:not(:last-child)]:sm:border-r [&>*:not(:last-child)]:sm:border-primary/8`}>
-                {platform.stats.map(s => <Stat key={s.label} {...s} />)}
+                {campaign.stats.map(s => <Stat key={s.label} {...s} />)}
               </div>
             </Reveal>
             <div className="mt-5 grid auto-rows-[minmax(140px,auto)] grid-cols-2 gap-4 md:grid-cols-4">
@@ -918,27 +845,27 @@ export default function Page() {
                   <div className="absolute right-5 top-5 flex h-14 w-14 items-center justify-center rounded-xl border border-primary/12 bg-surface-sub text-primary">
                     <ChatBubbleIcon s={32} />
                   </div>
-                  <span className="inline-flex w-fit items-center rounded-lg bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">What I talk about</span>
+                  <span className="inline-flex w-fit items-center rounded-lg bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">What we look for</span>
                   <div className="flex-1" />
-                  <p className="text-[15px] leading-[1.8] text-ink/70">{platform.demographics.talkAbout}</p>
+                  <p className="text-[15px] leading-[1.8] text-ink/70">{campaign.demographics.whatWeLookFor}</p>
                 </div>
               </Reveal>
-              <BentoStat delay={60} value={platform.demographics.primaryGender.value} label={platform.demographics.primaryGender.label} topRightIcon={<PersonIcon s={26} />} />
-              <BentoStat delay={120} value={platform.demographics.primaryAge.value} label={platform.demographics.primaryAge.label} topRightIcon={<HeartPulseIcon s={26} />} />
-              <BentoStat delay={180} value={platform.demographics.audience} label="Total followers" topRightIcon={<EyeIcon s={26} />} />
-              <BentoStat delay={240} value={platform.demographics.primaryLocation.value} label={platform.demographics.primaryLocation.label}
-                topRightIcon={<CountryFlag code={platform.demographics.primaryLocation.flagCode} className="h-[18px] w-[28px]" />} />
+              <BentoStat delay={60} value={campaign.demographics.primaryNiche.value} label={campaign.demographics.primaryNiche.label} topRightIcon={<PersonIcon s={26} />} />
+              <BentoStat delay={120} value={campaign.demographics.avgDuration.value} label={campaign.demographics.avgDuration.label} topRightIcon={<CalendarIcon s={26} />} />
+              <BentoStat delay={180} value={campaign.demographics.totalValue.value} label={campaign.demographics.totalValue.label} topRightIcon={<EyeIcon s={26} />} />
+              <BentoStat delay={240} value={campaign.demographics.topLocation.value} label={campaign.demographics.topLocation.label}
+                topRightIcon={<CountryFlag code={campaign.demographics.topLocation.flagCode} className="h-[18px] w-[28px]" />} />
             </div>
           </div>
         </div>
       </section>
 
-      {/* ════════ WORK ════════ */}
+      {/* ════════ WORK / CAMPAIGNS ════════ */}
       <section id="work" className="py-20">
         <div className="mx-auto max-w-[1080px] px-6">
-          <SectionHead kicker="My work" className="mb-10">Photos <span className="font-light text-ink/35">&amp;</span> <G>reels</G></SectionHead>
+          <SectionHead kicker="Our campaigns" className="mb-10">Campaigns <span className="font-light text-ink/35">&amp;</span> <G>content</G></SectionHead>
           <div className="grid auto-rows-[150px] grid-cols-2 gap-3 sm:auto-rows-[170px] md:grid-cols-4">
-            {PHOTOS.map((p, i) => (
+            {CAMPAIGN_PHOTOS.map((p, i) => (
               <Reveal key={p.id} delay={(i % 4) * 60} className={p.cls}>
                 <div className={`group relative h-full w-full overflow-hidden rounded-xl border border-primary/10 bg-gradient-to-br from-primary/15 via-primary-lt/10 to-magenta/15 ${CARD}`}>
                   {p.src ? (
@@ -951,29 +878,39 @@ export default function Page() {
               </Reveal>
             ))}
           </div>
-          <Reveal className="mt-12"><CollaborationCarousel collaborations={COLLABORATIONS} /></Reveal>
+          <Reveal className="mt-12"><CampaignCarousel campaigns={CAMPAIGNS} /></Reveal>
         </div>
       </section>
 
-      {/* ════════ WAYS TO WORK ════════ */}
-      <section className="border-y border-primary/10 bg-surface-sub py-20">
+      {/* ════════ REVIEWS — standalone slideshow, decoupled from any campaign ════════ */}
+      <section id="reviews" className="border-y border-primary/10 bg-surface-sub py-20">
+        <div className="mx-auto max-w-[760px] px-6">
+          <SectionHead kicker="What creators say" className="mb-12" sub="Unfiltered feedback from creators we've partnered with — not cherry-picked per campaign.">
+            Loved by the <G>creators</G> we work with
+          </SectionHead>
+          <ReviewsCarousel reviews={REVIEWS} />
+        </div>
+      </section>
+
+      {/* ════════ WAYS TO PARTNER ════════ */}
+      <section className="py-20">
         <div className="mx-auto max-w-[1080px] px-6">
-          <SectionHead kicker="Let's deal" className="mb-10" sub="Three clear ways to collaborate — pick what fits, or mix them.">
-            Ways to work <G>together</G>
+          <SectionHead kicker="Let's deal" className="mb-10" sub="Three clear ways we work with creators — pick what fits, or mix them.">
+            Ways to <G>partner</G>
           </SectionHead>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <WorkModel delay={0} name="Affiliate / Revenue Share" price="10–20%" priceLabel="per sale"
               icon={<Shield s={28} />}
-              features={['Lower or zero upfront','Earn a cut of every sale','Incentives fully aligned','Trackable codes & links']}
-              description="My favourite model. I only win when you do." popular={true} onChoose={() => setModal('inquiry')} />
+              features={['No upfront commitment', 'Earn on every sale you drive', 'Real-time tracking dashboard', 'Paid out monthly']}
+              description="Our most popular model. You earn when your audience buys." popular={true} onChoose={() => setModal('apply')} />
             <WorkModel delay={90} name="Paid Campaigns" price="From €350" priceLabel="per video"
               icon={<ZapIcon s={28} />}
-              features={['Flat fee per deliverable','You brief, I produce','Full usage rights included','Fast turnaround']}
-              description="Straightforward, predictable pricing." popular={false} onChoose={() => setModal('inquiry')} />
+              features={['Flat fee per deliverable', 'Clear brief, fast approval', 'Paid on delivery, not results', 'Full usage rights included']}
+              description="Predictable budget, predictable payout." popular={false} onChoose={() => setModal('apply')} />
             <WorkModel delay={180} name="Barter / Gifting" price="€120+" priceLabel="product value"
               icon={<HandshakeIcon s={28} />}
-              features={['Product-for-content exchange','Select premium items only','I genuinely use what I promote','Limited spots available']}
-              description="For brands with products I'd honestly love." popular={false} onChoose={() => setModal('inquiry')} />
+              features={['Curated product box', 'No content quota', "For creators who'd buy it anyway", 'Limited spots each quarter']}
+              description="For creators who genuinely love what we make." popular={false} onChoose={() => setModal('apply')} />
           </div>
         </div>
       </section>
@@ -984,21 +921,21 @@ export default function Page() {
           <div className="flex flex-col items-center gap-10 sm:flex-row sm:items-center sm:gap-14">
             <div className="flex-shrink-0">
               <div className="h-44 w-44 overflow-hidden rounded-2xl border-4 border-white shadow-[0_20px_50px_-12px_rgba(139,49,232,0.55)]"
-                style={c.avatarUrl ? { backgroundImage: `url(${c.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
-                {!c.avatarUrl && <span className={`flex h-full w-full items-center justify-center text-5xl font-black text-white ${GRAD_BTN}`}>{c.initials}</span>}
+                style={b.avatarUrl ? { backgroundImage: `url(${b.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
+                {!b.avatarUrl && <span className={`flex h-full w-full items-center justify-center text-5xl font-black text-white ${GRAD_BTN}`}>{b.initials}</span>}
               </div>
             </div>
             <div className="flex-1 text-center sm:text-left">
               <h2 className="text-[clamp(26px,4.5vw,42px)] font-black leading-[1.08] tracking-[-0.04em] text-white">
-                Let’s make something <span className={GRAD_TEXT}>that sells.</span>
+                Let's build your next <span className={GRAD_TEXT}>campaign.</span>
               </h2>
               <p className="mt-3 text-[14.5px] leading-[1.7] text-white/55">
-                Tell me about your product and your goal. One message — I reply within 48 hours.
+                Tell us about your audience and what you create. One message — we reply within 48 hours.
               </p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
-                <button onClick={() => setModal('inquiry')}
+                <button onClick={() => setModal('apply')}
                   className={`rounded-xl ${GRAD_BTN} px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_12px_32px_-8px_rgba(139,49,232,0.55)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-8px_rgba(139,49,232,0.7)]`}>
-                  Work with me via Creator Nexus
+                  Apply to Collaborate
                 </button>
                 <button onClick={() => setModal('message')}
                   className="rounded-xl border-[1.5px] border-white/25 px-7 py-3.5 text-[15px] font-bold text-white transition hover:-translate-y-0.5 hover:border-white hover:bg-white/[0.06]">
@@ -1009,7 +946,7 @@ export default function Page() {
           </div>
           <div className="mt-12 border-t border-white/8 py-6 text-center">
             <a href="/authenticate" className={`text-[13px] font-semibold ${GRAD_TEXT} underline-offset-4 hover:underline`}>
-              Create Your Own Creator Profile on Nexus and Get Discovered by Brands
+              Create Your Own Brand Profile on Nexus and Discover Creators to Partner With
             </a>
           </div>
         </div>
@@ -1018,12 +955,12 @@ export default function Page() {
       {/* Mobile sticky CTA */}
       <div className="fixed inset-x-0 bottom-0 z-[150] flex gap-2.5 border-t border-primary/10 bg-white/95 px-4 py-3 backdrop-blur-xl pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:hidden">
         <button onClick={() => setModal('message')} className="flex-1 rounded-lg border-[1.5px] border-primary/15 bg-white py-3 text-sm font-bold text-ink">Message</button>
-        <button onClick={() => setModal('inquiry')} className={`flex-[1.6] rounded-lg ${GRAD_BTN} py-3 text-sm font-bold text-white`}>Work with me</button>
+        <button onClick={() => setModal('apply')} className={`flex-[1.6] rounded-lg ${GRAD_BTN} py-3 text-sm font-bold text-white`}>Apply</button>
       </div>
 
       {/* Modals */}
-      <ContactModal open={modal !== null} type={modal ?? 'message'} slug="amelia-roze" firstName={c.firstName} onClose={() => setModal(null)} />
-      <PartnershipsModal open={partnershipsOpen} onClose={() => setPartnershipsOpen(false)} />
+      <ContactModal open={modal !== null} type={modal ?? 'message'} slug="kinetics" brandName={b.name} onClose={() => setModal(null)} />
+      <CreatorPartnershipsModal open={partnershipsOpen} onClose={() => setPartnershipsOpen(false)} />
     </div>
   )
 }
@@ -1061,13 +998,14 @@ function Phone({ src, label }: { src?: string; label?: string }) {
   )
 }
 
-/* ─── Collaboration Carousel ────────────────────────────────────────── */
-function CollaborationCarousel({ collaborations }: { collaborations: typeof COLLABORATIONS }) {
+/* ─── Campaign Carousel — NO embedded review block (reviews live in
+   their own section now) ────────────────────────────────────────────── */
+function CampaignCarousel({ campaigns }: { campaigns: typeof CAMPAIGNS }) {
   const [current, setCurrent] = useState(0)
-  const total = collaborations.length
+  const total = campaigns.length
   const prev = () => setCurrent(c => (c > 0 ? c - 1 : c))
   const next = () => setCurrent(c => (c < total - 1 ? c + 1 : c))
-  const item = collaborations[current]
+  const item = campaigns[current]
   if (!item) return null
 
   return (
@@ -1092,14 +1030,15 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
       <div className={`flex flex-col gap-6 rounded-2xl border border-primary/10 bg-white p-6 transition hover:-translate-y-1 sm:flex-row sm:p-8 ${CARD} ${CARD_HOVER}`}>
         <div className="flex flex-1 flex-col space-y-4 pr-0 sm:pr-6">
           <div className="flex items-center gap-3">
-            <span className="rounded-full bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">Featured collaboration</span>
+            <span className="rounded-full bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">Featured campaign</span>
             <span className="text-xs font-medium text-ink/40">#{current + 1}</span>
           </div>
           <div>
             <h3 className="text-2xl font-extrabold tracking-[-0.03em] text-ink">
-              We collaborated with <span className={GRAD_TEXT}>{item.brand}</span>
+              We partnered with <span className={GRAD_TEXT}>{item.creator}</span>
             </h3>
             <p className="mt-1 text-lg font-semibold text-ink/80">{item.title}</p>
+            <p className="mt-0.5 text-[13px] font-medium text-ink/40">{item.handle} · {item.niche}</p>
           </div>
           <p className="text-[15px] leading-relaxed text-ink/70">{item.description}</p>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 text-sm">
@@ -1145,31 +1084,78 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
           <Phone src={item.videoSrc} label={item.title} />
         </div>
       </div>
+    </div>
+  )
+}
 
-      {item.review && (
-        <div className={`mt-4 w-full rounded-2xl border border-primary/10 bg-white px-7 py-6 ${CARD}`}>
-          <div className="mb-4 flex items-center gap-4">
-            <GradientStars rating={item.review.rating} total={5} size={28} />
-            <span className="text-[12px] font-bold uppercase tracking-[0.12em] text-ink/35">
-              {item.review.rating}/5 · Campaign review
-            </span>
-          </div>
-          <p className="text-[15.5px] leading-[1.85] text-ink/75 sm:text-[16px]">“{item.review.quote}”</p>
-          <div className="mt-5 flex items-center gap-3 border-t border-primary/10 pt-4">
-            <BrandLogo
-              name={item.review.company}
-              color={item.review.brandColor}
-              logoUrl={item.review.brandLogoUrl}
-              initials={item.review.brandInitials}
-              size={44}
-            />
-            <div>
-              <div className="text-[14px] font-bold text-ink">{item.review.name}</div>
-              <div className="mt-0.5 text-[12px] text-ink/50">{item.review.role} · {item.review.company}</div>
-            </div>
-          </div>
+/* ─── Reviews Carousel — standalone slideshow, auto-advances, pauses
+   on hover/focus, navigable via arrows + dots. Decoupled from any
+   single campaign on purpose: this is the brand's aggregate
+   reputation, not a curated quote per case study.                    */
+function ReviewsCarousel({ reviews }: { reviews: typeof REVIEWS }) {
+  const [index, setIndex] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const total = reviews.length
+
+  useEffect(() => {
+    if (paused || total <= 1) return
+    const id = setInterval(() => setIndex(i => (i + 1) % total), 6000)
+    return () => clearInterval(id)
+  }, [paused, total])
+
+  const go = (i: number) => setIndex(((i % total) + total) % total)
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={() => setPaused(false)}
+    >
+      <div className="mb-4 flex items-center justify-between">
+        <span className="text-sm font-medium text-ink/40">{index + 1} / {total}</span>
+        <div className="flex gap-1.5">
+          <button onClick={() => go(index - 1)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/60 transition hover:bg-primary/[0.06] hover:text-primary" aria-label="Previous review">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
+          <button onClick={() => go(index + 1)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/60 transition hover:bg-primary/[0.06] hover:text-primary" aria-label="Next review">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </button>
         </div>
-      )}
+      </div>
+
+      <div className="overflow-hidden rounded-2xl">
+        <div className="flex transition-transform duration-[700ms] ease-[cubic-bezier(0.16,1,0.3,1)]" style={{ transform: `translateX(-${index * 100}%)` }}>
+          {reviews.map(r => (
+            <div key={r.id} className="w-full flex-shrink-0 px-0.5">
+              <div className={`rounded-2xl border border-primary/10 bg-white p-7 sm:p-9 ${CARD}`}>
+                <div className="mb-5 flex items-center justify-between">
+                  <GradientStars rating={r.rating} total={5} size={22} idSuffix={`-${r.id}`} />
+                  <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-ink/35">{r.date}</span>
+                </div>
+                <p className="text-[16.5px] leading-[1.85] text-ink/75 sm:text-[17.5px]">"{r.quote}"</p>
+                <div className="mt-7 flex items-center gap-3.5 border-t border-primary/10 pt-5">
+                  <PersonAvatar name={r.name} color={r.color} avatarUrl={r.avatarUrl} initials={r.initials} size={48} />
+                  <div className="flex-1">
+                    <div className="text-[14.5px] font-bold text-ink">{r.name}</div>
+                    <div className="mt-0.5 text-[12px] text-ink/50">{r.handle} · {r.niche} · {r.followers} followers</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-6 flex justify-center gap-2">
+        {reviews.map((r, i) => (
+          <button key={r.id} onClick={() => go(i)} aria-label={`Go to review ${i + 1}`}
+            className={`h-2 rounded-full transition-all ${i === index ? `w-7 ${GRAD_BTN}` : 'w-2 bg-primary/15 hover:bg-primary/30'}`} />
+        ))}
+      </div>
     </div>
   )
 }
@@ -1212,10 +1198,10 @@ function WorkModel({ name, price, priceLabel, icon, features, description, popul
 }
 
 /* ─── Contact modal ─────────────────────────────────────────────────── */
-function ContactModal({ open, type, slug, firstName, onClose }: { open: boolean; type: 'inquiry' | 'message'; slug: string; firstName: string; onClose: () => void }) {
-  const isInq = type === 'inquiry'
-  const [form, setForm] = useState({ name: '', company: '', email: '', message: '' })
-  const [budget, setBudget] = useState('')
+function ContactModal({ open, type, slug, brandName, onClose }: { open: boolean; type: 'apply' | 'message'; slug: string; brandName: string; onClose: () => void }) {
+  const isApply = type === 'apply'
+  const [form, setForm] = useState({ name: '', handle: '', email: '', message: '' })
+  const [collabType, setCollabType] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -1223,7 +1209,7 @@ function ContactModal({ open, type, slug, firstName, onClose }: { open: boolean;
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 
   useEffect(() => {
-    if (open) { document.body.style.overflow = 'hidden'; setSent(false); setError(''); setForm({ name: '', company: '', email: '', message: '' }); setBudget('') }
+    if (open) { document.body.style.overflow = 'hidden'; setSent(false); setError(''); setForm({ name: '', handle: '', email: '', message: '' }); setCollabType('') }
     return () => { document.body.style.overflow = '' }
   }, [open, type])
   useEffect(() => {
@@ -1235,7 +1221,7 @@ function ContactModal({ open, type, slug, firstName, onClose }: { open: boolean;
     if (!ok) return; setLoading(true); setError('')
     try {
       const res = await fetch(`${API}/inbox/${slug}`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: isInq ? 'inquiry' : 'message', senderName: form.name, senderCompany: form.company, senderEmail: form.email, message: form.message, budget }) })
+        body: JSON.stringify({ type: isApply ? 'application' : 'message', senderName: form.name, senderHandle: form.handle, senderEmail: form.email, message: form.message, collabType }) })
       const json = await res.json().catch(() => ({ success: true }))
       if (!json.success && res.status !== 429) throw new Error(json.message || 'Could not send.')
       setSent(true)
@@ -1251,38 +1237,38 @@ function ContactModal({ open, type, slug, firstName, onClose }: { open: boolean;
       <div role="dialog" aria-modal="true"
         className={`max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-2xl bg-white shadow-[0_24px_70px_-12px_rgba(10,6,18,0.3)] transition-all duration-300 ease-[cubic-bezier(0.34,1.5,0.64,1)] ${open ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-6 scale-95 opacity-0'}`}>
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-primary/10 bg-white px-6 py-5">
-          <h3 className="text-lg font-extrabold tracking-[-0.02em] text-ink">{sent ? 'Message sent!' : isInq ? 'Work with me' : 'Send a message'}</h3>
+          <h3 className="text-lg font-extrabold tracking-[-0.02em] text-ink">{sent ? 'Message sent!' : isApply ? 'Apply to collaborate' : 'Send a message'}</h3>
           <button onClick={onClose} aria-label="Close" className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-sub text-base text-ink/50 transition hover:bg-surface-card hover:text-ink">✕</button>
         </div>
         <div className="p-6">
           {sent ? (
             <div className="py-6 text-center">
               <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-green-500/12 text-green-500"><Check s={30} /></div>
-              <h3 className="mb-2 text-xl font-extrabold text-ink">{isInq ? "You're in the inbox!" : 'Message sent!'}</h3>
-              <p className="mx-auto max-w-[340px] text-sm leading-[1.7] text-ink/65">{form.name && `Thanks, ${form.name.split(' ')[0]} — `}{firstName} will reply to <b className="text-primary">{form.email || 'your email'}</b> within 48 hours.</p>
+              <h3 className="mb-2 text-xl font-extrabold text-ink">{isApply ? "You're in the inbox!" : 'Message sent!'}</h3>
+              <p className="mx-auto max-w-[340px] text-sm leading-[1.7] text-ink/65">{form.name && `Thanks, ${form.name.split(' ')[0]} — `}{brandName} will reply to <b className="text-primary">{form.email || 'your email'}</b> within 48 hours.</p>
               <button onClick={onClose} className={`mx-auto mt-6 rounded-lg ${GRAD_BTN} px-8 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5`}>Done</button>
             </div>
           ) : (
             <>
-              <p className="mb-5 text-sm leading-[1.6] text-ink/65">{isInq ? "Tell me about your product and goal — I'll reply with a tailored quote within 48 hours." : 'Introduce yourself and tell me what you have in mind. I read every message.'}</p>
+              <p className="mb-5 text-sm leading-[1.6] text-ink/65">{isApply ? "Tell us about your audience and what you create — we'll reply with next steps within 48 hours." : 'Introduce yourself and tell us what you have in mind. We read every message.'}</p>
               {error && <div className="mb-4 rounded-lg border border-primary/40 bg-primary/[0.06] px-3 py-2 text-[13px] text-primary">{error}</div>}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div><label className={lbl}>Your name *</label><input className={inp} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Jane Smith" /></div>
-                <div><label className={lbl}>Company</label><input className={inp} value={form.company} onChange={e => set('company', e.target.value)} placeholder="Brand Co." /></div>
+                <div><label className={lbl}>@handle or portfolio</label><input className={inp} value={form.handle} onChange={e => set('handle', e.target.value)} placeholder="@yourhandle" /></div>
               </div>
-              <div className="mt-4"><label className={lbl}>Email address *</label><input type="email" className={inp} value={form.email} onChange={e => set('email', e.target.value)} placeholder="jane@brand.com" /></div>
-              {isInq && (
-                <div className="mt-4"><label className={lbl}>Budget range</label>
-                  <div className="flex flex-wrap gap-2">{BUDGETS.map(b => <button key={b} type="button" onClick={() => setBudget(b)} className={`rounded-lg border-[1.5px] px-3.5 py-2 text-[12.5px] font-semibold transition ${budget === b ? 'border-primary bg-primary/[0.08] text-primary' : 'border-primary/12 bg-white text-ink/55'}`}>{b}</button>)}</div>
+              <div className="mt-4"><label className={lbl}>Email address *</label><input type="email" className={inp} value={form.email} onChange={e => set('email', e.target.value)} placeholder="jane@email.com" /></div>
+              {isApply && (
+                <div className="mt-4"><label className={lbl}>Preferred collaboration type</label>
+                  <div className="flex flex-wrap gap-2">{COLLAB_TYPES.map(ctype => <button key={ctype} type="button" onClick={() => setCollabType(ctype)} className={`rounded-lg border-[1.5px] px-3.5 py-2 text-[12.5px] font-semibold transition ${collabType === ctype ? 'border-primary bg-primary/[0.08] text-primary' : 'border-primary/12 bg-white text-ink/55'}`}>{ctype}</button>)}</div>
                 </div>
               )}
-              <div className="mt-4"><label className={lbl}>{isInq ? 'About your project *' : 'Your message *'}</label>
+              <div className="mt-4"><label className={lbl}>{isApply ? 'Why you\'d be a good fit *' : 'Your message *'}</label>
                 <textarea className={`${inp} min-h-[108px] resize-y leading-relaxed`} value={form.message} onChange={e => set('message', e.target.value)}
-                  placeholder={isInq ? "What are you promoting? What's the goal?" : `Hi ${firstName}, I'm reaching out because…`} />
+                  placeholder={isApply ? 'What do you create? Who is your audience?' : `Hi ${brandName}, I'm reaching out because…`} />
               </div>
               <button onClick={submit} disabled={!ok || loading}
                 className={`mt-5 w-full rounded-lg ${GRAD_BTN} py-3.5 text-[15px] font-bold text-white shadow-[0_8px_28px_-6px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-surface-card disabled:bg-none disabled:text-ink/30 disabled:shadow-none disabled:hover:translate-y-0`}>
-                {loading ? 'Sending…' : `Send ${isInq ? 'inquiry' : 'message'}`}
+                {loading ? 'Sending…' : `Send ${isApply ? 'application' : 'message'}`}
               </button>
             </>
           )}
