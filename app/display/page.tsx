@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, type ReactNode } from 'react'
    Creator portfolio — page.tsx  (Nexfluence v4, LIGHT)
    ════════════════════════════════════════════════════════════════════ */
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+const API = process.env['NEXT_PUBLIC_API_URL'] || 'http://localhost:5000'
 const CARD = 'shadow-[0_1px_2px_rgba(10,6,18,0.04),0_12px_32px_-12px_rgba(139,49,232,0.16)]'
 const CARD_HOVER = 'hover:shadow-[0_2px_6px_rgba(10,6,18,0.05),0_24px_56px_-16px_rgba(139,49,232,0.30)]'
 
@@ -40,19 +40,151 @@ const EXCLUSIVE_DEALS = [
   },
 ]
 
-const STATS = [
-  { to: 142, dec: 0, suffix: 'K', label: 'Combined reach' },
-  { to: 6.8, dec: 1, suffix: '%', label: 'Avg engagement' },
-  { to: 3.4, dec: 1, suffix: 'M', label: 'Monthly views' },
-  { to: 48, dec: 0, suffix: '+', label: 'Brand campaigns' },
-]
-const DEMOGRAPHICS = {
-  audience: '142K',
-  primaryGender: { value: '78%', label: 'Female audience' },
-  primaryAge: { value: '25–34', label: 'Primary age group' },
-  primaryLocation: { value: 'Latvia', label: 'Top location · 64%', flagCode: 'lv' },
-  talkAbout: "I create honest beauty and skincare content — morning routines, product results filmed over real time, and lifestyle vlogs from around Riga. My audience trusts me because I only feature what I'd actually rebuy, so when I recommend something, they act on it.",
+/* ─── Per-platform metrics ───────────────────────────────────────────
+   Each platform owns its own stat set and demographic snapshot.
+   "instagram" is flagged isPrimary — it's the default selection and
+   gets its own labeled group inside the dropdown.
+
+   PLATFORM_DATA is keyed by the PlatformKey union (not a generic
+   string index signature) so that PLATFORM_DATA[someKnownKey] always
+   resolves to PlatformEntry — never PlatformEntry | undefined. This
+   keeps the code clean under noUncheckedIndexedAccess.                */
+type PlatformKey = 'instagram' | 'tiktok' | 'youtube' | 'snapchat' | 'twitter' | 'linkedin' | 'facebook'
+
+type PlatformStat = { to: number; dec: number; suffix: string; label: string }
+type PlatformDemographics = {
+  audience: string
+  primaryGender: { value: string; label: string }
+  primaryAge: { value: string; label: string }
+  primaryLocation: { value: string; label: string; flagCode: string }
+  talkAbout: string
 }
+type PlatformEntry = {
+  key: PlatformKey
+  label: string
+  icon: string
+  isPrimary: boolean
+  stats: PlatformStat[]
+  demographics: PlatformDemographics
+}
+
+const PLATFORM_DATA: Record<PlatformKey, PlatformEntry> = {
+  instagram: {
+    key: 'instagram', label: 'Instagram', icon: '/Socials/Instagram.svg', isPrimary: true,
+    stats: [
+      { to: 142, dec: 0, suffix: 'K', label: 'Combined reach' },
+      { to: 6.8, dec: 1, suffix: '%', label: 'Avg engagement' },
+      { to: 3.4, dec: 1, suffix: 'M', label: 'Monthly views' },
+      { to: 48, dec: 0, suffix: '+', label: 'Brand campaigns' },
+    ],
+    demographics: {
+      audience: '142K',
+      primaryGender: { value: '78%', label: 'Female audience' },
+      primaryAge: { value: '25–34', label: 'Primary age group' },
+      primaryLocation: { value: 'Latvia', label: 'Top location · 64%', flagCode: 'lv' },
+      talkAbout: "I create honest beauty and skincare content — morning routines, product results filmed over real time, and lifestyle vlogs from around Riga. My audience trusts me because I only feature what I'd actually rebuy, so when I recommend something, they act on it.",
+    },
+  },
+  tiktok: {
+    key: 'tiktok', label: 'TikTok', icon: '/Socials/TikTok.svg', isPrimary: false,
+    stats: [
+      { to: 96, dec: 0, suffix: 'K', label: 'Followers' },
+      { to: 11.2, dec: 1, suffix: '%', label: 'Avg engagement' },
+      { to: 5.1, dec: 1, suffix: 'M', label: 'Monthly views' },
+      { to: 14, dec: 0, suffix: '', label: 'Viral videos (1M+)' },
+    ],
+    demographics: {
+      audience: '96K',
+      primaryGender: { value: '71%', label: 'Female audience' },
+      primaryAge: { value: '18–24', label: 'Primary age group' },
+      primaryLocation: { value: 'Lithuania', label: 'Top location · 41%', flagCode: 'lt' },
+      talkAbout: 'Quick get-ready-with-me clips, trend remixes, and one-take skincare hacks — TikTok is where I test ideas fast and let the algorithm tell me what actually resonates before it goes anywhere else.',
+    },
+  },
+  youtube: {
+    key: 'youtube', label: 'YouTube', icon: '/Socials/YouTube.svg', isPrimary: false,
+    stats: [
+      { to: 38, dec: 0, suffix: 'K', label: 'Subscribers' },
+      { to: 6.4, dec: 1, suffix: ' min', label: 'Avg view duration' },
+      { to: 22, dec: 0, suffix: 'K', label: 'Watch hours / mo' },
+      { to: 12, dec: 0, suffix: '', label: 'Sponsored videos' },
+    ],
+    demographics: {
+      audience: '38K',
+      primaryGender: { value: '69%', label: 'Female audience' },
+      primaryAge: { value: '25–34', label: 'Primary age group' },
+      primaryLocation: { value: 'Latvia', label: 'Top location · 58%', flagCode: 'lv' },
+      talkAbout: 'Long-form routine breakdowns, full product deep-dives, and month-long skincare experiments — YouTube is where my audience comes for the complete story behind a recommendation, not just the highlight.',
+    },
+  },
+  snapchat: {
+    key: 'snapchat', label: 'Snapchat', icon: '/Socials/Snapchat.svg', isPrimary: false,
+    stats: [
+      { to: 24, dec: 0, suffix: 'K', label: 'Subscribers' },
+      { to: 64, dec: 0, suffix: '%', label: 'Story completion' },
+      { to: 31, dec: 0, suffix: 'K', label: 'Avg daily views' },
+      { to: 6, dec: 0, suffix: '', label: 'Takeover campaigns' },
+    ],
+    demographics: {
+      audience: '24K',
+      primaryGender: { value: '82%', label: 'Female audience' },
+      primaryAge: { value: '16–21', label: 'Primary age group' },
+      primaryLocation: { value: 'Estonia', label: 'Top location · 37%', flagCode: 'ee' },
+      talkAbout: "Raw, unfiltered day-in-the-life snaps and first impressions of new products — no polish, no second takes. It's my youngest, fastest-reacting audience, and they let me know immediately if something's worth it.",
+    },
+  },
+  twitter: {
+    key: 'twitter', label: 'Twitter / X', icon: '/Socials/Twitter.svg', isPrimary: false,
+    stats: [
+      { to: 18, dec: 0, suffix: 'K', label: 'Followers' },
+      { to: 4.1, dec: 1, suffix: '%', label: 'Avg engagement' },
+      { to: 890, dec: 0, suffix: 'K', label: 'Monthly impressions' },
+      { to: 9, dec: 0, suffix: '', label: 'Sponsored threads' },
+    ],
+    demographics: {
+      audience: '18K',
+      primaryGender: { value: '54%', label: 'Female audience' },
+      primaryAge: { value: '25–34', label: 'Primary age group' },
+      primaryLocation: { value: 'Latvia', label: 'Top location · 49%', flagCode: 'lv' },
+      talkAbout: 'Hot takes on new launches, honest mini-reviews, and behind-the-scenes threads from brand shoots — X is where my more opinionated, unfiltered side comes out between the polished posts elsewhere.',
+    },
+  },
+  linkedin: {
+    key: 'linkedin', label: 'LinkedIn', icon: '/Socials/LinkedIn.svg', isPrimary: false,
+    stats: [
+      { to: 9.2, dec: 1, suffix: 'K', label: 'Followers' },
+      { to: 3.6, dec: 1, suffix: '%', label: 'Avg engagement' },
+      { to: 210, dec: 0, suffix: 'K', label: 'Post impressions / mo' },
+      { to: 7, dec: 0, suffix: '', label: 'Brand partnerships' },
+    ],
+    demographics: {
+      audience: '9.2K',
+      primaryGender: { value: '61%', label: 'Female audience' },
+      primaryAge: { value: '28–40', label: 'Primary age group' },
+      primaryLocation: { value: 'Latvia', label: 'Top location · 52%', flagCode: 'lv' },
+      talkAbout: 'Creator economy insights, brand collaboration breakdowns, and what actually drives ROI for beauty partnerships — this is where I speak directly to marketing teams, not just consumers.',
+    },
+  },
+  facebook: {
+    key: 'facebook', label: 'Facebook', icon: '/Socials/Facebook.svg', isPrimary: false,
+    stats: [
+      { to: 52, dec: 0, suffix: 'K', label: 'Followers' },
+      { to: 5.4, dec: 1, suffix: '%', label: 'Avg engagement' },
+      { to: 1.1, dec: 1, suffix: 'M', label: 'Monthly video views' },
+      { to: 21, dec: 0, suffix: '', label: 'Brand campaigns' },
+    ],
+    demographics: {
+      audience: '52K',
+      primaryGender: { value: '84%', label: 'Female audience' },
+      primaryAge: { value: '35–44', label: 'Primary age group' },
+      primaryLocation: { value: 'Latvia', label: 'Top location · 71%', flagCode: 'lv' },
+      talkAbout: "Longer captions, community discussions, and routine recommendations for an audience that's been with me since the beginning — Facebook skews older and more loyal than anywhere else I post.",
+    },
+  },
+}
+
+const PLATFORM_LIST: PlatformEntry[] = Object.values(PLATFORM_DATA)
+
 const BRANDS = ['Lumora', 'Kinetics', 'Glossé', 'Nordic Skin', 'Bēta Beauty', 'Aura Labs']
 
 const PHOTOS = [
@@ -81,7 +213,7 @@ const COLLABORATIONS = [
       quote: "Amelia delivered ahead of deadline and the results spoke for themselves — best-converting creator in our whole spring campaign. She understood the brief immediately, needed zero revisions, and the 3.2× ROAS surprised even our own performance team. We've already rebooked her twice.",
       name: 'Elena Roze', role: 'Brand Manager', company: 'Kinetics',
       brandColor: '#2563EB', brandInitials: 'KI',
-      brandLogoUrl: '/test/images/brands/kinetics.png',
+      brandLogoUrl: '/brands/Burger King.jpg',
     },
   },
   {
@@ -99,7 +231,7 @@ const COLLABORATIONS = [
       quote: "Working with Amelia felt like working with a marketing partner, not a creator. She understood our product, our margins, and pitched the affiliate model herself — something none of our other creators have ever done. The morning ritual video is still our best-performing piece of content six months later.",
       name: 'Mārtiņš Ozols', role: 'Founder', company: 'Lumora Skincare',
       brandColor: '#059669', brandInitials: 'LS',
-      brandLogoUrl: '/test/images/brands/lumora.png',
+      brandLogoUrl: '/brands/Nike.jpg',
     },
   },
   {
@@ -117,7 +249,7 @@ const COLLABORATIONS = [
       quote: "The content didn't feel like an ad — it felt like a recommendation from a trusted friend. Our DMs blew up the day it went live. We went from sceptical about influencer marketing to building our entire Q3 strategy around creators after this single campaign.",
       name: 'Anna Kalniņa', role: 'Marketing Lead', company: 'Glossé',
       brandColor: '#8B31E8', brandInitials: 'GL',
-      brandLogoUrl: '/test/images/brands/glosse.png',
+      brandLogoUrl: '/brands/RedBull.webp',
     },
   },
 ]
@@ -139,6 +271,29 @@ const Shield = ({ s = 16 }: { s?: number }) => (
       strokeLinecap="round"
       strokeLinejoin="round"
     />
+  </svg>
+)
+const StarIcon = ({ s = 14 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2.5l2.95 6.46 7.05.66-5.32 4.78 1.6 6.9L12 17.6l-6.28 3.7 1.6-6.9-5.32-4.78 7.05-.66L12 2.5z" />
+  </svg>
+)
+/* Feeling-based icons for the "Ways to work together" cards — chosen for what
+   each offer feels like to a brand, not for money/payment imagery. */
+const ZapIcon = ({ s = 28 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <path d="M4 14a1 1 0 01-.78-1.63l9.9-10.2a.5.5 0 01.86.46l-1.92 6.02A1 1 0 0013 10h7a1 1 0 01.78 1.63l-9.9 10.2a.5.5 0 01-.86-.46l1.92-6.02A1 1 0 0011 14z"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+const HandshakeIcon = ({ s = 28 }: { s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+    <path d="M11 17l2 2a1 1 0 103-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M14 14l2.5 2.5a1 1 0 103-3l-3.88-3.88a3 3 0 00-4.24 0l-.88.88a1 1 0 11-3-3l2.81-2.81a5.79 5.79 0 017.06-.87l.47.28a2 2 0 001.42.25L21 4"
+      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M21 3l1 11h-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M3 3l-1 11 6.5 6.5a1 1 0 103-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M3 4h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
 const Play = ({ s = 18 }: { s?: number }) => (
@@ -319,7 +474,7 @@ function Reveal({ children, delay = 0, className = '' }: { children: ReactNode; 
   const [shown, setShown] = useState(false)
   useEffect(() => {
     const el = ref.current; if (!el) return
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setShown(true); io.disconnect() } }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' })
+    const io = new IntersectionObserver(([e]) => { if (e?.isIntersecting) { setShown(true); io.disconnect() } }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' })
     io.observe(el); return () => io.disconnect()
   }, [])
   return (
@@ -337,7 +492,7 @@ function Stat({ to, dec, suffix, label }: { to: number; dec: number; suffix: str
   useEffect(() => {
     const el = ref.current; if (!el) return
     const io = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting) return; io.disconnect()
+      if (!e?.isIntersecting) return; io.disconnect()
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setVal(to); return }
       const dur = 1500, t0 = performance.now()
       const tick = (n: number) => { const p = Math.min((n - t0) / dur, 1); setVal(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(tick); else setVal(to) }
@@ -380,13 +535,17 @@ const G = ({ children }: { children: ReactNode }) => <span className={GRAD_TEXT}
 
 function CountryFlag({ code, className = '' }: { code: string; className?: string }) {
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`} srcSet={`https://flagcdn.com/w80/${code.toLowerCase()}.png 2x`}
       alt={code.toUpperCase()} className={`inline-block rounded-[4px] object-cover ${className}`} width={28} height={18} />
   )
 }
 
 function NexLogo({ height = 28, className = '' }: { height?: number; className?: string }) {
-  return <img src="/Nex.webp" alt="Nexfluence" height={height} className={`object-contain ${className}`} style={{ height }} />
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/Nex.webp" alt="Nexfluence" height={height} className={`object-contain ${className}`} style={{ height }} />
+  )
 }
 
 /* ─── Brand Logo tile ────────────────────────────────────────────────── */
@@ -400,6 +559,7 @@ function BrandLogo({
         className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/10 bg-white shadow-sm"
         style={{ width: size, height: size }}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={logoUrl} alt={name} width={size} height={size} className="h-full w-full object-contain p-1" draggable={false} />
       </div>
     )
@@ -410,6 +570,79 @@ function BrandLogo({
       style={{ width: size, height: size, background: color, fontSize: size * 0.36 }}
     >
       {abbr}
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Platform Dropdown — selects which platform's metrics drive the
+   Matrix section. Default = the entry flagged isPrimary (Instagram).
+   `current` is passed in already-resolved from the caller (which owns
+   the PlatformKey -> PlatformEntry lookup), so this component never
+   has to derive a "maybe undefined" value via .find() or array[0].     */
+function PlatformRow({ p, isSelected, onSelect }: { p: PlatformEntry; isSelected: boolean; onSelect: (key: PlatformKey) => void }) {
+  return (
+    <button
+      onClick={() => onSelect(p.key)}
+      className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] font-semibold transition hover:bg-primary/[0.06] ${isSelected ? 'bg-primary/[0.07] text-primary' : 'text-ink/75'}`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={p.icon} alt="" className="h-[18px] w-[18px] flex-shrink-0 rounded-md object-contain" />
+      <span className="flex-1">{p.label}</span>
+      {isSelected && <span className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${GRAD_BTN}`} />}
+    </button>
+  )
+}
+
+function PlatformDropdown({
+  platforms, current, selected, onSelect,
+}: { platforms: PlatformEntry[]; current: PlatformEntry; selected: PlatformKey; onSelect: (key: PlatformKey) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const primary = platforms.filter(p => p.isPrimary)
+  const others = platforms.filter(p => !p.isPrimary)
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onClick)
+    window.addEventListener('keydown', onEsc)
+    return () => { document.removeEventListener('mousedown', onClick); window.removeEventListener('keydown', onEsc) }
+  }, [])
+
+  const choose = (key: PlatformKey) => { onSelect(key); setOpen(false) }
+
+  return (
+    <div ref={ref} className="relative z-30 w-[260px]">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`flex w-full items-center gap-2.5 rounded-xl border bg-white px-4 py-2.5 text-[13px] font-semibold text-ink shadow-sm transition hover:-translate-y-0.5 ${CARD} ${open ? 'border-primary/30' : 'border-primary/12'}`}
+      >
+        <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-[0.1em] text-ink/40">Showing</span>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={current.icon} alt="" className="h-[18px] w-[18px] flex-shrink-0 rounded-md object-contain" />
+        <span className="flex-1 truncate text-ink">{current.label}</span>
+        {current.isPrimary && (
+          <span className="flex-shrink-0 text-primary" title="Primary platform" aria-label="Primary platform">
+            <StarIcon s={14} />
+          </span>
+        )}
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className={`flex-shrink-0 text-ink/40 transition-transform ${open ? 'rotate-180' : ''}`}>
+          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className={`absolute right-0 top-[calc(100%+8px)] w-full overflow-hidden rounded-2xl border border-primary/10 bg-white ${CARD}`}>
+          <div className="px-4 pb-2 pt-3.5 text-[10px] font-bold uppercase tracking-[0.12em] text-ink/35">Primary platform</div>
+          {primary.map(p => <PlatformRow key={p.key} p={p} isSelected={selected === p.key} onSelect={choose} />)}
+          <div className="mx-4 my-1.5 h-px bg-primary/8" />
+          <div className="px-4 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-ink/35">Other platforms</div>
+          <div className="max-h-[260px] overflow-y-auto pb-2">
+            {others.map(p => <PlatformRow key={p.key} p={p} isSelected={selected === p.key} onSelect={choose} />)}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -507,6 +740,8 @@ function PartnershipsModal({ open, onClose }: { open: boolean; onClose: () => vo
 export default function Page() {
   const [modal, setModal] = useState<'inquiry' | 'message' | null>(null)
   const [partnershipsOpen, setPartnershipsOpen] = useState(false)
+  const [platformKey, setPlatformKey] = useState<PlatformKey>('instagram')
+  const platform = PLATFORM_DATA[platformKey]
   const c = CREATOR
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 
@@ -557,7 +792,7 @@ export default function Page() {
               <div className="w-16 flex-shrink-0" aria-hidden="true" />
               {/* Right nav */}
               <div className="relative z-10 flex items-center gap-0.5">
-                {NAV_RIGHT.map(n => (
+                {NAV_RIGHT.map(n => ( 
                   <button key={n.label} onClick={n.action}
                     className="rounded-lg px-4 py-2 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary">
                     {n.label}
@@ -581,12 +816,9 @@ export default function Page() {
             {!c.avatarUrl && <span className="flex h-full w-full items-center justify-center text-5xl font-black text-white">{c.initials}</span>}
           </div>
 
-          {/* ── Creator name + verified tick ────────────────────────────────
-              h1 is flex + items-center + justify-center so the name and tick
-              are vertically centred on each other AND the whole row is
-              horizontally centred within the column.                         */}
           <h1 className="mt-5 flex w-full items-center justify-center gap-2.5 text-center text-[clamp(34px,6vw,56px)] font-black leading-none tracking-[-0.045em] text-ink">
             <span>{c.name}</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/Tick.svg" alt="" className='h-8 w-8'/>
           </h1>
 
@@ -594,13 +826,6 @@ export default function Page() {
             <span className="text-primary"><Pin /></span>Based in {c.location}
           </p>
 
-          {/* ── Social icons — uniform size, no container box ───────────────
-              Each platform SVG has different internal padding, so rendering
-              raw makes them look unequal. The fix: a fixed 40×40 flex frame
-              per icon, and the <img> fills the WHOLE frame (h-full w-full)
-              with object-contain. Because the frame is identical for every
-              icon and the image fills it edge-to-edge, every logo now reads
-              at the same visual size. No border / no background box.         */}
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3.5">
             {SOCIAL_LINKS.map(s => (
               <a
@@ -610,6 +835,7 @@ export default function Page() {
                 title={s.label}
                 className="flex h-8 w-8 items-center justify-center transition-all duration-200 hover:-translate-y-1 hover:opacity-90 hover:drop-shadow-[0_6px_16px_rgba(139,49,232,0.35)]"
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={s.src}
                   alt={s.label}
@@ -620,7 +846,6 @@ export default function Page() {
             ))}
           </div>
 
-          {/* Website button */}
           {c.websiteUrl && (
             <a
               href={c.websiteUrl}
@@ -634,7 +859,6 @@ export default function Page() {
             </a>
           )}
 
-          {/* Brand partnerships button */}
           {EXCLUSIVE_DEALS.length > 0 && (
             <div className="mt-8">
               <button
@@ -679,27 +903,32 @@ export default function Page() {
       <section id="matrix" className="border-y border-primary/10 bg-surface-sub py-20">
         <div className="mx-auto max-w-[1080px] px-6">
           <SectionHead kicker="The matrix" className="mb-9">Audience, by the <G>numbers</G></SectionHead>
-          <Reveal>
-            <div className={`grid grid-cols-2 gap-x-4 gap-y-7 rounded-2xl border border-primary/10 bg-white p-9 sm:grid-cols-4 sm:gap-4 ${CARD} [&>*:not(:last-child)]:sm:border-r [&>*:not(:last-child)]:sm:border-primary/8`}>
-              {STATS.map(s => <Stat key={s.label} {...s} />)}
-            </div>
-          </Reveal>
-          <div className="mt-5 grid auto-rows-[minmax(140px,auto)] grid-cols-2 gap-4 md:grid-cols-4">
-            <Reveal className="col-span-2 row-span-2 md:col-span-2">
-              <div className={`relative flex h-full flex-col rounded-2xl border border-primary/10 bg-white p-7 ${CARD}`}>
-                <div className="absolute right-5 top-5 flex h-14 w-14 items-center justify-center rounded-xl border border-primary/12 bg-surface-sub text-primary">
-                  <ChatBubbleIcon s={32} />
-                </div>
-                <span className="inline-flex w-fit items-center rounded-lg bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">What I talk about</span>
-                <div className="flex-1" />
-                <p className="text-[15px] leading-[1.8] text-ink/70">{DEMOGRAPHICS.talkAbout}</p>
+          <div className="mb-6 flex justify-end">
+            <PlatformDropdown platforms={PLATFORM_LIST} current={platform} selected={platformKey} onSelect={setPlatformKey} />
+          </div>
+          <div key={platformKey}>
+            <Reveal>
+              <div className={`grid grid-cols-2 gap-x-4 gap-y-7 rounded-2xl border border-primary/10 bg-white p-9 sm:grid-cols-4 sm:gap-4 ${CARD} [&>*:not(:last-child)]:sm:border-r [&>*:not(:last-child)]:sm:border-primary/8`}>
+                {platform.stats.map(s => <Stat key={s.label} {...s} />)}
               </div>
             </Reveal>
-            <BentoStat delay={60} value={DEMOGRAPHICS.primaryGender.value} label={DEMOGRAPHICS.primaryGender.label} topRightIcon={<PersonIcon s={26} />} />
-            <BentoStat delay={120} value={DEMOGRAPHICS.primaryAge.value} label={DEMOGRAPHICS.primaryAge.label} topRightIcon={<HeartPulseIcon s={26} />} />
-            <BentoStat delay={180} value={DEMOGRAPHICS.audience} label="Total followers" topRightIcon={<EyeIcon s={26} />} />
-            <BentoStat delay={240} value={DEMOGRAPHICS.primaryLocation.value} label={DEMOGRAPHICS.primaryLocation.label}
-              topRightIcon={<CountryFlag code={DEMOGRAPHICS.primaryLocation.flagCode} className="h-[18px] w-[28px]" />} />
+            <div className="mt-5 grid auto-rows-[minmax(140px,auto)] grid-cols-2 gap-4 md:grid-cols-4">
+              <Reveal className="col-span-2 row-span-2 md:col-span-2">
+                <div className={`relative flex h-full flex-col rounded-2xl border border-primary/10 bg-white p-7 ${CARD}`}>
+                  <div className="absolute right-5 top-5 flex h-14 w-14 items-center justify-center rounded-xl border border-primary/12 bg-surface-sub text-primary">
+                    <ChatBubbleIcon s={32} />
+                  </div>
+                  <span className="inline-flex w-fit items-center rounded-lg bg-primary/[0.08] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-primary">What I talk about</span>
+                  <div className="flex-1" />
+                  <p className="text-[15px] leading-[1.8] text-ink/70">{platform.demographics.talkAbout}</p>
+                </div>
+              </Reveal>
+              <BentoStat delay={60} value={platform.demographics.primaryGender.value} label={platform.demographics.primaryGender.label} topRightIcon={<PersonIcon s={26} />} />
+              <BentoStat delay={120} value={platform.demographics.primaryAge.value} label={platform.demographics.primaryAge.label} topRightIcon={<HeartPulseIcon s={26} />} />
+              <BentoStat delay={180} value={platform.demographics.audience} label="Total followers" topRightIcon={<EyeIcon s={26} />} />
+              <BentoStat delay={240} value={platform.demographics.primaryLocation.value} label={platform.demographics.primaryLocation.label}
+                topRightIcon={<CountryFlag code={platform.demographics.primaryLocation.flagCode} className="h-[18px] w-[28px]" />} />
+            </div>
           </div>
         </div>
       </section>
@@ -712,8 +941,12 @@ export default function Page() {
             {PHOTOS.map((p, i) => (
               <Reveal key={p.id} delay={(i % 4) * 60} className={p.cls}>
                 <div className={`group relative h-full w-full overflow-hidden rounded-xl border border-primary/10 bg-gradient-to-br from-primary/15 via-primary-lt/10 to-magenta/15 ${CARD}`}>
-                  {p.src ? <img src={p.src} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-                    : <span className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold uppercase tracking-[0.18em] text-ink/35">Photo</span>}
+                  {p.src ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.src} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  ) : (
+                    <span className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold uppercase tracking-[0.18em] text-ink/35">Photo</span>
+                  )}
                 </div>
               </Reveal>
             ))}
@@ -730,15 +963,15 @@ export default function Page() {
           </SectionHead>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             <WorkModel delay={0} name="Affiliate / Revenue Share" price="10–20%" priceLabel="per sale"
-              icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M7 17L17 7M9 7h8v8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+              icon={<Shield s={28} />}
               features={['Lower or zero upfront','Earn a cut of every sale','Incentives fully aligned','Trackable codes & links']}
               description="My favourite model. I only win when you do." popular={true} onChoose={() => setModal('inquiry')} />
             <WorkModel delay={90} name="Paid Campaigns" price="From €350" priceLabel="per video"
-              icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="2.5" y="6" width="19" height="12" rx="2.5" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="2" /></svg>}
+              icon={<ZapIcon s={28} />}
               features={['Flat fee per deliverable','You brief, I produce','Full usage rights included','Fast turnaround']}
               description="Straightforward, predictable pricing." popular={false} onChoose={() => setModal('inquiry')} />
             <WorkModel delay={180} name="Barter / Gifting" price="€120+" priceLabel="product value"
-              icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M4 8l4-4 4 4M20 16l-4 4-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 4v9a3 3 0 003 3h2M16 20v-9a3 3 0 00-3-3h-2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>}
+              icon={<HandshakeIcon s={28} />}
               features={['Product-for-content exchange','Select premium items only','I genuinely use what I promote','Limited spots available']}
               description="For brands with products I'd honestly love." popular={false} onChoose={() => setModal('inquiry')} />
           </div>
@@ -746,7 +979,7 @@ export default function Page() {
       </section>
 
       {/* ════════ FOOTER ════════ */}
-      <footer className="bg-ink px-6 pb-0 pt-14">
+      <footer className="bg-ink px-6 pb-0 pt-24 ">
         <div className="mx-auto max-w-[900px]">
           <div className="flex flex-col items-center gap-10 sm:flex-row sm:items-center sm:gap-14">
             <div className="flex-shrink-0">
@@ -757,7 +990,7 @@ export default function Page() {
             </div>
             <div className="flex-1 text-center sm:text-left">
               <h2 className="text-[clamp(26px,4.5vw,42px)] font-black leading-[1.08] tracking-[-0.04em] text-white">
-                Let's make something <span className={GRAD_TEXT}>that sells.</span>
+                Let’s make something <span className={GRAD_TEXT}>that sells.</span>
               </h2>
               <p className="mt-3 text-[14.5px] leading-[1.7] text-white/55">
                 Tell me about your product and your goal. One message — I reply within 48 hours.
@@ -835,6 +1068,7 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
   const prev = () => setCurrent(c => (c > 0 ? c - 1 : c))
   const next = () => setCurrent(c => (c < total - 1 ? c + 1 : c))
   const item = collaborations[current]
+  if (!item) return null
 
   return (
     <div className="relative w-full">
@@ -920,7 +1154,7 @@ function CollaborationCarousel({ collaborations }: { collaborations: typeof COLL
               {item.review.rating}/5 · Campaign review
             </span>
           </div>
-          <p className="text-[15.5px] leading-[1.85] text-ink/75 sm:text-[16px]">"{item.review.quote}"</p>
+          <p className="text-[15.5px] leading-[1.85] text-ink/75 sm:text-[16px]">“{item.review.quote}”</p>
           <div className="mt-5 flex items-center gap-3 border-t border-primary/10 pt-4">
             <BrandLogo
               name={item.review.company}
@@ -953,7 +1187,7 @@ function WorkModel({ name, price, priceLabel, icon, features, description, popul
             Most popular
           </span>
         )}
-        <div className={`mb-4 flex items-center justify-center rounded-2xl ${GRAD_BTN} text-white shadow-[0_8px_20px_-6px_rgba(139,49,232,0.5)] ${popular ? 'h-16 w-16' : 'h-14 w-14'}`}>{icon}</div>
+        <div className={`mb-4 flex items-center justify-center rounded-xl border border-primary/10 bg-surface-sub text-primary ${popular ? 'h-16 w-16' : 'h-14 w-14'}`}>{icon}</div>
         <h3 className="text-lg font-extrabold tracking-[-0.02em] text-ink">{name}</h3>
         <div className="mt-1 flex items-baseline gap-1.5">
           <span className="text-2xl font-black text-ink">{price}</span>
@@ -1056,4 +1290,4 @@ function ContactModal({ open, type, slug, firstName, onClose }: { open: boolean;
       </div>
     </div>
   )
-} 
+}
