@@ -1,7 +1,7 @@
 /* Font @import MUST come first — before @import "tailwindcss" — because
    Turbopack expands the Tailwind import inline, and CSS requires every
    @import to precede all other rules. */
-@import url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Odibee+Sans&display=swap');
 @import "tailwindcss";
 
 /* ─── Brand palette (Nexfluence design system) ───────────────────────────────
@@ -26,7 +26,7 @@
   --color-surface-card: #ede9ff;
 
   /* Concrete Iosevka Charon stack (was self-referential before, which broke the font) */
-  --font-rubik: "Google Sans", sans-serif;
+  --font-rubik: "Odibee Sans", sans-serif;
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */
