@@ -5,7 +5,7 @@ import AuthProvider from './AuthProvider'
 import { Yusei_Magic } from 'next/font/google'
 
 const yuseiMagic = Yusei_Magic({
-  weight: '400',              // Yusei Magic is static — 400 only
+  weight: '400',
   subsets: ['latin'],
   variable: '--font-rubik',
   display: 'swap',
