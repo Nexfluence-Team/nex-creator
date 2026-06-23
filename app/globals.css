@@ -1,7 +1,7 @@
 /* Font @import MUST come first — before @import "tailwindcss" — because
    Turbopack expands the Tailwind import inline, and CSS requires every
    @import to precede all other rules. */
-@import url('https://fonts.googleapis.com/css2?family=Economica:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+/* @import url('https://fonts.googleapis.com/css2?family=Truculenta:opsz,wght@12..72,100..900&display=swap'); */
 @import "tailwindcss";
 
 /* ─── Brand palette (Nexfluence design system) ───────────────────────────────
@@ -26,7 +26,7 @@
   --color-surface-card: #ede9ff;
 
   /* Concrete Iosevka Charon stack (was self-referential before, which broke the font) */
-  --font-rubik: "Economica", sans-serif;
+  --font-rubik: "Truculenta";
 }
 
 /* ─── Base ───────────────────────────────────────────────────────────────── */

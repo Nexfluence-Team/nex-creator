@@ -4,35 +4,28 @@ import { useState, useEffect, useRef, useId, type ReactNode, type MouseEvent as 
 
 /* ════════════════════════════════════════════════════════════════════
    Brand dashboard — page.tsx  (Nexfluence v4, LIGHT)
-   Home page after a brand logs in. Same three jobs as the creator
-   dashboard — performance over a custom date range, inbox with inline
-   reply, notifications — but every metric is reframed around what a
-   brand actually tracks: who's applying, who's already partnered, and
-   whether the spend is converting.
    ════════════════════════════════════════════════════════════════════ */
 
-const CARD = 'shadow-[0_1px_2px_rgba(10,6,18,0.04),0_12px_32px_-12px_rgba(139,49,232,0.16)]'
-const GRAD_BTN = 'bg-gradient-to-r from-primary via-primary-lt to-magenta'
+const CARD      = 'shadow-[0_1px_2px_rgba(10,6,18,0.04),0_12px_32px_-12px_rgba(139,49,232,0.16)]'
+const GRAD_BTN  = 'bg-gradient-to-r from-primary via-primary-lt to-magenta'
 const GRAD_TEXT = 'bg-gradient-to-r from-primary via-primary-lt to-magenta bg-clip-text text-transparent'
 
 const BRAND = { name: 'Kinetics', slug: 'kinetics' }
 
 type RangeOption = 7 | 14 | 28
 const RANGE_OPTIONS: { label: string; value: RangeOption }[] = [
-  { label: 'Last 7 days', value: 7 },
+  { label: 'Last 7 days',  value: 7  },
   { label: 'Last 14 days', value: 14 },
   { label: 'Last 28 days', value: 28 },
 ]
 
-/* 28 days of profile view counts, oldest → newest, ending today (Jun 19).
-   Swap for a real /analytics/views endpoint once one exists.            */
 const VIEWS_DATA: { label: string; views: number }[] = [
   { label: 'May 23', views: 150 }, { label: 'May 24', views: 175 }, { label: 'May 25', views: 160 },
   { label: 'May 26', views: 210 }, { label: 'May 27', views: 260 }, { label: 'May 28', views: 240 },
   { label: 'May 29', views: 205 }, { label: 'May 30', views: 230 }, { label: 'May 31', views: 250 },
-  { label: 'Jun 1', views: 205 }, { label: 'Jun 2', views: 265 }, { label: 'Jun 3', views: 290 },
-  { label: 'Jun 4', views: 310 }, { label: 'Jun 5', views: 295 }, { label: 'Jun 6', views: 330 },
-  { label: 'Jun 7', views: 380 }, { label: 'Jun 8', views: 360 }, { label: 'Jun 9', views: 340 },
+  { label: 'Jun 1',  views: 205 }, { label: 'Jun 2',  views: 265 }, { label: 'Jun 3',  views: 290 },
+  { label: 'Jun 4',  views: 310 }, { label: 'Jun 5',  views: 295 }, { label: 'Jun 6',  views: 330 },
+  { label: 'Jun 7',  views: 380 }, { label: 'Jun 8',  views: 360 }, { label: 'Jun 9',  views: 340 },
   { label: 'Jun 10', views: 385 }, { label: 'Jun 11', views: 420 }, { label: 'Jun 12', views: 400 },
   { label: 'Jun 13', views: 430 }, { label: 'Jun 14', views: 415 }, { label: 'Jun 15', views: 455 },
   { label: 'Jun 16', views: 440 }, { label: 'Jun 17', views: 470 }, { label: 'Jun 18', views: 490 },
@@ -40,18 +33,18 @@ const VIEWS_DATA: { label: string; views: number }[] = [
 ]
 
 type NotificationType = 'application' | 'profile_view' | 'payout' | 'deal' | 'insight'
-type NotificationItem = { id: string; type: NotificationType; title: string; time: string; unread: boolean }
+type NotificationItem  = { id: string; type: NotificationType; title: string; time: string; unread: boolean }
 
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  { id: 'n1', type: 'application', title: 'Amelia Roze applied to your affiliate program', time: '2h ago', unread: true },
-  { id: 'n2', type: 'profile_view', title: 'Markus Tamm viewed your brand profile', time: '5h ago', unread: true },
-  { id: 'n3', type: 'payout', title: 'Payout sent — €380 to Rūta Vaitkutė', time: '1d ago', unread: false },
-  { id: 'n4', type: 'deal', title: 'Sandra Liepa accepted your campaign brief', time: '2d ago', unread: true },
-  { id: 'n5', type: 'insight', title: 'Your affiliate program crossed 500 conversions this month', time: '3d ago', unread: false },
-  { id: 'n6', type: 'deal', title: 'Aiga Ozola requested to extend her partnership', time: '4d ago', unread: false },
+  { id: 'n1', type: 'application',  title: 'Amelia Roze applied to your affiliate program',          time: '2h ago', unread: true  },
+  { id: 'n2', type: 'profile_view', title: 'Markus Tamm viewed your brand profile',                  time: '5h ago', unread: true  },
+  { id: 'n3', type: 'payout',       title: 'Payout sent — €380 to Rūta Vaitkutė',                   time: '1d ago', unread: false },
+  { id: 'n4', type: 'deal',         title: 'Sandra Liepa accepted your campaign brief',              time: '2d ago', unread: true  },
+  { id: 'n5', type: 'insight',      title: 'Your affiliate program crossed 500 conversions',         time: '3d ago', unread: false },
+  { id: 'n6', type: 'deal',         title: 'Aiga Ozola requested to extend her partnership',         time: '4d ago', unread: false },
 ]
 
-type Message = { id: string; sender: 'me' | 'them'; text: string; time: string }
+type Message      = { id: string; sender: 'me' | 'them'; text: string; time: string }
 type Conversation = {
   id: string; creatorName: string; handle: string; color: string; initials: string; avatarUrl: string | null
   unread: boolean; lastMessage: string; lastTime: string; thread: Message[]
@@ -62,45 +55,77 @@ const INITIAL_CONVERSATIONS: Conversation[] = [
     id: 'cv1', creatorName: 'Amelia Roze', handle: '@amelia.roze', color: '#8B31E8', initials: 'AR', avatarUrl: null, unread: true,
     lastMessage: 'Thanks for the affiliate bump — can we get it in writing?', lastTime: '2h ago',
     thread: [
-      { id: 'm1', sender: 'them', text: "Hi! Following up on bumping my commission rate.", time: 'Yesterday, 4:10 PM' },
-      { id: 'm2', sender: 'me', text: "Approved on our end — 18% starting next cycle.", time: 'Yesterday, 6:02 PM' },
-      { id: 'm3', sender: 'them', text: 'Thanks for the affiliate bump — can we get it in writing?', time: '2h ago' },
+      { id: 'm1', sender: 'them', text: 'Hi! Following up on bumping my commission rate.',           time: 'Yesterday, 4:10 PM' },
+      { id: 'm2', sender: 'me',   text: 'Approved on our end — 18% starting next cycle.',            time: 'Yesterday, 6:02 PM' },
+      { id: 'm3', sender: 'them', text: 'Thanks for the affiliate bump — can we get it in writing?', time: '2h ago'             },
     ],
   },
   {
     id: 'cv2', creatorName: 'Markus Tamm', handle: '@markustamm', color: '#2563EB', initials: 'MT', avatarUrl: null, unread: false,
     lastMessage: 'Sending over the training-block content tomorrow.', lastTime: '1d ago',
     thread: [
-      { id: 'm1', sender: 'me', text: "How's the training-block series coming along?", time: '2d ago' },
-      { id: 'm2', sender: 'them', text: 'Sending over the training-block content tomorrow.', time: '1d ago' },
+      { id: 'm1', sender: 'me',   text: "How's the training-block series coming along?",             time: '2d ago' },
+      { id: 'm2', sender: 'them', text: 'Sending over the training-block content tomorrow.',         time: '1d ago' },
     ],
   },
   {
     id: 'cv3', creatorName: 'Sandra Liepa', handle: '@sandra.liepa', color: '#DB2777', initials: 'SL', avatarUrl: null, unread: true,
     lastMessage: "Just confirmed — I'm in for the capsule wardrobe drop.", lastTime: '2d ago',
     thread: [
-      { id: 'm1', sender: 'me', text: 'Brief is ready whenever you want to take a look.', time: '3d ago' },
-      { id: 'm2', sender: 'them', text: "Just confirmed — I'm in for the capsule wardrobe drop.", time: '2d ago' },
+      { id: 'm1', sender: 'me',   text: 'Brief is ready whenever you want to take a look.',         time: '3d ago' },
+      { id: 'm2', sender: 'them', text: "Just confirmed — I'm in for the capsule wardrobe drop.",   time: '2d ago' },
     ],
   },
   {
     id: 'cv4', creatorName: 'Rūta Vaitkutė', handle: '@ruta.glow', color: '#C026D3', initials: 'RV', avatarUrl: null, unread: true,
     lastMessage: "Can you resend the tracked link? Mine isn't working.", lastTime: '3d ago',
     thread: [
-      { id: 'm1', sender: 'them', text: "Can you resend the tracked link? Mine isn't working.", time: '3d ago' },
+      { id: 'm1', sender: 'them', text: "Can you resend the tracked link? Mine isn't working.",     time: '3d ago' },
     ],
   },
   {
     id: 'cv5', creatorName: 'Aiga Ozola', handle: '@aiga.bakes', color: '#EA580C', initials: 'AO', avatarUrl: null, unread: false,
     lastMessage: 'Loved the new recovery stack samples!', lastTime: '5d ago',
     thread: [
-      { id: 'm1', sender: 'me', text: 'Sent a box of the new recovery stack your way — let us know what you think.', time: '6d ago' },
-      { id: 'm2', sender: 'them', text: 'Loved the new recovery stack samples!', time: '5d ago' },
+      { id: 'm1', sender: 'me',   text: 'Sent a box of the new recovery stack your way — let us know what you think.', time: '6d ago' },
+      { id: 'm2', sender: 'them', text: 'Loved the new recovery stack samples!',                    time: '5d ago' },
     ],
   },
 ]
 
-/* ─── Icons ──────────────────────────────────────────────────────────── */
+/* ─────────────────────── CREATOR TARGET CONSTANTS ───────────────────── */
+/* Simulated current state */
+const CURRENT_ACTIVE_CREATORS     = 9
+const CURRENT_AVG_CONVERSION_RATE = 4.2   // %
+const CURRENT_AVG_ENGAGEMENT_RATE = 7.8   // %
+const CURRENT_PIECES_OF_CONTENT   = 23
+
+/* Target conversion rate options */
+const TARGET_CONVERSION_OPTIONS = [
+  { label: '2%',  value: 2  },
+  { label: '3%',  value: 3  },
+  { label: '5%',  value: 5  },
+  { label: '7%',  value: 7  },
+  { label: '10%', value: 10 },
+]
+/* Target engagement rate options */
+const TARGET_ENGAGEMENT_OPTIONS = [
+  { label: '3%',  value: 3  },
+  { label: '5%',  value: 5  },
+  { label: '8%',  value: 8  },
+  { label: '10%', value: 10 },
+  { label: '12%', value: 12 },
+]
+/* How many pieces of content target per creator per month */
+const CONTENT_PER_CREATOR_OPTIONS = [
+  { label: '1',  value: 1 },
+  { label: '2',  value: 2 },
+  { label: '3',  value: 3 },
+  { label: '4',  value: 4 },
+  { label: '5',  value: 5 },
+]
+
+/* ═══════════════════════ ICONS ═══════════════════════════════════════ */
 function CalendarIcon({ s = 14 }: { s?: number }) {
   return (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
@@ -137,13 +162,6 @@ function HandshakeIcon({ s = 18 }: { s?: number }) {
     </svg>
   )
 }
-function BookmarkIcon({ s = 18, filled = false }: { s?: number; filled?: boolean }) {
-  return (
-    <svg width={s} height={s} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'}>
-      <path d="M6 3.5h12a1 1 0 011 1V21l-7-4-7 4V4.5a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-    </svg>
-  )
-}
 function EuroIcon({ s = 18 }: { s?: number }) {
   return (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
@@ -173,16 +191,59 @@ function SendIcon({ s = 15 }: { s?: number }) {
     </svg>
   )
 }
-
-function NexLogo({ className = '' }: { className?: string }) {
+function TargetIcon({ s = 18 }: { s?: number }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/Nex.webp" alt="Nexfluence" className={`w-auto object-contain ${className}`} />
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9"   stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="5"   stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
   )
 }
+function UsersIcon({ s = 18 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.9" />
+      <path d="M2 20v-1a7 7 0 0114 0v1" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+      <path d="M16 11a3 3 0 000-6M22 20v-1a7 7 0 00-5-6.7" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
+  )
+}
+function ZapIcon({ s = 18 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M4 14a1 1 0 01-.78-1.63l9.9-10.2a.5.5 0 01.86.46l-1.92 6.02A1 1 0 0013 10h7a1 1 0 01.78 1.63l-9.9 10.2a.5.5 0 01-.86-.46l1.92-6.02A1 1 0 0011 14z"
+        stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function ImageIcon({ s = 18 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="3" width="18" height="18" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function EditIcon({ s = 14 }: { s?: number }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none">
+      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function NexLogo({ className = '' }: { className?: string }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/Nex.webp" alt="Nexfluence" className={`w-auto object-contain ${className}`} />
+}
 
-/* ─── Person avatar (circle) — creator side of a conversation ───────── */
-function PersonAvatar({ name, color, avatarUrl, initials, size = 38 }: { name: string; color: string; avatarUrl?: string | null; initials?: string; size?: number }) {
+/* ─── Person avatar ──────────────────────────────────────────────────── */
+function PersonAvatar({ name, color, avatarUrl, initials, size = 38 }: {
+  name: string; color: string; avatarUrl?: string | null; initials?: string; size?: number
+}) {
   const abbr = initials ?? name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
   if (avatarUrl) {
     return (
@@ -193,14 +254,19 @@ function PersonAvatar({ name, color, avatarUrl, initials, size = 38 }: { name: s
     )
   }
   return (
-    <div className="flex flex-shrink-0 items-center justify-center rounded-full font-extrabold text-white shadow-sm" style={{ width: size, height: size, background: color, fontSize: size * 0.38 }}>
+    <div className="flex flex-shrink-0 items-center justify-center rounded-full font-extrabold text-white shadow-sm"
+      style={{ width: size, height: size, background: color, fontSize: size * 0.38 }}>
       {abbr}
     </div>
   )
 }
 
-/* ─── Stat card ──────────────────────────────────────────────────────── */
-function StatCard({ icon, label, value, delta }: { icon: ReactNode; label: string; value: string; delta?: { label: string; positive: boolean } }) {
+/* ═══════════════════════ STAT CARD ═══════════════════════════════════ */
+function StatCard({ icon, label, value, delta, sublabel }: {
+  icon: ReactNode; label: string; value: string
+  delta?: { label: string; positive: boolean }
+  sublabel?: string
+}) {
   return (
     <div className={`flex flex-col justify-between rounded-2xl border border-primary/10 bg-white p-5 ${CARD}`}>
       <div className="flex items-start justify-between">
@@ -214,31 +280,233 @@ function StatCard({ icon, label, value, delta }: { icon: ReactNode; label: strin
       <div className="mt-4">
         <div className="text-[24px] font-black tracking-[-0.03em] text-ink">{value}</div>
         <div className="mt-0.5 text-[12.5px] font-medium text-ink/50">{label}</div>
+        {sublabel && <div className="mt-0.5 text-[11px] font-medium text-ink/35">{sublabel}</div>}
       </div>
     </div>
   )
 }
 
-/* ─── Range dropdown (custom 7 / 14 / 28-day picker) ─────────────────── */
+/* ═══════════════════════ CREATOR TARGET CARD ════════════════════════
+   Brand sets:
+     (1) Target conversion rate   (2) Target engagement rate
+     (3) Pieces of content per creator per month
+   Dashboard calculates:
+     How many more creators needed vs current count to hit targets
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* Small inline select — reused three times inside the goal card */
+function GoalSelect<T extends number>({
+  label, value, options, onChange,
+}: {
+  label: string
+  value: T
+  options: { label: string; value: T }[]
+  onChange: (v: T) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const current = options.find(o => o.value === value)
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="flex items-center gap-1.5">
+        <span className="text-[12px] font-medium text-ink/45">{label}</span>
+        <button onClick={() => setOpen(o => !o)}
+          className="flex items-center gap-1.5 rounded-lg border border-primary/15 bg-primary/[0.05] px-2.5 py-1 text-[13px] font-bold text-primary transition hover:bg-primary/[0.09]">
+          {current?.label}
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className={`text-primary/60 transition-transform ${open ? 'rotate-180' : ''}`}>
+            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
+      {open && (
+        <div className={`absolute left-0 top-[calc(100%+6px)] z-20 w-[110px] overflow-hidden rounded-xl border border-primary/10 bg-white ${CARD}`}>
+          {options.map(opt => (
+            <button key={opt.value} onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={`flex w-full items-center justify-between px-4 py-2.5 text-[13px] font-semibold transition hover:bg-primary/[0.06] ${value === opt.value ? 'bg-primary/[0.07] text-primary' : 'text-ink/75'}`}>
+              {opt.label}
+              {value === opt.value && <span className={`h-2 w-2 rounded-full ${GRAD_BTN}`} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CreatorTargetCard() {
+  const [targetConversion, setTargetConversion] = useState(5)
+  const [targetEngagement, setTargetEngagement] = useState(8)
+  const [contentPerCreator, setContentPerCreator] = useState(2)
+
+  /* ── Gap calculations ── */
+  const conversionGap  = Math.max(0, targetConversion  - CURRENT_AVG_CONVERSION_RATE)
+  const engagementGap  = Math.max(0, targetEngagement  - CURRENT_AVG_ENGAGEMENT_RATE)
+
+  /*
+    Simple heuristic: to close a 1% conversion gap you need ~1.5 more creators;
+    to close a 1% engagement gap you need ~1 more creator; take the larger need.
+    Increasing content per creator buys partial coverage — every +1 piece/creator
+    reduces the extra creator need by ~0.4.
+    All rounded up; minimum 0.
+  */
+  const extraForConversion = conversionGap  * 1.5
+  const extraForEngagement = engagementGap  * 1.0
+  const contentOffset      = (contentPerCreator - 1) * 0.4
+  const creatorsNeeded     = Math.max(0, Math.ceil(Math.max(extraForConversion, extraForEngagement) - contentOffset))
+
+  const contentNeeded      = creatorsNeeded * contentPerCreator
+  const totalContentTarget = (CURRENT_ACTIVE_CREATORS + creatorsNeeded) * contentPerCreator
+
+  const conversionProgress = Math.min(100, Math.round((CURRENT_AVG_CONVERSION_RATE / Math.max(targetConversion, 0.01)) * 100))
+  const engagementProgress = Math.min(100, Math.round((CURRENT_AVG_ENGAGEMENT_RATE / Math.max(targetEngagement, 0.01)) * 100))
+
+  const allTargetsMet = creatorsNeeded === 0
+
+  return (
+    <div className={`rounded-2xl border border-primary/10 bg-white p-6 ${CARD}`}>
+
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/[0.08] text-primary">
+            <TargetIcon s={18} />
+          </span>
+          <div>
+            <p className="text-[13px] font-bold uppercase tracking-[0.1em] text-ink/50">Creator performance targets</p>
+            <p className="mt-0.5 text-[11.5px] text-ink/35">Set your targets — we'll tell you how many more creators you need</p>
+          </div>
+        </div>
+
+        {/* Target controls */}
+        <div className="flex flex-wrap items-center gap-4">
+          <GoalSelect
+            label="Target conversion:"
+            value={targetConversion}
+            options={TARGET_CONVERSION_OPTIONS}
+            onChange={setTargetConversion}
+          />
+          <GoalSelect
+            label="Target engagement:"
+            value={targetEngagement}
+            options={TARGET_ENGAGEMENT_OPTIONS}
+            onChange={setTargetEngagement}
+          />
+          <GoalSelect
+            label="Content per creator:"
+            value={contentPerCreator}
+            options={CONTENT_PER_CREATOR_OPTIONS}
+            onChange={setContentPerCreator}
+          />
+        </div>
+      </div>
+
+      {/* Progress bars */}
+      <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+        {/* Conversion rate */}
+        <div className="rounded-xl bg-surface-sub p-4">
+          <div className="flex items-end justify-between mb-2">
+            <span className="text-[12px] font-medium text-ink/45">Conversion rate</span>
+            <span className={`text-[12px] font-bold ${CURRENT_AVG_CONVERSION_RATE >= targetConversion ? 'text-emerald-600' : 'text-ink/55'}`}>
+              {CURRENT_AVG_CONVERSION_RATE}% <span className="font-medium text-ink/35">/ {targetConversion}%</span>
+            </span>
+          </div>
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-primary/[0.08]">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${CURRENT_AVG_CONVERSION_RATE >= targetConversion ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : GRAD_BTN}`}
+              style={{ width: `${conversionProgress}%` }}
+            />
+          </div>
+          <p className="mt-1.5 text-[11px] text-ink/35">
+            {CURRENT_AVG_CONVERSION_RATE >= targetConversion ? '✓ Target met' : `${(targetConversion - CURRENT_AVG_CONVERSION_RATE).toFixed(1)}% gap remaining`}
+          </p>
+        </div>
+
+        {/* Engagement rate */}
+        <div className="rounded-xl bg-surface-sub p-4">
+          <div className="flex items-end justify-between mb-2">
+            <span className="text-[12px] font-medium text-ink/45">Engagement rate</span>
+            <span className={`text-[12px] font-bold ${CURRENT_AVG_ENGAGEMENT_RATE >= targetEngagement ? 'text-emerald-600' : 'text-ink/55'}`}>
+              {CURRENT_AVG_ENGAGEMENT_RATE}% <span className="font-medium text-ink/35">/ {targetEngagement}%</span>
+            </span>
+          </div>
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-primary/[0.08]">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${CURRENT_AVG_ENGAGEMENT_RATE >= targetEngagement ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : GRAD_BTN}`}
+              style={{ width: `${engagementProgress}%` }}
+            />
+          </div>
+          <p className="mt-1.5 text-[11px] text-ink/35">
+            {CURRENT_AVG_ENGAGEMENT_RATE >= targetEngagement ? '✓ Target met' : `${(targetEngagement - CURRENT_AVG_ENGAGEMENT_RATE).toFixed(1)}% gap remaining`}
+          </p>
+        </div>
+      </div>
+
+      {/* Status row */}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        {allTargetsMet ? (
+          <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2.5">
+            <span className="text-emerald-500">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12l4 4 10-10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <span className="text-[13px] font-bold text-emerald-700">All targets met with your current creator roster 🎉</span>
+          </div>
+        ) : (
+          <>
+            <div className={`flex items-center gap-2 rounded-xl px-4 py-2.5 ${GRAD_BTN}`}>
+              <UsersIcon s={15} />
+              <span className="text-[13px] font-bold text-white">
+                {creatorsNeeded} more creator{creatorsNeeded !== 1 ? 's' : ''} needed
+              </span>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl bg-surface-sub px-4 py-2.5">
+              <ImageIcon s={15} />
+              <span className="text-[13px] font-semibold text-ink/70">
+                <span className="font-extrabold text-ink">{contentNeeded}</span> more piece{contentNeeded !== 1 ? 's' : ''} of content
+              </span>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl bg-surface-sub px-4 py-2.5">
+              <UsersIcon s={15} />
+              <span className="text-[13px] font-semibold text-ink/70">
+                <span className="font-extrabold text-ink">{CURRENT_ACTIVE_CREATORS + creatorsNeeded}</span> total creators to hit targets
+              </span>
+            </div>
+            <p className="ml-1 text-[11.5px] text-ink/35">
+              At {contentPerCreator} piece{contentPerCreator !== 1 ? 's' : ''}/creator · targets: {targetConversion}% CVR, {targetEngagement}% ER
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════ RANGE DROPDOWN ════════════════════════════= */
 function RangeDropdown({ value, onChange }: { value: RangeOption; onChange: (v: RangeOption) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const current = RANGE_OPTIONS.find(r => r.value === value) ?? RANGE_OPTIONS[0]!
 
   useEffect(() => {
-    const onClick = (e: globalThis.MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('mousedown', onClick)
-    window.addEventListener('keydown', onEsc)
-    return () => { document.removeEventListener('mousedown', onClick); window.removeEventListener('keydown', onEsc) }
+    const h1 = (e: globalThis.MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const h2 = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', h1); window.addEventListener('keydown', h2)
+    return () => { document.removeEventListener('mousedown', h1); window.removeEventListener('keydown', h2) }
   }, [])
 
   return (
     <div ref={ref} className="relative flex-shrink-0">
       <button onClick={() => setOpen(o => !o)}
         className={`flex items-center gap-2 rounded-xl border bg-white px-3.5 py-2 text-[12.5px] font-semibold text-ink shadow-sm transition hover:-translate-y-0.5 ${open ? 'border-primary/30' : 'border-primary/12'}`}>
-        <CalendarIcon s={13} />
-        {current.label}
+        <CalendarIcon s={13} />{current.label}
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" className={`text-ink/40 transition-transform ${open ? 'rotate-180' : ''}`}>
           <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -257,21 +525,21 @@ function RangeDropdown({ value, onChange }: { value: RangeOption; onChange: (v: 
   )
 }
 
-/* ─── Views chart — hand-rolled SVG, hover tooltip, no chart library ─── */
+/* ═══════════════════════ VIEWS CHART ════════════════════════════════ */
 function ViewsChart({ data }: { data: { label: string; views: number }[] }) {
   const rawId = useId()
-  const id = rawId.replace(/:/g, '')
+  const id    = rawId.replace(/:/g, '')
   const [hover, setHover] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
 
   const W = 700, H = 220, PAD_L = 8, PAD_R = 8, PAD_T = 14, PAD_B = 24
   const innerW = W - PAD_L - PAD_R
   const innerH = H - PAD_T - PAD_B
-  const n = data.length
+  const n      = data.length
   const values = data.map(d => d.views)
-  const max = Math.max(...values)
-  const min = Math.min(...values)
-  const span = Math.max(max - min, 1)
+  const max    = Math.max(...values)
+  const min    = Math.min(...values)
+  const span   = Math.max(max - min, 1)
 
   const xAt = (i: number) => PAD_L + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW)
   const yAt = (v: number) => PAD_T + innerH - ((v - min) / span) * innerH
@@ -280,13 +548,13 @@ function ViewsChart({ data }: { data: { label: string; views: number }[] }) {
   const areaPath = `${linePath} L ${xAt(n - 1).toFixed(2)} ${(PAD_T + innerH).toFixed(2)} L ${xAt(0).toFixed(2)} ${(PAD_T + innerH).toFixed(2)} Z`
 
   const tickEvery = Math.max(1, Math.ceil(n / 6))
-  const ticks = data.map((_, i) => i).filter(i => i % tickEvery === 0 || i === n - 1)
+  const ticks     = data.map((_, i) => i).filter(i => i % tickEvery === 0 || i === n - 1)
 
   const handleMove = (e: ReactMouseEvent<SVGSVGElement>) => {
     const svg = svgRef.current; if (!svg) return
-    const rect = svg.getBoundingClientRect()
+    const rect  = svg.getBoundingClientRect()
     const xFrac = (e.clientX - rect.left) / rect.width
-    const xSvg = xFrac * W
+    const xSvg  = xFrac * W
     let idx = Math.round(((xSvg - PAD_L) / innerW) * (n - 1))
     idx = Math.min(n - 1, Math.max(0, idx))
     setHover(idx)
@@ -295,78 +563,68 @@ function ViewsChart({ data }: { data: { label: string; views: number }[] }) {
   const hoverPoint = hover !== null ? data[hover] : null
 
   return (
-    <div className="relative h-[220px] w-full">
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${W} ${H}`}
-        preserveAspectRatio="none"
+    <div className="relative h-full min-h-[180px] w-full flex-1">
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"
         className="h-full w-full cursor-crosshair"
-        onMouseMove={handleMove}
-        onMouseLeave={() => setHover(null)}
-      >
+        onMouseMove={handleMove} onMouseLeave={() => setHover(null)}>
         <defs>
           <linearGradient id={`${id}-area`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8B31E8" stopOpacity="0.26" />
-            <stop offset="100%" stopColor="#FF33BC" stopOpacity="0" />
+            <stop offset="0%"   stopColor="#8B31E8" stopOpacity="0.26" />
+            <stop offset="100%" stopColor="#FF33BC" stopOpacity="0"    />
           </linearGradient>
           <linearGradient id={`${id}-line`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#8B31E8" />
-            <stop offset="55%" stopColor="#A855F7" />
+            <stop offset="0%"   stopColor="#8B31E8" />
+            <stop offset="55%"  stopColor="#A855F7" />
             <stop offset="100%" stopColor="#FF33BC" />
           </linearGradient>
         </defs>
-
         {[0, 0.25, 0.5, 0.75, 1].map(p => (
-          <line key={p} x1={PAD_L} x2={W - PAD_R} y1={PAD_T + innerH * p} y2={PAD_T + innerH * p} stroke="#8B31E8" strokeOpacity="0.06" strokeWidth="1" />
+          <line key={p} x1={PAD_L} x2={W - PAD_R} y1={PAD_T + innerH * p} y2={PAD_T + innerH * p}
+            stroke="#8B31E8" strokeOpacity="0.06" strokeWidth="1" />
         ))}
-
         <path d={areaPath} fill={`url(#${id}-area)`} />
         <path d={linePath} fill="none" stroke={`url(#${id}-line)`} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-
         {ticks.map(i => (
           <text key={i} x={xAt(i)} y={H - 6} textAnchor="middle" fontSize="9.5" fontWeight={700} className="fill-ink/35">
             {data[i]?.label}
           </text>
         ))}
-
         {hoverPoint && hover !== null && (
           <g>
-            <line x1={xAt(hover)} x2={xAt(hover)} y1={PAD_T} y2={PAD_T + innerH} stroke="#8B31E8" strokeOpacity="0.25" strokeWidth="1.5" strokeDasharray="3 3" />
+            <line x1={xAt(hover)} x2={xAt(hover)} y1={PAD_T} y2={PAD_T + innerH}
+              stroke="#8B31E8" strokeOpacity="0.25" strokeWidth="1.5" strokeDasharray="3 3" />
             <circle cx={xAt(hover)} cy={yAt(hoverPoint.views)} r="4.5" fill="white" stroke="#8B31E8" strokeWidth="2.5" />
           </g>
         )}
       </svg>
-
       {hoverPoint && hover !== null && (
-        <div
-          className="pointer-events-none absolute z-10 whitespace-nowrap rounded-lg border border-primary/10 bg-ink px-2.5 py-1.5 text-[11px] font-bold text-white shadow-lg"
-          style={{ left: `${(xAt(hover) / W) * 100}%`, top: `${(yAt(hoverPoint.views) / H) * 100}%`, transform: 'translate(-50%, -135%)' }}
-        >
-          {hoverPoint.label} · {hoverPoint.views.toLocaleString()} views
+        <div className="pointer-events-none absolute z-10 whitespace-nowrap rounded-lg border border-primary/10 bg-ink px-2.5 py-1.5 text-[11px] font-bold text-white shadow-lg"
+          style={{ left: `${(xAt(hover) / W) * 100}%`, top: `${(yAt(hoverPoint.views) / H) * 100}%`, transform: 'translate(-50%, -135%)' }}>
+          {hoverPoint.label} · {hoverPoint.views.toLocaleString()} profile views
         </div>
       )}
     </div>
   )
 }
 
-/* ─── Views card — total, delta vs previous period, range dropdown ──── */
+/* ═══════════════════════ VIEWS CARD ════════════════════════════════= */
 function ViewsCard({ range, onRangeChange }: { range: RangeOption; onRangeChange: (r: RangeOption) => void }) {
-  const n = VIEWS_DATA.length
+  const n     = VIEWS_DATA.length
   const slice = VIEWS_DATA.slice(n - range)
   const total = slice.reduce((s, d) => s + d.views, 0)
 
   let delta: { label: string; positive: boolean } | null = null
   if (range * 2 <= n) {
-    const prevSlice = VIEWS_DATA.slice(n - range * 2, n - range)
-    const prevTotal = prevSlice.reduce((s, d) => s + d.views, 0)
-    if (prevTotal > 0) {
-      const pct = ((total - prevTotal) / prevTotal) * 100
+    const prev    = VIEWS_DATA.slice(n - range * 2, n - range)
+    const prevTot = prev.reduce((s, d) => s + d.views, 0)
+    if (prevTot > 0) {
+      const pct = ((total - prevTot) / prevTot) * 100
       delta = { label: `${Math.abs(pct).toFixed(1)}%`, positive: pct >= 0 }
     }
   }
 
   return (
-    <div className={`rounded-2xl border border-primary/10 bg-white p-6 ${CARD}`}>
+    <div className={`flex h-full w-full flex-col rounded-2xl border border-primary/10 bg-white p-6 ${CARD}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink/40">Profile views</p>
@@ -378,29 +636,31 @@ function ViewsCard({ range, onRangeChange }: { range: RangeOption; onRangeChange
               </span>
             )}
           </div>
-          <p className="mt-1 text-[12px] font-medium text-ink/40">{delta ? `vs previous ${range} days` : `Last ${range} days`} · creators discovering your profile</p>
+          <p className="mt-1 text-[12px] font-medium text-ink/40">
+            {delta ? `vs previous ${range} days` : `Last ${range} days`} · creators discovering your profile
+          </p>
         </div>
         <RangeDropdown value={range} onChange={onRangeChange} />
       </div>
-      <div className="mt-6">
+      <div className="mt-6 flex flex-1 flex-col min-h-0">
         <ViewsChart data={slice} />
       </div>
     </div>
   )
 }
 
-/* ─── Notifications panel ────────────────────────────────────────────── */
+/* ═══════════════════════ NOTIFICATIONS ══════════════════════════════ */
 const NOTIFICATION_STYLE: Record<NotificationType, { icon: ReactNode; bg: string; text: string }> = {
-  application: { icon: <ChatBubbleIcon s={16} />, bg: 'bg-primary/[0.08]', text: 'text-primary' },
-  profile_view: { icon: <EyeIcon s={16} />, bg: 'bg-sky-50', text: 'text-sky-600' },
-  payout: { icon: <EuroIcon s={16} />, bg: 'bg-emerald-50', text: 'text-emerald-600' },
-  deal: { icon: <HandshakeIcon s={16} />, bg: 'bg-amber-50', text: 'text-amber-600' },
-  insight: { icon: <LightbulbIcon s={16} />, bg: 'bg-violet-50', text: 'text-violet-600' },
+  application:  { icon: <ChatBubbleIcon s={16} />, bg: 'bg-primary/[0.08]', text: 'text-primary'     },
+  profile_view: { icon: <EyeIcon s={16} />,        bg: 'bg-sky-50',         text: 'text-sky-600'     },
+  payout:       { icon: <EuroIcon s={16} />,       bg: 'bg-emerald-50',     text: 'text-emerald-600' },
+  deal:         { icon: <HandshakeIcon s={16} />,  bg: 'bg-amber-50',       text: 'text-amber-600'   },
+  insight:      { icon: <LightbulbIcon s={16} />,  bg: 'bg-violet-50',      text: 'text-violet-600'  },
 }
 
-function NotificationsPanel({
-  items, onMarkRead, onMarkAllRead,
-}: { items: NotificationItem[]; onMarkRead: (id: string) => void; onMarkAllRead: () => void }) {
+function NotificationsPanel({ items, onMarkRead, onMarkAllRead }: {
+  items: NotificationItem[]; onMarkRead: (id: string) => void; onMarkAllRead: () => void
+}) {
   const unreadCount = items.filter(n => n.unread).length
   return (
     <div className={`flex h-full flex-col overflow-hidden rounded-2xl border border-primary/10 bg-white ${CARD}`}>
@@ -430,14 +690,15 @@ function NotificationsPanel({
   )
 }
 
-/* ─── Messages panel — inline inbox: select a conversation, reply ───── */
-function MessagesPanel({
-  conversations, setConversations,
-}: { conversations: Conversation[]; setConversations: (updater: (prev: Conversation[]) => Conversation[]) => void }) {
+/* ═══════════════════════ MESSAGES PANEL ════════════════════════════= */
+function MessagesPanel({ conversations, setConversations }: {
+  conversations: Conversation[]
+  setConversations: (updater: (prev: Conversation[]) => Conversation[]) => void
+}) {
   const [selectedId, setSelectedId] = useState<string | null>(conversations[0]?.id ?? null)
-  const [draft, setDraft] = useState('')
-  const threadEndRef = useRef<HTMLDivElement>(null)
-  const selected = conversations.find(c => c.id === selectedId) ?? null
+  const [draft, setDraft]           = useState('')
+  const threadEndRef                = useRef<HTMLDivElement>(null)
+  const selected                    = conversations.find(c => c.id === selectedId) ?? null
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -451,8 +712,8 @@ function MessagesPanel({
   const send = () => {
     const text = draft.trim()
     if (!text || !selectedId) return
-    const newMessage: Message = { id: `m${Date.now()}`, sender: 'me', text, time: 'Just now' }
-    setConversations(prev => prev.map(c => (c.id === selectedId ? { ...c, thread: [...c.thread, newMessage], lastMessage: text, lastTime: 'Just now' } : c)))
+    const msg: Message = { id: `m${Date.now()}`, sender: 'me', text, time: 'Just now' }
+    setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, thread: [...c.thread, msg], lastMessage: text, lastTime: 'Just now' } : c))
     setDraft('')
   }
 
@@ -462,7 +723,6 @@ function MessagesPanel({
         <h3 className="text-[14.5px] font-bold text-ink">Messages</h3>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-[260px_1fr]">
-        {/* Conversation list */}
         <div className="divide-y divide-primary/6 border-b border-primary/8 sm:max-h-[460px] sm:overflow-y-auto sm:border-b-0 sm:border-r sm:border-primary/8">
           {conversations.map(c => (
             <button key={c.id} onClick={() => openConversation(c.id)}
@@ -479,8 +739,6 @@ function MessagesPanel({
             </button>
           ))}
         </div>
-
-        {/* Thread */}
         <div className="flex min-h-[360px] flex-col">
           {selected ? (
             <>
@@ -503,13 +761,10 @@ function MessagesPanel({
                 <div ref={threadEndRef} />
               </div>
               <div className="flex flex-shrink-0 items-center gap-2 border-t border-primary/8 px-4 py-3">
-                <input
-                  value={draft}
-                  onChange={e => setDraft(e.target.value)}
+                <input value={draft} onChange={e => setDraft(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') send() }}
                   placeholder="Write a reply…"
-                  className="flex-1 rounded-full border border-primary/12 bg-surface-sub px-4 py-2.5 text-[13px] text-ink outline-none transition focus:border-primary focus:bg-white focus:shadow-[0_0_0_3px_rgba(139,49,232,0.1)]"
-                />
+                  className="flex-1 rounded-full border border-primary/12 bg-surface-sub px-4 py-2.5 text-[13px] text-ink outline-none transition focus:border-primary focus:bg-white focus:shadow-[0_0_0_3px_rgba(139,49,232,0.1)]" />
                 <button onClick={send} disabled={!draft.trim()} aria-label="Send reply"
                   className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${GRAD_BTN} text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-y-0`}>
                   <SendIcon s={15} />
@@ -527,45 +782,39 @@ function MessagesPanel({
   )
 }
 
-/* ════════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════════
    PAGE
-   ════════════════════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════════════ */
 export default function Page() {
-  const [range, setRange] = useState<RangeOption>(7)
+  const [range, setRange]               = useState<RangeOption>(7)
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS)
   const [conversations, setConversations] = useState<Conversation[]>(INITIAL_CONVERSATIONS)
 
   const unreadMessages = conversations.filter(c => c.unread).length
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 
-  const markNotificationRead = (id: string) => setNotifications(prev => prev.map(n => (n.id === id ? { ...n, unread: false } : n)))
+  const markNotificationRead    = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: false } : n))
   const markAllNotificationsRead = () => setNotifications(prev => prev.map(n => ({ ...n, unread: false })))
-  const updateConversations = (updater: (prev: Conversation[]) => Conversation[]) => setConversations(updater)
+  const updateConversations      = (updater: (prev: Conversation[]) => Conversation[]) => setConversations(updater)
 
-  // TODO: wire these up to next/link once routes exist — "Dashboard" is this page.
-  const NAV_LEFT = [
-    { label: 'Dashboard', active: true, badge: 0, action: () => {} },
-    { label: 'Discover Creators', active: false, badge: 0, action: () => {} },
+  const NAV_LEFT  = [
+    { label: 'Dashboard',         active: true,  badge: 0,              action: () => {}                },
+    { label: 'Discover Creators', active: false, badge: 0,              action: () => {}                },
   ]
   const NAV_RIGHT = [
-    { label: 'Messages', active: false, badge: unreadMessages, action: () => scrollTo('messages') },
-    { label: 'My Profile', active: false, badge: 0, action: () => {} },
+    { label: 'Messages',   active: false, badge: unreadMessages, action: () => scrollTo('messages') },
+    { label: 'My Profile', active: false, badge: 0,              action: () => {}                   },
   ]
 
   return (
     <div className="min-h-screen bg-canvas font-rubik text-ink antialiased">
+
       {/* ════════ HEADER ════════ */}
       <header className="sticky top-0 z-40 border-b border-primary/10 bg-white/95 backdrop-blur-xl">
-        {/* ── NAV PILL — same component as the rest of the product ── */}
-        <div className="mx-auto max-w-[1080px] px-4 pt-3 sm:px-6">
+        <div className="mx-auto max-w-[1080px] px-4 pb-3 pt-3 sm:px-6">
           <div className="relative flex w-full items-center justify-between rounded-2xl px-3 py-2.5" style={{ overflow: 'visible' }}>
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 rounded-2xl backdrop-blur-xl"
-              style={{
-                background: 'linear-gradient(90deg, rgba(139,49,232,0.05) 0%, rgba(139,49,232,0.05) 30%, rgba(255,255,255,0) 42%, rgba(255,255,255,0) 58%, rgba(139,49,232,0.05) 70%, rgba(139,49,232,0.05) 100%)',
-              }}
-            />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-2xl backdrop-blur-xl"
+              style={{ background: 'linear-gradient(90deg, rgba(139,49,232,0.05) 0%, rgba(139,49,232,0.05) 30%, rgba(255,255,255,0) 42%, rgba(255,255,255,0) 58%, rgba(139,49,232,0.05) 70%, rgba(139,49,232,0.05) 100%)' }} />
             <div className="relative z-10 flex items-center gap-0.5">
               {NAV_LEFT.map(n => (
                 <button key={n.label} onClick={n.action}
@@ -587,7 +836,7 @@ export default function Page() {
               ))}
             </div>
             <div className="pointer-events-none absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2">
-              <NexLogo className="h-8 pointer-events-auto drop-shadow-[0_4px_14px_rgba(139,49,232,0.4)] sm:h-9" />
+              <NexLogo className="pointer-events-auto h-8 drop-shadow-[0_4px_14px_rgba(139,49,232,0.4)] sm:h-9" />
             </div>
           </div>
         </div>
@@ -595,6 +844,8 @@ export default function Page() {
 
       {/* ════════ MAIN ════════ */}
       <main className="mx-auto max-w-[1080px] px-6 py-8">
+
+        {/* Page title */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-[clamp(22px,3.2vw,30px)] font-black tracking-[-0.03em] text-ink">
@@ -608,23 +859,56 @@ export default function Page() {
           </a>
         </div>
 
-        {/* Stat cards */}
+        {/* ── 4 stat cards ── */}
         <div className="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatCard icon={<ChatBubbleIcon s={18} />} label="New messages" value={String(unreadMessages)} delta={{ label: '+2 today', positive: true }} />
-          <StatCard icon={<HandshakeIcon s={18} />} label="Active creators" value="9" delta={{ label: '+3 this month', positive: true }} />
-          <StatCard icon={<BookmarkIcon s={18} filled />} label="Shortlisted creators" value="18" delta={{ label: '+4 this week', positive: true }} />
-          <StatCard icon={<EuroIcon s={18} />} label="Affiliate sales this month" value="€4,280" delta={{ label: '12.4%', positive: true }} />
+          <StatCard
+            icon={<UsersIcon s={18} />}
+            label="Active creators"
+            value={String(CURRENT_ACTIVE_CREATORS)}
+            sublabel="Currently deployed"
+            delta={{ label: '+3 this month', positive: true }}
+          />
+          <StatCard
+            icon={<ZapIcon s={18} />}
+            label="Avg. conversion rate"
+            value={`${CURRENT_AVG_CONVERSION_RATE}%`}
+            sublabel="Across all active creators"
+            delta={{ label: '+0.6% vs last month', positive: true }}
+          />
+          <StatCard
+            icon={<EyeIcon s={18} />}
+            label="Avg. engagement rate"
+            value={`${CURRENT_AVG_ENGAGEMENT_RATE}%`}
+            sublabel="Across all active creators"
+            delta={{ label: '+1.1% vs last month', positive: true }}
+          />
+          <StatCard
+            icon={<ImageIcon s={18} />}
+            label="Pieces of content"
+            value={String(CURRENT_PIECES_OF_CONTENT)}
+            sublabel="Published this month"
+            delta={{ label: '+5 this week', positive: true }}
+          />
         </div>
 
-        {/* Views chart + Notifications */}
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
+        {/* ── Creator target card — full width ── */}
+        <div className="mt-4">
+          <CreatorTargetCard />
+        </div>
+
+        {/* ── Views chart + Notifications — equal height ── */}
+        <div className="mt-6 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
+          <div className="flex h-full lg:col-span-2">
             <ViewsCard range={range} onRangeChange={setRange} />
           </div>
-          <NotificationsPanel items={notifications} onMarkRead={markNotificationRead} onMarkAllRead={markAllNotificationsRead} />
+          <NotificationsPanel
+            items={notifications}
+            onMarkRead={markNotificationRead}
+            onMarkAllRead={markAllNotificationsRead}
+          />
         </div>
 
-        {/* Messages */}
+        {/* ── Messages ── */}
         <div className="mt-6">
           <MessagesPanel conversations={conversations} setConversations={updateConversations} />
         </div>
