@@ -337,29 +337,73 @@ function RankDelta({ creator }: { creator: Creator }) {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   CANVAS SHARE CARD GENERATOR
-   Generates a 1080×1080 PNG entirely client-side.
-   No server. No external fonts at runtime. Uses system fallbacks
-   that approximate Rubik (the CSS variable --font-rubik).
-   
-   In production: load Rubik via FontFace API before drawing.
+   CANVAS SHARE CARD GENERATOR — 1080×1080 Instagram-ready PNG
+   ─────────────────────────────────────────────────────────────────
+   THE FONT FIX:
+   Canvas 2D ignores CSS @font-face declarations by default —
+   it only sees fonts that the browser has already rendered on
+   screen. To use Rubik (--font-rubik) in the canvas we must load
+   it explicitly via the FontFace API and add it to document.fonts
+   BEFORE any ctx.font call. We load three weights:
+     400 → body copy (handle, footer tagline)
+     700 → medium emphasis (NSC label, niche tag)
+     900 → heavy display (name, rank badge, brand name)
+   Source: Google Fonts CDN subset for Latin Extended (covers
+   all Baltic characters: ā, ē, ģ, ī, ķ, ļ, ņ, š, ū, ž etc.)
+
+   COLOUR PALETTE used on canvas — exact Nexus v4 LIGHT tokens:
+     Primary     #8B31E8   (violet)
+     Primary-lt  #B44FF0   (gradient mid)
+     Magenta     #FF33BC
+     Ink         #0A0612   (background base)
+     Canvas      #F8F7FF   (not used on dark card)
+     White       #FFFFFF
    ════════════════════════════════════════════════════════════════════ */
+
+/* Module-level font cache — load once per session, reuse every call  */
+let _rubikLoaded = false
+async function ensureRubik(): Promise<void> {
+  if (_rubikLoaded) return
+  /* Google Fonts CSS2 API returns @font-face blocks for Rubik.
+     We load the three weights we need as binary FontFace objects
+     so Canvas can use them immediately after .load() resolves.    */
+  const BASE = 'https://fonts.gstatic.com/s/rubik/v28/'
+  const faces = [
+    new FontFace('Rubik', `url(${BASE}iJWZBXyIfDnIV5PNhY1KTN7Z-Yh-B4i1UA.woff2)`, { weight: '400' }),
+    new FontFace('Rubik', `url(${BASE}iJWZBXyIfDnIV5PNhY1KTN7Z-Yh-4Yi1UA.woff2)`, { weight: '700' }),
+    new FontFace('Rubik', `url(${BASE}iJWZBXyIfDnIV5PNhY1KTN7Z-Yh-NYm1UA.woff2)`, { weight: '900' }),
+  ]
+  await Promise.all(faces.map(async f => {
+    await f.load()
+    document.fonts.add(f)
+  }))
+  _rubikLoaded = true
+}
+
+/* Helper: set ctx.font using Rubik with a system-font fallback chain */
+function rubik(weight: 400 | 700 | 900, px: number): string {
+  return `${weight} ${px}px 'Rubik', 'Nunito', 'Poppins', 'Helvetica Neue', Arial, sans-serif`
+}
+
 async function generateShareCard(creator: Creator): Promise<string> {
+  /* ── 1. Load Rubik into the browser font registry first ── */
+  await ensureRubik()
+
   const SIZE = 1080
-  const canvas = document.createElement('canvas')
+  const canvas  = document.createElement('canvas')
   canvas.width  = SIZE
   canvas.height = SIZE
-  const ctx = canvas.getContext('2d')!
+  const ctx     = canvas.getContext('2d')!
 
-  /* ── background gradient ── */
+  /* ── 2. Background: dark ink-to-violet gradient ── */
   const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE)
-  bg.addColorStop(0,   '#0A0612')
-  bg.addColorStop(0.5, '#1A0B35')
-  bg.addColorStop(1,   '#0F0820')
+  bg.addColorStop(0,    '#0A0612')   /* ink — Nexus primary dark */
+  bg.addColorStop(0.45, '#160930')   /* deep violet mid */
+  bg.addColorStop(1,    '#0F0620')   /* near-black with violet cast */
   ctx.fillStyle = bg
   ctx.fillRect(0, 0, SIZE, SIZE)
 
-  /* ── subtle noise texture via small dots ── */
+  /* ── 3. Film-grain noise (subtle — 4% opacity micro-dots) ── */
   ctx.globalAlpha = 0.04
   for (let i = 0; i < 4000; i++) {
     ctx.fillStyle = '#ffffff'
@@ -369,53 +413,66 @@ async function generateShareCard(creator: Creator): Promise<string> {
   }
   ctx.globalAlpha = 1
 
-  /* ── decorative orbs ── */
-  const orb1 = ctx.createRadialGradient(200, 200, 0, 200, 200, 400)
-  orb1.addColorStop(0, 'rgba(139,49,232,0.25)')
+  /* ── 4. Ambient colour orbs ── */
+  /* Top-left violet orb */
+  const orb1 = ctx.createRadialGradient(160, 220, 0, 160, 220, 460)
+  orb1.addColorStop(0, 'rgba(139,49,232,0.32)')
   orb1.addColorStop(1, 'rgba(139,49,232,0)')
   ctx.fillStyle = orb1
   ctx.fillRect(0, 0, SIZE, SIZE)
-
-  const orb2 = ctx.createRadialGradient(SIZE - 150, SIZE - 150, 0, SIZE - 150, SIZE - 150, 350)
-  orb2.addColorStop(0, 'rgba(255,51,188,0.18)')
+  /* Bottom-right magenta orb */
+  const orb2 = ctx.createRadialGradient(SIZE - 120, SIZE - 140, 0, SIZE - 120, SIZE - 140, 380)
+  orb2.addColorStop(0, 'rgba(255,51,188,0.22)')
   orb2.addColorStop(1, 'rgba(255,51,188,0)')
   ctx.fillStyle = orb2
   ctx.fillRect(0, 0, SIZE, SIZE)
+  /* Centre-bottom warm glow */
+  const orb3 = ctx.createRadialGradient(SIZE / 2, SIZE - 80, 0, SIZE / 2, SIZE - 80, 320)
+  orb3.addColorStop(0, 'rgba(180,79,240,0.18)')
+  orb3.addColorStop(1, 'rgba(180,79,240,0)')
+  ctx.fillStyle = orb3
+  ctx.fillRect(0, 0, SIZE, SIZE)
 
-  /* ── rank ring colours ── */
   const rr = RANK_RING[creator.rank]!
 
-  /* ── large ghost rank number behind everything ── */
+  /* ── 5. Giant ghost rank number — the visual signature ── */
   ctx.save()
-  ctx.font = `900 380px Arial, sans-serif`
+  ctx.font      = rubik(900, 420)
   ctx.textAlign = 'center'
-  const ghostGrad = ctx.createLinearGradient(0, SIZE * 0.45, 0, SIZE * 0.85)
-  ghostGrad.addColorStop(0, 'rgba(139,49,232,0.18)')
-  ghostGrad.addColorStop(1, 'rgba(139,49,232,0)')
-  ctx.fillStyle = ghostGrad
-  ctx.fillText(`${creator.rank}`, SIZE / 2, SIZE * 0.82)
+  ctx.textBaseline = 'alphabetic'
+  const ghostG  = ctx.createLinearGradient(0, SIZE * 0.42, 0, SIZE * 0.88)
+  ghostG.addColorStop(0, 'rgba(139,49,232,0.22)')
+  ghostG.addColorStop(1, 'rgba(139,49,232,0)')
+  ctx.fillStyle = ghostG
+  ctx.fillText(String(creator.rank), SIZE / 2, SIZE * 0.85)
   ctx.restore()
 
-  /* ── circular avatar at top-centre ── */
-  const AV = 200   /* avatar diameter */
-  const AX = SIZE / 2
-  const AY = 310   /* centre Y */
-  const RING = 10  /* ring thickness */
+  /* ── 6. Circular avatar — top-centre ── */
+  const AV   = 210   /* diameter */
+  const AX   = SIZE / 2
+  const AY   = 315   /* circle centre Y */
+  const RING = 12    /* ring thickness */
 
-  /* Ring */
-  const ringGrad = ctx.createLinearGradient(AX - AV / 2, AY - AV / 2, AX + AV / 2, AY + AV / 2)
-  ringGrad.addColorStop(0, rr.from)
-  ringGrad.addColorStop(0.5, rr.via)
-  ringGrad.addColorStop(1, rr.to)
+  /* Rank-coloured gradient ring with glow */
+  const ringG = ctx.createLinearGradient(AX - AV / 2, AY - AV / 2, AX + AV / 2, AY + AV / 2)
+  ringG.addColorStop(0,   rr.from)
+  ringG.addColorStop(0.5, rr.via)
+  ringG.addColorStop(1,   rr.to)
   ctx.beginPath()
-  ctx.arc(AX, AY, AV / 2 + RING, 0, Math.PI * 2)
-  ctx.fillStyle = ringGrad
+  ctx.arc(AX, AY, AV / 2 + RING + 3, 0, Math.PI * 2)
+  ctx.fillStyle   = ringG
   ctx.shadowColor = rr.glow
-  ctx.shadowBlur = 40
+  ctx.shadowBlur  = 50
   ctx.fill()
-  ctx.shadowBlur = 0
+  ctx.shadowBlur  = 0
 
-  /* Avatar fill (colour or image) */
+  /* Dark separator between ring and avatar */
+  ctx.beginPath()
+  ctx.arc(AX, AY, AV / 2 + 3, 0, Math.PI * 2)
+  ctx.fillStyle = '#0A0612'
+  ctx.fill()
+
+  /* Avatar clip */
   ctx.save()
   ctx.beginPath()
   ctx.arc(AX, AY, AV / 2, 0, Math.PI * 2)
@@ -426,123 +483,183 @@ async function generateShareCard(creator: Creator): Promise<string> {
       const img = new Image()
       img.crossOrigin = 'anonymous'
       await new Promise<void>((res, rej) => {
-        img.onload = () => res()
-        img.onerror = () => rej()
+        img.onload  = () => res()
+        img.onerror = () => rej(new Error('img load failed'))
         img.src = creator.avatarUrl
       })
       ctx.drawImage(img, AX - AV / 2, AY - AV / 2, AV, AV)
     } catch {
-      /* fallback to colour + initials */
+      /* Photo failed — fall through to initials */
       ctx.fillStyle = creator.avatarColor
       ctx.fillRect(AX - AV / 2, AY - AV / 2, AV, AV)
+      ctx.fillStyle    = 'rgba(255,255,255,0.95)'
+      ctx.font         = rubik(900, 78)
+      ctx.textAlign    = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(creator.initials, AX, AY)
     }
   } else {
+    /* No photo — colour fill + initials in Rubik Black */
     ctx.fillStyle = creator.avatarColor
     ctx.fillRect(AX - AV / 2, AY - AV / 2, AV, AV)
-    ctx.fillStyle = 'rgba(255,255,255,0.95)'
-    ctx.font = `900 72px Arial, sans-serif`
-    ctx.textAlign = 'center'
+    ctx.fillStyle    = 'rgba(255,255,255,0.95)'
+    ctx.font         = rubik(900, 78)
+    ctx.textAlign    = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(creator.initials, AX, AY)
-    ctx.textBaseline = 'alphabetic'
   }
   ctx.restore()
+  ctx.textBaseline = 'alphabetic'
 
-  /* ── name ── */
+  /* ── 7. Creator name — Rubik Black 900, white ── */
+  ctx.font      = rubik(900, 62)
   ctx.fillStyle = '#FFFFFF'
-  ctx.font      = `900 58px Arial, sans-serif`
   ctx.textAlign = 'center'
-  ctx.fillText(creator.name, SIZE / 2, AY + AV / 2 + 80)
+  /* Letter-spacing simulation: draw char-by-char is complex;
+     instead we use a tight but clean single fillText.
+     Real tracking: canvas doesn't support letter-spacing natively
+     but Rubik at 900 is tight by design — looks correct.         */
+  ctx.fillText(creator.name, SIZE / 2, AY + AV / 2 + 84)
 
-  /* ── handle in gradient ── */
-  const handleGrad = ctx.createLinearGradient(SIZE * 0.25, 0, SIZE * 0.75, 0)
-  handleGrad.addColorStop(0, '#8B31E8')
-  handleGrad.addColorStop(1, '#FF33BC')
-  ctx.fillStyle = handleGrad
-  ctx.font      = `700 36px Arial, sans-serif`
-  ctx.fillText(`@${creator.handle}`, SIZE / 2, AY + AV / 2 + 136)
+  /* ── 8. @handle — Rubik 700, primary→magenta gradient ── */
+  const handleG = ctx.createLinearGradient(SIZE * 0.2, 0, SIZE * 0.8, 0)
+  handleG.addColorStop(0,   '#8B31E8')   /* primary */
+  handleG.addColorStop(0.5, '#B44FF0')   /* primary-lt */
+  handleG.addColorStop(1,   '#FF33BC')   /* magenta */
+  ctx.fillStyle = handleG
+  ctx.font      = rubik(700, 38)
+  ctx.fillText(`@${creator.handle}`, SIZE / 2, AY + AV / 2 + 144)
 
-  /* ── rank badge pill ── */
-  const PILL_W = 380, PILL_H = 96, PILL_X = SIZE / 2 - PILL_W / 2, PILL_Y = AY + AV / 2 + 176
-  const pillGrad = ctx.createLinearGradient(PILL_X, 0, PILL_X + PILL_W, 0)
-  pillGrad.addColorStop(0, rr.from)
-  pillGrad.addColorStop(0.5, rr.via)
-  pillGrad.addColorStop(1, rr.to)
+  /* ── 9. Rank badge pill ── */
+  const PILL_W = 400
+  const PILL_H = 104
+  const PILL_X = SIZE / 2 - PILL_W / 2
+  const PILL_Y = AY + AV / 2 + 192
+
+  /* Pill background gradient */
+  const pillG = ctx.createLinearGradient(PILL_X, 0, PILL_X + PILL_W, 0)
+  pillG.addColorStop(0,   rr.from)
+  pillG.addColorStop(0.5, rr.via)
+  pillG.addColorStop(1,   rr.to)
   ctx.beginPath()
-  roundRect(ctx, PILL_X, PILL_Y, PILL_W, PILL_H, 48)
-  ctx.fillStyle = pillGrad
+  roundRect(ctx, PILL_X, PILL_Y, PILL_W, PILL_H, 52)
+  ctx.fillStyle   = pillG
   ctx.shadowColor = rr.glow
-  ctx.shadowBlur = 28
+  ctx.shadowBlur  = 36
   ctx.fill()
-  ctx.shadowBlur = 0
+  ctx.shadowBlur  = 0
 
-  /* emoji */
-  ctx.font = `52px Arial, sans-serif`
-  ctx.fillStyle = '#FFFFFF'
-  ctx.fillText(rr.emoji, SIZE / 2 - 90, PILL_Y + 62)
+  /* Pill inner gloss — subtle top highlight */
+  const glossG = ctx.createLinearGradient(0, PILL_Y, 0, PILL_Y + PILL_H * 0.5)
+  glossG.addColorStop(0, 'rgba(255,255,255,0.18)')
+  glossG.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.beginPath()
+  roundRect(ctx, PILL_X + 2, PILL_Y + 2, PILL_W - 4, PILL_H * 0.5, 50)
+  ctx.fillStyle = glossG
+  ctx.fill()
 
-  /* rank text */
-  ctx.font = `900 40px Arial, sans-serif`
-  ctx.fillText(rr.label, SIZE / 2 + 28, PILL_Y + 62)
+  /* Emoji in pill */
+  ctx.font         = `56px 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif`
+  ctx.fillStyle    = '#FFFFFF'
+  ctx.textAlign    = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(rr.emoji, SIZE / 2 - 96, PILL_Y + PILL_H / 2)
 
-  /* ── NSC score ── */
-  ctx.fillStyle = 'rgba(255,255,255,0.40)'
-  ctx.font      = `600 22px Arial, sans-serif`
-  ctx.fillText('Nexus Score™', SIZE / 2, PILL_Y + PILL_H + 52)
-  ctx.fillStyle = 'rgba(255,255,255,0.80)'
-  ctx.font      = `900 32px Arial, sans-serif`
-  ctx.fillText(`NSC ${creator.nsc.toLocaleString()}`, SIZE / 2, PILL_Y + PILL_H + 94)
+  /* Rank label — Rubik Black */
+  ctx.font         = rubik(900, 42)
+  ctx.fillStyle    = '#FFFFFF'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(rr.label, SIZE / 2 + 30, PILL_Y + PILL_H / 2)
+  ctx.textBaseline = 'alphabetic'
 
-  /* ── niche pill ── */
+  /* ── 10. NSC score block ── */
+  const scoreY = PILL_Y + PILL_H + 54
+  ctx.font      = rubik(400, 22)
+  ctx.fillStyle = 'rgba(255,255,255,0.38)'
+  ctx.textAlign = 'center'
+  ctx.fillText('NEXUS SCORE™', SIZE / 2, scoreY)
+
+  ctx.font      = rubik(900, 48)
+  ctx.fillStyle = 'rgba(255,255,255,0.88)'
+  ctx.fillText(`NSC ${creator.nsc.toLocaleString()}`, SIZE / 2, scoreY + 56)
+
+  /* ── 11. Niche category pill ── */
   const NICHE = creator.nicheLabel.toUpperCase()
-  ctx.font = `700 20px Arial, sans-serif`
-  const nW = ctx.measureText(NICHE).width + 48
-  const nX = SIZE / 2 - nW / 2
-  const nY = PILL_Y + PILL_H + 120
+  ctx.font     = rubik(700, 21)
+  const nMet   = ctx.measureText(NICHE)
+  const nW     = nMet.width + 56
+  const nX     = SIZE / 2 - nW / 2
+  const nY     = scoreY + 90
+
+  /* Pill border */
   ctx.beginPath()
-  roundRect(ctx, nX, nY, nW, 40, 20)
-  ctx.fillStyle = 'rgba(139,49,232,0.25)'
+  roundRect(ctx, nX - 1, nY - 1, nW + 2, 50, 26)
+  const nicheBorderG = ctx.createLinearGradient(nX, 0, nX + nW, 0)
+  nicheBorderG.addColorStop(0,   '#8B31E8')
+  nicheBorderG.addColorStop(1,   '#FF33BC')
+  ctx.fillStyle = nicheBorderG
   ctx.fill()
-  ctx.fillStyle = 'rgba(255,255,255,0.75)'
-  ctx.fillText(NICHE, SIZE / 2, nY + 26)
 
-  /* ── footer band ── */
-  const footerH = 130
-  const footerY = SIZE - footerH
-  const footerBg = ctx.createLinearGradient(0, footerY, 0, SIZE)
-  footerBg.addColorStop(0, 'rgba(139,49,232,0.0)')
-  footerBg.addColorStop(0.3, 'rgba(139,49,232,0.45)')
-  footerBg.addColorStop(1, 'rgba(139,49,232,0.60)')
-  ctx.fillStyle = footerBg
-  ctx.fillRect(0, footerY, SIZE, footerH)
-
-  /* Divider line */
-  const lineGrad = ctx.createLinearGradient(80, 0, SIZE - 80, 0)
-  lineGrad.addColorStop(0, 'rgba(255,255,255,0)')
-  lineGrad.addColorStop(0.3, 'rgba(255,255,255,0.35)')
-  lineGrad.addColorStop(0.7, 'rgba(255,255,255,0.35)')
-  lineGrad.addColorStop(1, 'rgba(255,255,255,0)')
-  ctx.strokeStyle = lineGrad
-  ctx.lineWidth = 1
+  /* Pill fill */
   ctx.beginPath()
-  ctx.moveTo(80, footerY + 1); ctx.lineTo(SIZE - 80, footerY + 1)
+  roundRect(ctx, nX, nY, nW, 48, 25)
+  ctx.fillStyle = 'rgba(10,6,18,0.65)'
+  ctx.fill()
+
+  /* Pill text */
+  ctx.fillStyle    = 'rgba(255,255,255,0.85)'
+  ctx.textAlign    = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(NICHE, SIZE / 2, nY + 24)
+  ctx.textBaseline = 'alphabetic'
+
+  /* ── 12. Footer band ── */
+  const footerH = 148
+  const footerY = SIZE - footerH
+
+  /* Fade-in dark band */
+  const footerBg = ctx.createLinearGradient(0, footerY - 40, 0, SIZE)
+  footerBg.addColorStop(0,    'rgba(10,6,18,0)')
+  footerBg.addColorStop(0.25, 'rgba(10,6,18,0.75)')
+  footerBg.addColorStop(1,    'rgba(10,6,18,0.95)')
+  ctx.fillStyle = footerBg
+  ctx.fillRect(0, footerY - 40, SIZE, footerH + 40)
+
+  /* Gradient divider line */
+  const lineG = ctx.createLinearGradient(0, 0, SIZE, 0)
+  lineG.addColorStop(0,    'rgba(139,49,232,0)')
+  lineG.addColorStop(0.2,  'rgba(139,49,232,0.7)')
+  lineG.addColorStop(0.5,  'rgba(255,51,188,0.9)')
+  lineG.addColorStop(0.8,  'rgba(139,49,232,0.7)')
+  lineG.addColorStop(1,    'rgba(139,49,232,0)')
+  ctx.strokeStyle = lineG
+  ctx.lineWidth   = 2
+  ctx.beginPath()
+  ctx.moveTo(60, footerY + 2)
+  ctx.lineTo(SIZE - 60, footerY + 2)
   ctx.stroke()
 
-  /* Brand name */
-  ctx.fillStyle = '#FFFFFF'
-  ctx.font      = `900 34px Arial, sans-serif`
+  /* Brand name — Rubik Black, gradient fill */
+  const brandG = ctx.createLinearGradient(SIZE * 0.2, 0, SIZE * 0.8, 0)
+  brandG.addColorStop(0,   '#8B31E8')
+  brandG.addColorStop(0.5, '#B44FF0')
+  brandG.addColorStop(1,   '#FF33BC')
+  ctx.font      = rubik(900, 38)
+  ctx.fillStyle = brandG
   ctx.textAlign = 'center'
-  ctx.fillText('CREATOR NEXUS', SIZE / 2, footerY + 48)
+  ctx.fillText('CREATOR NEXUS', SIZE / 2, footerY + 54)
 
-  ctx.fillStyle = 'rgba(255,255,255,0.50)'
-  ctx.font      = `500 20px Arial, sans-serif`
-  ctx.fillText('by Nexfluence · Ranked by Nexus Score™', SIZE / 2, footerY + 82)
+  /* Sub-tagline — Rubik 400 */
+  ctx.font      = rubik(400, 20)
+  ctx.fillStyle = 'rgba(255,255,255,0.42)'
+  ctx.fillText('by Nexfluence  ·  Ranked by Nexus Score™', SIZE / 2, footerY + 90)
 
-  ctx.fillStyle = 'rgba(255,255,255,0.30)'
-  ctx.font      = `500 18px Arial, sans-serif`
-  ctx.fillText('nexus.nexfluence.eu', SIZE / 2, footerY + 112)
+  /* URL — Rubik 400, muted */
+  ctx.font      = rubik(400, 18)
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'
+  ctx.fillText('nexus.nexfluence.eu', SIZE / 2, footerY + 122)
 
-  return canvas.toDataURL('image/png')
+  return canvas.toDataURL('image/png', 1.0)
 }
 
 /* ─── roundRect polyfill ─────────────────────────────────────────── */
