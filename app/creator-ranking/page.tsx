@@ -36,7 +36,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
    — Deep ink-to-violet gradient background
    — Creator circular avatar at top-centre, 160px, gradient ring
      coloured by rank (gold/1, silver/2, bronze/3)
-   — Name in white Rubik Black, @handle in gradient text
+   — Name in white Yusei Magic (fallback to system)
+   — @handle in gradient text
    — Large rank badge in centre
    — Nexfluence logo + URL in footer band
    — Exported as PNG via canvas.toBlob → anchor.download
@@ -339,19 +340,13 @@ function RankDelta({ creator }: { creator: Creator }) {
 /* ════════════════════════════════════════════════════════════════════
    CANVAS SHARE CARD GENERATOR — 1080×1080 Instagram-ready PNG
    ─────────────────────────────────────────────────────────────────
-   THE FONT FIX:
-   Canvas 2D ignores CSS @font-face declarations by default —
-   it only sees fonts that the browser has already rendered on
-   screen. To use Rubik (--font-rubik) in the canvas we must load
-   it explicitly via the FontFace API and add it to document.fonts
-   BEFORE any ctx.font call. We load three weights:
-     400 → body copy (handle, footer tagline)
-     700 → medium emphasis (NSC label, niche tag)
-     900 → heavy display (name, rank badge, brand name)
-   Source: Google Fonts CDN subset for Latin Extended (covers
-   all Baltic characters: ā, ē, ģ, ī, ķ, ļ, ņ, š, ū, ž etc.)
+   FONT LOADING — Yusei Magic (your font)
+   We inject the Google Fonts stylesheet and use document.fonts.load()
+   to guarantee the font is ready before any canvas text call.
+   If loading fails, we fall back to system fonts so the card still
+   renders (just with a different typeface).
 
-   COLOUR PALETTE used on canvas — exact Nexus v4 LIGHT tokens:
+   COLOUR PALETTE (unchanged):
      Primary     #8B31E8   (violet)
      Primary-lt  #B44FF0   (gradient mid)
      Magenta     #FF33BC
@@ -360,34 +355,40 @@ function RankDelta({ creator }: { creator: Creator }) {
      White       #FFFFFF
    ════════════════════════════════════════════════════════════════════ */
 
-/* Module-level font cache — load once per session, reuse every call  */
-let _rubikLoaded = false
-async function ensureRubik(): Promise<void> {
-  if (_rubikLoaded) return
-  /* Google Fonts CSS2 API returns @font-face blocks for Rubik.
-     We load the three weights we need as binary FontFace objects
-     so Canvas can use them immediately after .load() resolves.    */
-  const BASE = 'https://fonts.gstatic.com/s/rubik/v28/'
-  const faces = [
-    new FontFace('Rubik', `url(${BASE}iJWZBXyIfDnIV5PNhY1KTN7Z-Yh-B4i1UA.woff2)`, { weight: '400' }),
-    new FontFace('Rubik', `url(${BASE}iJWZBXyIfDnIV5PNhY1KTN7Z-Yh-4Yi1UA.woff2)`, { weight: '700' }),
-    new FontFace('Rubik', `url(${BASE}iJWZBXyIfDnIV5PNhY1KTN7Z-Yh-NYm1UA.woff2)`, { weight: '900' }),
-  ]
-  await Promise.all(faces.map(async f => {
-    await f.load()
-    document.fonts.add(f)
-  }))
-  _rubikLoaded = true
+let _yuseiLoaded = false
+
+async function ensureYuseiMagic(): Promise<void> {
+  if (_yuseiLoaded) return
+
+  try {
+    // Inject Google Fonts stylesheet if not already present
+    if (!document.querySelector('link[href*="Yusei+Magic"]')) {
+      const link = document.createElement('link')
+      link.href = 'https://fonts.googleapis.com/css2?family=Yusei+Magic&display=swap'
+      link.rel = 'stylesheet'
+      document.head.appendChild(link)
+    }
+
+    // Wait for the browser to load the font face (Yusei Magic only has Regular 400)
+    await document.fonts.load('400 1em "Yusei Magic"')
+
+    _yuseiLoaded = true
+  } catch {
+    // If font loading fails, we'll still render using fallback fonts
+    _yuseiLoaded = true // prevent repeated attempts
+  }
 }
 
-/* Helper: set ctx.font using Rubik with a system-font fallback chain */
-function rubik(weight: 400 | 700 | 900, px: number): string {
-  return `${weight} ${px}px 'Rubik', 'Nunito', 'Poppins', 'Helvetica Neue', Arial, sans-serif`
+/* Helper: set ctx.font using Yusei Magic with a system-font fallback chain.
+   The 'weight' parameter is kept for consistency but Yusei Magic only has 400,
+   so we apply it anyway (browser will use the closest available). */
+function yuseiMagic(weight: 400 | 700 | 900, px: number): string {
+  return `${weight} ${px}px 'Yusei Magic', 'Nunito', 'Poppins', 'Helvetica Neue', Arial, sans-serif`
 }
 
 async function generateShareCard(creator: Creator): Promise<string> {
-  /* ── 1. Load Rubik into the browser font registry first ── */
-  await ensureRubik()
+  /* ── 1. Load Yusei Magic into the browser font registry first ── */
+  await ensureYuseiMagic()
 
   const SIZE = 1080
   const canvas  = document.createElement('canvas')
@@ -437,7 +438,7 @@ async function generateShareCard(creator: Creator): Promise<string> {
 
   /* ── 5. Giant ghost rank number — the visual signature ── */
   ctx.save()
-  ctx.font      = rubik(900, 420)
+  ctx.font      = yuseiMagic(900, 420)
   ctx.textAlign = 'center'
   ctx.textBaseline = 'alphabetic'
   const ghostG  = ctx.createLinearGradient(0, SIZE * 0.42, 0, SIZE * 0.88)
@@ -493,17 +494,17 @@ async function generateShareCard(creator: Creator): Promise<string> {
       ctx.fillStyle = creator.avatarColor
       ctx.fillRect(AX - AV / 2, AY - AV / 2, AV, AV)
       ctx.fillStyle    = 'rgba(255,255,255,0.95)'
-      ctx.font         = rubik(900, 78)
+      ctx.font         = yuseiMagic(900, 78)
       ctx.textAlign    = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(creator.initials, AX, AY)
     }
   } else {
-    /* No photo — colour fill + initials in Rubik Black */
+    /* No photo — colour fill + initials in Yusei Magic */
     ctx.fillStyle = creator.avatarColor
     ctx.fillRect(AX - AV / 2, AY - AV / 2, AV, AV)
     ctx.fillStyle    = 'rgba(255,255,255,0.95)'
-    ctx.font         = rubik(900, 78)
+    ctx.font         = yuseiMagic(900, 78)
     ctx.textAlign    = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(creator.initials, AX, AY)
@@ -511,23 +512,19 @@ async function generateShareCard(creator: Creator): Promise<string> {
   ctx.restore()
   ctx.textBaseline = 'alphabetic'
 
-  /* ── 7. Creator name — Rubik Black 900, white ── */
-  ctx.font      = rubik(900, 62)
+  /* ── 7. Creator name — Yusei Magic, white ── */
+  ctx.font      = yuseiMagic(900, 62)
   ctx.fillStyle = '#FFFFFF'
   ctx.textAlign = 'center'
-  /* Letter-spacing simulation: draw char-by-char is complex;
-     instead we use a tight but clean single fillText.
-     Real tracking: canvas doesn't support letter-spacing natively
-     but Rubik at 900 is tight by design — looks correct.         */
   ctx.fillText(creator.name, SIZE / 2, AY + AV / 2 + 84)
 
-  /* ── 8. @handle — Rubik 700, primary→magenta gradient ── */
+  /* ── 8. @handle — Yusei Magic, primary→magenta gradient ── */
   const handleG = ctx.createLinearGradient(SIZE * 0.2, 0, SIZE * 0.8, 0)
   handleG.addColorStop(0,   '#8B31E8')   /* primary */
   handleG.addColorStop(0.5, '#B44FF0')   /* primary-lt */
   handleG.addColorStop(1,   '#FF33BC')   /* magenta */
   ctx.fillStyle = handleG
-  ctx.font      = rubik(700, 38)
+  ctx.font      = yuseiMagic(700, 38)
   ctx.fillText(`@${creator.handle}`, SIZE / 2, AY + AV / 2 + 144)
 
   /* ── 9. Rank badge pill ── */
@@ -565,8 +562,8 @@ async function generateShareCard(creator: Creator): Promise<string> {
   ctx.textBaseline = 'middle'
   ctx.fillText(rr.emoji, SIZE / 2 - 96, PILL_Y + PILL_H / 2)
 
-  /* Rank label — Rubik Black */
-  ctx.font         = rubik(900, 42)
+  /* Rank label — Yusei Magic */
+  ctx.font         = yuseiMagic(900, 42)
   ctx.fillStyle    = '#FFFFFF'
   ctx.textBaseline = 'middle'
   ctx.fillText(rr.label, SIZE / 2 + 30, PILL_Y + PILL_H / 2)
@@ -574,18 +571,18 @@ async function generateShareCard(creator: Creator): Promise<string> {
 
   /* ── 10. NSC score block ── */
   const scoreY = PILL_Y + PILL_H + 54
-  ctx.font      = rubik(400, 22)
+  ctx.font      = yuseiMagic(400, 22)
   ctx.fillStyle = 'rgba(255,255,255,0.38)'
   ctx.textAlign = 'center'
   ctx.fillText('NEXUS SCORE™', SIZE / 2, scoreY)
 
-  ctx.font      = rubik(900, 48)
+  ctx.font      = yuseiMagic(900, 48)
   ctx.fillStyle = 'rgba(255,255,255,0.88)'
   ctx.fillText(`NSC ${creator.nsc.toLocaleString()}`, SIZE / 2, scoreY + 56)
 
   /* ── 11. Niche category pill ── */
   const NICHE = creator.nicheLabel.toUpperCase()
-  ctx.font     = rubik(700, 21)
+  ctx.font     = yuseiMagic(700, 21)
   const nMet   = ctx.measureText(NICHE)
   const nW     = nMet.width + 56
   const nX     = SIZE / 2 - nW / 2
@@ -639,23 +636,23 @@ async function generateShareCard(creator: Creator): Promise<string> {
   ctx.lineTo(SIZE - 60, footerY + 2)
   ctx.stroke()
 
-  /* Brand name — Rubik Black, gradient fill */
+  /* Brand name — Yusei Magic, gradient fill */
   const brandG = ctx.createLinearGradient(SIZE * 0.2, 0, SIZE * 0.8, 0)
   brandG.addColorStop(0,   '#8B31E8')
   brandG.addColorStop(0.5, '#B44FF0')
   brandG.addColorStop(1,   '#FF33BC')
-  ctx.font      = rubik(900, 38)
+  ctx.font      = yuseiMagic(900, 38)
   ctx.fillStyle = brandG
   ctx.textAlign = 'center'
   ctx.fillText('CREATOR NEXUS', SIZE / 2, footerY + 54)
 
-  /* Sub-tagline — Rubik 400 */
-  ctx.font      = rubik(400, 20)
+  /* Sub-tagline — Yusei Magic 400 */
+  ctx.font      = yuseiMagic(400, 20)
   ctx.fillStyle = 'rgba(255,255,255,0.42)'
   ctx.fillText('by Nexfluence  ·  Ranked by Nexus Score™', SIZE / 2, footerY + 90)
 
-  /* URL — Rubik 400, muted */
-  ctx.font      = rubik(400, 18)
+  /* URL — Yusei Magic 400, muted */
+  ctx.font      = yuseiMagic(400, 18)
   ctx.fillStyle = 'rgba(255,255,255,0.25)'
   ctx.fillText('nexus.nexfluence.eu', SIZE / 2, footerY + 122)
 
@@ -1092,11 +1089,7 @@ export default function RankingsPage() {
             <div className="space-y-3">
               {rest.map((c, i) => (
                 <div key={c.id} style={{ animationDelay: `${i * 40}ms` }}
-                  className="animate-[fadeSlideIn_0.4s_ease_forwards] opacity-0"
-                  /* @keyframes defined in global CSS or inline:
-                     @keyframes fadeSlideIn { from { opacity:0; transform:translateY(8px) }
-                     to { opacity:1; transform:translateY(0) } }
-                     Add this to globals.css or use Tailwind's animation plugin. */>
+                  className="animate-[fadeSlideIn_0.4s_ease_forwards] opacity-0">
                   <RankRow creator={c}/>
                 </div>
               ))}
