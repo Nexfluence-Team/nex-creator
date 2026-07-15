@@ -1,53 +1,61 @@
 'use client'
 
-import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 
 /* ════════════════════════════════════════════════════════════════════
-   Creator Messages — app/creator/messages/page.tsx  (Nexfluence v4, LIGHT)
+   Creator Messages — app/creator-message/page.tsx  (Nexfluence v4, LIGHT)
    ════════════════════════════════════════════════════════════════════
-   Two-panel messenger: conversation list (left) + thread (right).
-
-   POV = CREATOR. isMe = msg.sender === 'creator'.
-
-   Inline special cards — what the CREATOR can do:
-
-   INVITE card (brand sent → sentByMe = false):
-     pending           → Accept | Decline | View proposal
-     accepted          → "View campaign →"
-     declined          → "Invite declined"
-
-   CONTRACT card (brand sent → sentByMe = false):
-     pending           → Sign contract | Request changes
-     signed            → Download / View contract →
-     changes_requested → "Awaiting revised contract from [brand]"
-
-   PAYMENT card (creator sends → sentByMe = true):
-     pending           → "Awaiting payment from [brand]" (creator waiting)
-     paid              → "Payment received ✓"
-     reason_given      → brand's reason shown in amber box
-
-   Creator's composer quick actions:
-     € icon → PaymentRequestModal (fill amount + note + campaign → insert card)
-     No campaign invite button (brand-only)
-     No send-contract button (brand-only)
+   OLX-INSPIRED ADDITIONS (this revision):
+   • Deal context bar — pinned strip under the thread header showing the
+     most recent deal/offer touchpoint for this conversation, mirroring
+     OLX's pinned-listing bar above a chat.
+   • Offer / counter-offer — a proper negotiation chain: each offer is
+     its own card (Accept / Counter / Decline). Countering supersedes
+     the old card and appends a fresh one, so the thread always reads
+     top-to-bottom as a real negotiation history.
+   • Raise a dispute — creator-initiated card, routes to /creator-dispute.
+   • Sign details — lightweight "confirm final terms" e-signature card,
+     distinct from a full Contract: either party can initiate; whoever
+     didn't can countersign inline.
+   • Invoice — formal line-itemized document (invoice #, line items,
+     computed total, due date), distinct from the existing quick
+     "Request payment" ask.
+   • All five creator actions (payment request, offer, sign details,
+     invoice, dispute) now live behind one "+" quick-actions popover
+     instead of a row of header icons.
+   • Route fixes: dashboard, profile, invite/contract "view", dispute.
    ════════════════════════════════════════════════════════════════════ */
 
 const CARD      = 'shadow-[0_1px_2px_rgba(10,6,18,0.04),0_12px_32px_-12px_rgba(139,49,232,0.16)]'
 const GRAD_BTN  = 'bg-gradient-to-r from-primary via-primary-lt to-magenta'
 const GRAD_TEXT = 'bg-gradient-to-r from-primary via-primary-lt to-magenta bg-clip-text text-transparent'
 
+let _uid = 0
+const newId = (p: string) => `${p}_${++_uid}_${Date.now()}`
+
 /* ════════════════════════════════════════════════════════════════════
-   TYPES — identical to brand messages page
+   TYPES
    ════════════════════════════════════════════════════════════════════ */
 type InviteStatus   = 'pending' | 'accepted' | 'declined'
 type ContractStatus = 'pending' | 'signed'   | 'changes_requested'
 type PaymentStatus  = 'pending' | 'paid'     | 'reason_given'
+type OfferStatus    = 'pending' | 'accepted' | 'declined' | 'countered'
+type DisputeStatus  = 'open' | 'under_review' | 'resolved'
+type SignStatus     = 'awaiting_counterparty' | 'fully_signed'
+type InvoiceStatus  = 'sent' | 'paid' | 'overdue'
+
+interface LineItem { desc: string; qty: number; rate: number }
+interface TermRow   { label: string; value: string }
 
 type SpecialCard =
   | { kind: 'invite';   campaignName: string; campaignObjective: string; rate: string;      status: InviteStatus;   sentByMe: boolean }
   | { kind: 'contract'; contractName: string; dealType: string;          pieces: string;    status: ContractStatus; sentByMe: boolean }
   | { kind: 'payment';  amount: string; dueDate: string; campaignName: string; note: string; status: PaymentStatus; sentByMe: boolean }
+  | { kind: 'offer';    campaignName: string; amount: string; note: string; offerBy: 'creator' | 'brand'; status: OfferStatus }
+  | { kind: 'dispute';  campaignName: string; reason: string; description: string; sentByMe: boolean; status: DisputeStatus }
+  | { kind: 'sign_details'; campaignName: string; terms: TermRow[]; sentByMe: boolean; status: SignStatus }
+  | { kind: 'invoice';  invoiceNumber: string; campaignName: string; lineItems: LineItem[]; dueDate: string; notes: string; status: InvoiceStatus; sentByMe: boolean }
 
 type Message = {
   id: string
@@ -71,18 +79,20 @@ type Conversation = {
   thread: Message[]
 }
 
+const DISPUTE_REASONS = [
+  'Payment overdue', 'Content unfairly rejected', 'Contract terms violated',
+  'Scope changed without agreement', 'Communication breakdown', 'Other',
+]
+
 /* ════════════════════════════════════════════════════════════════════
    MOCK DATA
-   Same narrative as brand page but POV-flipped:
-   creator = 'me' (right, gradient) | brand = 'them' (left, grey)
-   sentByMe values are from CREATOR perspective
    ════════════════════════════════════════════════════════════════════ */
 const INITIAL_CONVOS: Conversation[] = [
   {
     id: 'cv1',
     brandName: 'Kinetics', brandType: 'brand', color: '#8B31E8', initials: 'KI', logoUrl: null,
     unread: 1, online: true, lastTime: '2m ago',
-    lastMessage: 'Can we bump the commission to 18%?',
+    lastMessage: 'I countered at €340 for the 3 pieces.',
     thread: [
       { id: 'm1', sender: 'brand',   text: "Hey Amelia! We'd love to have you on the Vitamin-C Recovery Stack campaign this summer.", time: 'Jun 19, 10:02 AM' },
       { id: 'm2', sender: 'brand',   time: 'Jun 19, 10:03 AM', card: { kind: 'invite', campaignName: 'Vitamin-C Recovery Stack', campaignObjective: 'Conversions', rate: '15% commission', status: 'accepted', sentByMe: false } },
@@ -90,20 +100,22 @@ const INITIAL_CONVOS: Conversation[] = [
       { id: 'm4', sender: 'brand',   text: 'Amazing! Sending you the contract now.', time: 'Jun 19, 11:00 AM' },
       { id: 'm5', sender: 'brand',   time: 'Jun 19, 11:01 AM', card: { kind: 'contract', contractName: 'Vitamin-C Recovery Stack — Amelia Roze', dealType: 'Hybrid', pieces: '3 pieces', status: 'signed', sentByMe: false } },
       { id: 'm6', sender: 'creator', text: 'Signed! Looking forward to working with you on this.', time: 'Jun 19, 11:28 AM' },
-      { id: 'm7', sender: 'creator', text: 'One thing — can we bump the commission to 18%? The last campaign I did at 15% undersold my value a bit.', time: '2m ago' },
+      { id: 'm7', sender: 'brand',   time: '10m ago', card: { kind: 'offer', campaignName: 'Vitamin-C Recovery Stack — extra deliverable', amount: '€280', note: 'One extra Reel for the launch week push.', offerBy: 'brand', status: 'countered' } },
+      { id: 'm8', sender: 'creator', time: '2m ago', card: { kind: 'offer', campaignName: 'Vitamin-C Recovery Stack — extra deliverable', amount: '€340', note: 'Launch-week turnaround is tight — €340 covers the rush.', offerBy: 'creator', status: 'pending' } },
     ],
   },
   {
     id: 'cv2',
     brandName: 'Forma Fit', brandType: 'brand', color: '#2563EB', initials: 'FF', logoUrl: null,
     unread: 0, online: false, lastTime: '1h ago',
-    lastMessage: 'Payment is overdue — could you check?',
+    lastMessage: 'Dispute raised — awaiting Nexfluence review.',
     thread: [
       { id: 'm1', sender: 'brand',   time: 'Jun 10, 9:00 AM', card: { kind: 'invite', campaignName: 'Training Block Q3', campaignObjective: 'UGC', rate: 'From €400/video', status: 'accepted', sentByMe: false } },
       { id: 'm2', sender: 'creator', text: 'Sounds perfect for my training content. In!', time: 'Jun 10, 9:45 AM' },
       { id: 'm3', sender: 'brand',   time: 'Jun 10, 10:00 AM', card: { kind: 'contract', contractName: 'Training Block Q3 — Amelia Roze', dealType: 'Flat fee', pieces: '2 videos', status: 'signed', sentByMe: false } },
       { id: 'm4', sender: 'creator', text: 'Both videos are live — here are the links: [link1] [link2]', time: 'Jun 18, 2:14 PM' },
-      { id: 'm5', sender: 'creator', time: '1h ago', card: { kind: 'payment', amount: '€800', dueDate: 'Jun 18, 2026', campaignName: 'Training Block Q3', note: 'Both deliverables posted on Jun 18. Payment was due within 14 days of go-live per the contract.', status: 'pending', sentByMe: true } },
+      { id: 'm5', sender: 'creator', time: 'Jun 20, 9:00 AM', card: { kind: 'payment', amount: '€800', dueDate: 'Jun 18, 2026', campaignName: 'Training Block Q3', note: 'Both deliverables posted on Jun 18. Payment was due within 14 days of go-live per the contract.', status: 'pending', sentByMe: true } },
+      { id: 'm6', sender: 'creator', time: '1h ago', card: { kind: 'dispute', campaignName: 'Training Block Q3', reason: 'Payment overdue', description: 'Contract specifies payment within 14 days of go-live. Both deliverables went live Jun 18 and payment is now 2 days past due with no response to my payment request.', sentByMe: true, status: 'open' } },
     ],
   },
   {
@@ -122,25 +134,42 @@ const INITIAL_CONVOS: Conversation[] = [
     id: 'cv4',
     brandName: 'Amber Wellness', brandType: 'brand', color: '#CA8A04', initials: 'AW', logoUrl: null,
     unread: 0, online: false, lastTime: '1d ago',
-    lastMessage: "Great, I'll get started this week!",
+    lastMessage: "I've sent the final terms to sign off on before the full contract.",
     thread: [
       { id: 'm1', sender: 'brand',   time: 'Jun 18, 11:00 AM', card: { kind: 'invite', campaignName: 'Adaptogen Sleep Stack', campaignObjective: 'Conversions', rate: '12% commission', status: 'pending', sentByMe: false } },
       { id: 'm2', sender: 'creator', text: 'Thank you for the invite — reviewing the brief now.', time: 'Jun 18, 11:45 AM' },
       { id: 'm3', sender: 'brand',   text: 'No rush! Let us know if you have questions about the product or brief.', time: 'Jun 18, 12:00 PM' },
       { id: 'm4', sender: 'creator', text: "All good — accepting! Great, I'll get started this week.", time: '1d ago' },
+      { id: 'm5', sender: 'creator', time: '1d ago', card: {
+          kind: 'sign_details', campaignName: 'Adaptogen Sleep Stack',
+          terms: [
+            { label: 'Commission rate', value: '12% on tracked sales, 60-day cookie' },
+            { label: 'Deliverables', value: '3 pieces — Story, Reel, TikTok' },
+            { label: 'Timeline', value: 'Jul 5 – Aug 5' },
+            { label: 'Usage rights', value: 'Organic only, no paid amplification' },
+          ],
+          sentByMe: true, status: 'awaiting_counterparty',
+        } },
     ],
   },
   {
     id: 'cv5',
     brandName: 'Vāre Coffee', brandType: 'brand', color: '#EA580C', initials: 'VC', logoUrl: null,
     unread: 0, online: true, lastTime: '2d ago',
-    lastMessage: 'Payment received — thank you!',
+    lastMessage: 'Invoice INV-1042 sent — €240 due.',
     thread: [
       { id: 'm1', sender: 'brand',   time: 'Jun 5, 9:00 AM', card: { kind: 'invite', campaignName: 'New Roast Reveal — Baltic Tour', campaignObjective: 'Awareness', rate: '€80 gifting + 10%', status: 'accepted', sentByMe: false } },
       { id: 'm2', sender: 'brand',   time: 'Jun 5, 9:30 AM', card: { kind: 'contract', contractName: 'New Roast Reveal — Amelia Roze', dealType: 'Hybrid', pieces: '1 Reel', status: 'signed', sentByMe: false } },
-      { id: 'm3', sender: 'creator', time: 'Jun 12, 10:00 AM', card: { kind: 'payment', amount: '€240', dueDate: 'Jun 12, 2026', campaignName: 'New Roast Reveal', note: 'Reel live as per contract. Commission on tracked sales totals €240.', status: 'paid', sentByMe: true } },
-      { id: 'm4', sender: 'brand',   text: 'Payment processed — should hit your account within 2 business days.', time: '2d ago' },
-      { id: 'm5', sender: 'creator', text: 'Payment received — thank you! Would love to do another campaign.', time: '2d ago' },
+      { id: 'm3', sender: 'creator', text: 'Reel is live! Tracked sales are looking good already.', time: 'Jun 12, 9:40 AM' },
+      { id: 'm4', sender: 'creator', time: '2d ago', card: {
+          kind: 'invoice', invoiceNumber: 'INV-1042', campaignName: 'New Roast Reveal', dueDate: 'Jun 26, 2026',
+          lineItems: [
+            { desc: 'Instagram Reel — New Roast Reveal', qty: 1, rate: 80 },
+            { desc: 'Affiliate commission on tracked sales', qty: 1, rate: 160 },
+          ],
+          notes: 'Reel live since Jun 12. Commission calculated on tracked sales through Jun 20.',
+          status: 'sent', sentByMe: true,
+        } },
     ],
   },
   {
@@ -218,6 +247,21 @@ function BuildingIcon({ s = 11 }: { s?: number }) {
 function AgencyIcon({ s = 11 }: { s?: number }) {
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M2 20v-1a7 7 0 0114 0v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 11a3 3 0 000-6M22 20v-1a7 7 0 00-5-6.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
 }
+function HandshakeIcon({ s = 15 }: { s?: number }) {
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M11 17l2 2a1 1 0 103-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M14 14l2.5 2.5a1 1 0 103-3l-3.88-3.88a3 3 0 00-4.24 0l-.88.88a1 1 0 11-3-3l2.81-2.81a5.79 5.79 0 017.06-.87l.47.28a2 2 0 001.42.25L21 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 3l-1 11 6.5 6.5a1 1 0 103-3M3 4h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+}
+function ReceiptIcon({ s = 15 }: { s?: number }) {
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><path d="M9 8h6M9 12h6M9 16h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+}
+function PlusIcon({ s = 18 }: { s?: number }) {
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"/></svg>
+}
+function ScaleIcon({ s = 15 }: { s?: number }) {
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M12 3v18M5 7h14M5 7l-3 7a3.5 3.5 0 007 0L5 7zM19 7l-3 7a3.5 3.5 0 007 0L19 7zM8 21h8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+}
+function TrashIcon({ s = 14 }: { s?: number }) {
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+}
 
 /* ════════════════════════════════════════════════════════════════════
    SMALL SHARED COMPONENTS
@@ -236,6 +280,62 @@ function BrandAvatar({ initials, color, logoUrl, size = 38, online = false }: {
   )
 }
 
+function euro(n: number) { return `€${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}` }
+
+function extractCampaignNames(convo: Conversation): string[] {
+  const set = new Set<string>()
+  convo.thread.forEach(m => {
+    if (!m.card) return
+    if (m.card.kind === 'invite') set.add(m.card.campaignName)
+    if (m.card.kind === 'contract') set.add(m.card.contractName.split(' — ')[0]!.trim())
+    if (m.card.kind === 'payment') set.add(m.card.campaignName)
+    if (m.card.kind === 'offer') set.add(m.card.campaignName)
+  })
+  return Array.from(set)
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DEAL CONTEXT BAR — OLX-style pinned strip showing the most recent
+   deal touchpoint for this conversation (invite / contract / offer),
+   so the negotiation always has visible anchor context above the chat.
+   ════════════════════════════════════════════════════════════════════ */
+function computeDealContext(convo: Conversation): { label: string; sub: string; tone: 'green' | 'grey' | 'red' } | null {
+  for (let i = convo.thread.length - 1; i >= 0; i--) {
+    const m = convo.thread[i]!
+    if (!m.card) continue
+    if (m.card.kind === 'offer') {
+      const tone = m.card.status === 'accepted' ? 'green' : m.card.status === 'declined' ? 'red' : 'grey'
+      return { label: `${m.card.campaignName} · ${m.card.amount}`, sub: m.card.status === 'pending' ? (m.card.offerBy === 'creator' ? 'Your offer — awaiting response' : 'Their offer — needs your response') : m.card.status, tone }
+    }
+    if (m.card.kind === 'contract') {
+      const tone = m.card.status === 'signed' ? 'green' : m.card.status === 'changes_requested' ? 'red' : 'grey'
+      return { label: m.card.contractName.split(' — ')[0]!.trim(), sub: m.card.status.replace('_', ' '), tone }
+    }
+    if (m.card.kind === 'invite') {
+      const tone = m.card.status === 'accepted' ? 'green' : m.card.status === 'declined' ? 'red' : 'grey'
+      return { label: `${m.card.campaignName} · ${m.card.rate}`, sub: m.card.status, tone }
+    }
+  }
+  return null
+}
+
+function DealContextBar({ convo, onView }: { convo: Conversation; onView: () => void }) {
+  const ctx = useMemo(() => computeDealContext(convo), [convo])
+  if (!ctx) return null
+  const toneCls = ctx.tone === 'green' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : ctx.tone === 'red' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-surface-sub text-ink/60 border-primary/8'
+  return (
+    <div className={`flex flex-shrink-0 items-center justify-between gap-3 border-b px-5 py-2.5 ${toneCls}`}>
+      <div className="min-w-0">
+        <p className="truncate text-[12px] font-bold leading-tight">{ctx.label}</p>
+        <p className="truncate text-[10.5px] font-medium capitalize leading-tight opacity-70">{ctx.sub}</p>
+      </div>
+      <button onClick={onView} className="flex-shrink-0 text-[11.5px] font-bold underline decoration-1 underline-offset-2 opacity-80 hover:opacity-100">
+        View deal
+      </button>
+    </div>
+  )
+}
+
 /* The creator's own avatar is a circle (personal) */
 function CreatorAvatar({ size = 30 }: { size?: number }) {
   return (
@@ -247,7 +347,7 @@ function CreatorAvatar({ size = 30 }: { size?: number }) {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   INVITE CARD  — brand sent → sentByMe = false from creator's view
+   INVITE CARD
    ════════════════════════════════════════════════════════════════════ */
 function InviteCard({ card, convoId, onAction }: {
   card: Extract<SpecialCard, { kind: 'invite' }>
@@ -263,7 +363,6 @@ function InviteCard({ card, convoId, onAction }: {
 
   return (
     <div className={`w-[300px] max-w-full overflow-hidden rounded-2xl border bg-white ${CARD} ${card.status !== 'pending' ? 'border-primary/10' : 'border-primary/20'}`}>
-      {/* Top gradient band */}
       <div className={`flex items-center gap-2.5 px-4 py-3 ${GRAD_BTN}`}>
         <RocketIcon s={14}/>
         <span className="text-[11.5px] font-bold uppercase tracking-[0.10em] text-white/90">Campaign invite</span>
@@ -271,8 +370,6 @@ function InviteCard({ card, convoId, onAction }: {
           <span className={`ml-auto rounded-full border px-2.5 py-0.5 text-[10.5px] font-bold ${sc.cls}`}>{sc.label}</span>
         )}
       </div>
-
-      {/* Body */}
       <div className="px-4 py-3.5">
         <p className="text-[14px] font-extrabold leading-tight text-ink">{card.campaignName}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -280,8 +377,6 @@ function InviteCard({ card, convoId, onAction }: {
           <span className="text-[12px] font-semibold text-ink/50">{card.rate}</span>
         </div>
       </div>
-
-      {/* Creator actions — pending, brand sent it (sentByMe = false) */}
       {card.status === 'pending' && !card.sentByMe && (
         <div className="flex gap-2 border-t border-primary/10 px-4 py-3">
           <button onClick={() => onAction(convoId, 'invite', 'view')}
@@ -298,15 +393,11 @@ function InviteCard({ card, convoId, onAction }: {
           </button>
         </div>
       )}
-
-      {/* If creator sent the invite (agency flow) and waiting — not typical but handle */}
       {card.status === 'pending' && card.sentByMe && (
         <div className="border-t border-primary/10 px-4 py-3">
           <p className="text-[11.5px] font-semibold text-ink/40">Awaiting response…</p>
         </div>
       )}
-
-      {/* Resolved state footer */}
       {card.status !== 'pending' && (
         <div className="border-t border-primary/10 px-4 py-3">
           <button onClick={() => onAction(convoId, 'invite', 'view')}
@@ -320,7 +411,7 @@ function InviteCard({ card, convoId, onAction }: {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   CONTRACT CARD — brand sent → sentByMe = false from creator's view
+   CONTRACT CARD
    ════════════════════════════════════════════════════════════════════ */
 function ContractCard({ card, convoId, onAction }: {
   card: Extract<SpecialCard, { kind: 'contract' }>
@@ -336,7 +427,6 @@ function ContractCard({ card, convoId, onAction }: {
 
   return (
     <div className={`w-[300px] max-w-full overflow-hidden rounded-2xl border bg-white ${CARD} ${card.status === 'changes_requested' ? 'border-rose-200' : 'border-primary/10'}`}>
-      {/* Header */}
       <div className="flex items-center gap-3 border-b border-primary/10 px-4 py-3.5">
         <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${GRAD_BTN} shadow-[0_4px_10px_-4px_rgba(139,49,232,0.45)]`}>
           <FileIcon s={15}/>
@@ -346,15 +436,11 @@ function ContractCard({ card, convoId, onAction }: {
           <p className="text-[11px] font-semibold text-ink/45">{card.dealType} · {card.pieces}</p>
         </div>
       </div>
-
-      {/* Status row */}
       <div className="flex items-center justify-between px-4 py-2.5">
         <span className={`rounded-full border px-2.5 py-0.5 text-[10.5px] font-bold ${sm.badge}`}>{sm.label}</span>
         <button onClick={() => onAction(convoId, 'contract', 'view')}
           className="text-[12px] font-bold text-primary hover:underline">View</button>
       </div>
-
-      {/* Creator actions — brand sent it, creator hasn't acted yet */}
       {card.status === 'pending' && !card.sentByMe && (
         <div className="flex gap-2 border-t border-primary/10 px-4 py-3">
           <button onClick={() => onAction(convoId, 'contract', 'sign')}
@@ -367,8 +453,6 @@ function ContractCard({ card, convoId, onAction }: {
           </button>
         </div>
       )}
-
-      {/* Signed — download CTA */}
       {card.status === 'signed' && (
         <div className="flex gap-2 border-t border-emerald-100 bg-emerald-50 px-4 py-3">
           <button onClick={() => onAction(convoId, 'contract', 'download')}
@@ -377,8 +461,6 @@ function ContractCard({ card, convoId, onAction }: {
           </button>
         </div>
       )}
-
-      {/* Changes requested — creator already sent request, waiting */}
       {card.status === 'changes_requested' && (
         <div className="border-t border-rose-100 bg-rose-50 px-4 py-3">
           <p className="text-[11.5px] font-semibold text-rose-600">
@@ -391,42 +473,23 @@ function ContractCard({ card, convoId, onAction }: {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   PAYMENT CARD — creator sent it (sentByMe = true)
-   Shows status from creator's perspective:
-     pending      → "Awaiting payment" (creator waiting on brand)
-     paid         → "Received ✓"
-     reason_given → amber box showing brand's reason/explanation
+   PAYMENT CARD  (quick informal ask — distinct from Invoice)
    ════════════════════════════════════════════════════════════════════ */
-function PaymentCard({ card, convoId, brandName }: {
+function PaymentCard({ card, brandName }: {
   card: Extract<SpecialCard, { kind: 'payment' }>
-  convoId: string
   brandName: string
 }) {
-  const headerCls =
-    card.status === 'pending'      ? 'bg-amber-500'  :
-    card.status === 'paid'         ? 'bg-emerald-500' :
-                                     'bg-ink/20'
-
-  const statusLabel =
-    card.status === 'pending'      ? 'Awaiting payment' :
-    card.status === 'paid'         ? 'Paid ✓'           :
-                                     'Brand responded'
-
-  const badgeCls =
-    card.status === 'pending'      ? 'bg-white/20 text-white border-white/30' :
-    card.status === 'paid'         ? 'bg-white/20 text-white border-white/30' :
-                                     'bg-surface-sub text-ink/60 border-primary/10'
+  const headerCls = card.status === 'pending' ? 'bg-amber-500' : card.status === 'paid' ? 'bg-emerald-500' : 'bg-ink/20'
+  const statusLabel = card.status === 'pending' ? 'Awaiting payment' : card.status === 'paid' ? 'Paid ✓' : 'Brand responded'
+  const badgeCls = card.status === 'reason_given' ? 'bg-surface-sub text-ink/60 border-primary/10' : 'bg-white/20 text-white border-white/30'
 
   return (
     <div className={`w-[320px] max-w-full overflow-hidden rounded-2xl border bg-white ${CARD} ${card.status === 'pending' ? 'border-amber-300' : 'border-primary/10'}`}>
-      {/* Header band */}
       <div className={`flex items-center gap-2.5 px-4 py-3 ${headerCls}`}>
         <EuroIcon s={15}/>
         <span className="text-[12px] font-bold uppercase tracking-[0.10em] text-white/90">Payment request</span>
         <span className={`ml-auto rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${badgeCls}`}>{statusLabel}</span>
       </div>
-
-      {/* Amount + details */}
       <div className="px-4 py-4">
         <div className="flex items-baseline gap-2">
           <span className={`text-[28px] font-black tracking-[-0.04em] ${GRAD_TEXT}`}>{card.amount}</span>
@@ -435,33 +498,21 @@ function PaymentCard({ card, convoId, brandName }: {
         <p className="mt-0.5 text-[12px] font-semibold text-ink/55">{card.campaignName}</p>
         <p className="mt-2 text-[12.5px] leading-[1.65] text-ink/60">{card.note}</p>
       </div>
-
-      {/* Status footers */}
       {card.status === 'pending' && (
         <div className="border-t border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-[11.5px] font-semibold text-amber-700">
-            Sent to {brandName} — awaiting confirmation or response.
-          </p>
+          <p className="text-[11.5px] font-semibold text-amber-700">Sent to {brandName} — awaiting confirmation or response.</p>
         </div>
       )}
-
       {card.status === 'paid' && (
-        <div className="border-t border-emerald-100 bg-emerald-50 px-4 py-3 flex items-center gap-2">
-          <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
-            <CheckIcon s={10}/>
-          </span>
-          <p className="text-[12px] font-semibold text-emerald-700">
-            {brandName} has processed this payment.
-          </p>
+        <div className="flex items-center gap-2 border-t border-emerald-100 bg-emerald-50 px-4 py-3">
+          <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"><CheckIcon s={10}/></span>
+          <p className="text-[12px] font-semibold text-emerald-700">{brandName} has processed this payment.</p>
         </div>
       )}
-
       {card.status === 'reason_given' && (
-        <div className="border-t border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-2">
+        <div className="flex items-start gap-2 border-t border-amber-200 bg-amber-50 px-4 py-3">
           <AlertIcon s={14}/>
-          <p className="text-[11.5px] font-semibold text-amber-700">
-            {brandName} replied with a reason — check the message below.
-          </p>
+          <p className="text-[11.5px] font-semibold text-amber-700">{brandName} replied with a reason — check the message below.</p>
         </div>
       )}
     </div>
@@ -469,11 +520,247 @@ function PaymentCard({ card, convoId, brandName }: {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   MESSAGE BUBBLE
-   isMe = msg.sender === 'creator'
-   Gradient bubbles on the right for creator, grey on left for brand.
+   OFFER CARD — OLX-style negotiation. Each offer is its own card;
+   countering supersedes it and appends a fresh one from the other side.
    ════════════════════════════════════════════════════════════════════ */
-function MessageBubble({ msg, convoId, brandName, brandColor, brandInitials, brandLogoUrl, onCardAction }: {
+function OfferCard({ card, convoId, brandName, onAccept, onDecline, onCounter }: {
+  card: Extract<SpecialCard, { kind: 'offer' }>
+  convoId: string; brandName: string
+  onAccept: (convoId: string) => void
+  onDecline: (convoId: string) => void
+  onCounter: (convoId: string, amount: string, note: string) => void
+}) {
+  const [countering, setCountering] = useState(false)
+  const [amount, setAmount] = useState('')
+  const [note, setNote]     = useState('')
+
+  const isFromBrand = card.offerBy === 'brand'
+  const isMine       = card.offerBy === 'creator'
+  const badge =
+    card.status === 'accepted' ? { label: 'Accepted ✓', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' } :
+    card.status === 'declined' ? { label: 'Declined',   cls: 'bg-rose-50 text-rose-600 border-rose-200' } :
+    card.status === 'countered' ? { label: 'Superseded', cls: 'bg-surface-sub text-ink/45 border-primary/10' } :
+    null
+
+  const submitCounter = () => {
+    if (!amount.trim()) return
+    onCounter(convoId, amount.trim().startsWith('€') ? amount.trim() : `€${amount.trim()}`, note.trim())
+    setCountering(false); setAmount(''); setNote('')
+  }
+
+  return (
+    <div className={`w-[320px] max-w-full overflow-hidden rounded-2xl border bg-white ${CARD} ${card.status === 'pending' ? 'border-primary/20' : 'border-primary/10'}`}>
+      <div className={`flex items-center gap-2.5 px-4 py-3 ${GRAD_BTN}`}>
+        <HandshakeIcon s={14}/>
+        <span className="text-[11.5px] font-bold uppercase tracking-[0.10em] text-white/90">{isMine ? 'Your offer' : 'Offer received'}</span>
+        {badge && <span className={`ml-auto rounded-full border px-2.5 py-0.5 text-[10.5px] font-bold ${badge.cls}`}>{badge.label}</span>}
+      </div>
+      <div className="px-4 py-3.5">
+        <div className="flex items-baseline gap-2">
+          <span className={`text-[26px] font-black tracking-[-0.03em] ${GRAD_TEXT}`}>{card.amount}</span>
+        </div>
+        <p className="mt-0.5 text-[12px] font-semibold text-ink/55">{card.campaignName}</p>
+        {card.note && <p className="mt-2 text-[12.5px] leading-[1.6] text-ink/60">{card.note}</p>}
+      </div>
+
+      {/* Received, pending → Accept / Counter / Decline */}
+      {card.status === 'pending' && isFromBrand && !countering && (
+        <div className="flex gap-2 border-t border-primary/10 px-4 py-3">
+          <button onClick={() => onDecline(convoId)}
+            className="flex h-9 flex-1 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-[12.5px] font-bold text-rose-600 transition hover:bg-rose-100">
+            Decline
+          </button>
+          <button onClick={() => setCountering(true)}
+            className="flex h-9 flex-1 items-center justify-center rounded-xl border border-primary/15 text-[12.5px] font-bold text-primary transition hover:bg-primary/[0.05]">
+            Counter
+          </button>
+          <button onClick={() => onAccept(convoId)}
+            className={`flex h-9 flex-1 items-center justify-center gap-1 rounded-xl ${GRAD_BTN} text-[12.5px] font-bold text-white shadow-[0_4px_12px_-4px_rgba(139,49,232,0.45)] transition hover:-translate-y-0.5`}>
+            <CheckIcon s={11}/>Accept
+          </button>
+        </div>
+      )}
+
+      {/* Inline counter form */}
+      {countering && (
+        <div className="space-y-2.5 border-t border-primary/10 bg-surface-sub px-4 py-3.5">
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[13px] font-bold text-ink/40">€</span>
+            <input autoFocus value={amount} onChange={e => setAmount(e.target.value)} placeholder="Your counter amount"
+              className="w-full rounded-lg border border-primary/15 bg-white py-2 pl-7 pr-3 text-[13px] font-semibold text-ink outline-none focus:border-primary"/>
+          </div>
+          <input value={note} onChange={e => setNote(e.target.value)} placeholder="Add a short note (optional)"
+            className="w-full rounded-lg border border-primary/15 bg-white px-3 py-2 text-[12.5px] text-ink outline-none focus:border-primary"/>
+          <div className="flex gap-2">
+            <button onClick={() => setCountering(false)} className="flex-1 rounded-lg border border-primary/15 bg-white py-2 text-[12px] font-bold text-ink/50 transition hover:bg-surface-sub">Cancel</button>
+            <button onClick={submitCounter} disabled={!amount.trim()}
+              className={`flex-1 rounded-lg py-2 text-[12px] font-bold text-white transition ${amount.trim() ? `${GRAD_BTN} hover:-translate-y-0.5` : 'cursor-not-allowed bg-ink/15'}`}>
+              Send counter
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sent by me, pending → waiting */}
+      {card.status === 'pending' && isMine && (
+        <div className="border-t border-primary/10 px-4 py-3">
+          <p className="text-[11.5px] font-semibold text-ink/40">Waiting for {brandName} to respond…</p>
+        </div>
+      )}
+      {card.status === 'accepted' && (
+        <div className="border-t border-emerald-100 bg-emerald-50 px-4 py-3">
+          <p className="text-[11.5px] font-semibold text-emerald-700">Both sides agreed on {card.amount}.</p>
+        </div>
+      )}
+      {card.status === 'declined' && (
+        <div className="border-t border-rose-100 bg-rose-50 px-4 py-3">
+          <p className="text-[11.5px] font-semibold text-rose-600">This offer was declined.</p>
+        </div>
+      )}
+      {card.status === 'countered' && (
+        <div className="border-t border-primary/10 bg-surface-sub px-4 py-3">
+          <p className="text-[11.5px] font-semibold text-ink/45">Superseded by a new offer below.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DISPUTE CARD
+   ════════════════════════════════════════════════════════════════════ */
+function DisputeCard({ card, onOpen }: {
+  card: Extract<SpecialCard, { kind: 'dispute' }>
+  onOpen: () => void
+}) {
+  const statusMap: Record<DisputeStatus, { label: string; cls: string }> = {
+    open:          { label: 'Open',          cls: 'bg-rose-50 text-rose-700 border-rose-200'    },
+    under_review:  { label: 'Under review',  cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+    resolved:      { label: 'Resolved',      cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  }
+  const sm = statusMap[card.status]
+  return (
+    <div className={`w-[320px] max-w-full overflow-hidden rounded-2xl border border-rose-200 bg-white ${CARD}`}>
+      <div className="flex items-center gap-2.5 bg-rose-500 px-4 py-3">
+        <ScaleIcon s={14}/>
+        <span className="text-[11.5px] font-bold uppercase tracking-[0.10em] text-white/90">Dispute raised</span>
+        <span className={`ml-auto rounded-full border px-2.5 py-0.5 text-[10.5px] font-bold ${sm.cls}`}>{sm.label}</span>
+      </div>
+      <div className="px-4 py-3.5">
+        <p className="text-[13px] font-extrabold text-ink">{card.campaignName}</p>
+        <p className="mt-1 text-[11.5px] font-bold uppercase tracking-[0.06em] text-rose-500">{card.reason}</p>
+        <p className="mt-2 text-[12.5px] leading-[1.6] text-ink/65">{card.description}</p>
+      </div>
+      <div className="flex items-center justify-between border-t border-rose-100 bg-rose-50 px-4 py-3">
+        <p className="text-[11px] font-semibold text-rose-600">Nexfluence support has been notified.</p>
+        <button onClick={onOpen} className="flex-shrink-0 text-[12px] font-bold text-rose-700 hover:underline">View dispute →</button>
+      </div>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   SIGN DETAILS CARD — lightweight terms confirmation, either party can
+   initiate; whoever hasn't signed yet can countersign inline.
+   ════════════════════════════════════════════════════════════════════ */
+function SignDetailsCard({ card, convoId, brandName, onCountersign }: {
+  card: Extract<SpecialCard, { kind: 'sign_details' }>
+  convoId: string; brandName: string
+  onCountersign: (convoId: string) => void
+}) {
+  const fully = card.status === 'fully_signed'
+  return (
+    <div className={`w-[320px] max-w-full overflow-hidden rounded-2xl border bg-white ${CARD} ${fully ? 'border-emerald-200' : 'border-primary/15'}`}>
+      <div className="flex items-center gap-2.5 border-b border-primary/10 px-4 py-3">
+        <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${GRAD_BTN} text-white`}>
+          <PenIcon s={13}/>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11.5px] font-bold uppercase tracking-[0.08em] text-ink/45">Final details to sign</p>
+          <p className="truncate text-[13px] font-extrabold text-ink">{card.campaignName}</p>
+        </div>
+        <span className={`flex-shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${fully ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+          {fully ? 'Fully signed ✓' : 'Awaiting countersign'}
+        </span>
+      </div>
+      <div className="space-y-2 px-4 py-3.5">
+        {card.terms.map((t, i) => (
+          <div key={i} className="flex items-start justify-between gap-3 text-[12px]">
+            <span className="flex-shrink-0 font-semibold text-ink/45">{t.label}</span>
+            <span className="text-right font-bold text-ink">{t.value}</span>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-between border-t border-primary/8 px-4 py-3">
+        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-ink/50">
+          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white"><CheckIcon s={9}/></span>You signed
+        </div>
+        <div className={`flex items-center gap-1.5 text-[11px] font-semibold ${fully ? 'text-ink/50' : 'text-amber-600'}`}>
+          {fully
+            ? <><span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white"><CheckIcon s={9}/></span>{brandName} signed</>
+            : <>{!card.sentByMe
+                ? <button onClick={() => onCountersign(convoId)} className="rounded-lg border border-primary/20 bg-primary/[0.05] px-2.5 py-1 font-bold text-primary transition hover:bg-primary/[0.1]">Add my signature</button>
+                : <span>Awaiting {brandName}…</span>}
+              </>
+          }
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   INVOICE CARD — formal, line-itemized (distinct from PaymentCard)
+   ════════════════════════════════════════════════════════════════════ */
+function InvoiceCard({ card }: { card: Extract<SpecialCard, { kind: 'invoice' }> }) {
+  const total = card.lineItems.reduce((s, li) => s + li.qty * li.rate, 0)
+  const statusMap: Record<InvoiceStatus, { label: string; cls: string }> = {
+    sent:     { label: 'Sent',     cls: 'bg-white/20 text-white border-white/30' },
+    paid:     { label: 'Paid ✓',   cls: 'bg-white/20 text-white border-white/30' },
+    overdue:  { label: 'Overdue',  cls: 'bg-white/20 text-white border-white/30' },
+  }
+  const sm = statusMap[card.status]
+  const headerCls = card.status === 'paid' ? 'bg-emerald-500' : card.status === 'overdue' ? 'bg-rose-500' : 'bg-ink'
+  return (
+    <div className={`w-[340px] max-w-full overflow-hidden rounded-2xl border border-primary/10 bg-white ${CARD}`}>
+      <div className={`flex items-center gap-2.5 px-4 py-3 ${headerCls}`}>
+        <ReceiptIcon s={14}/>
+        <span className="text-[11.5px] font-bold uppercase tracking-[0.10em] text-white/90">Invoice {card.invoiceNumber}</span>
+        <span className={`ml-auto rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${sm.cls}`}>{sm.label}</span>
+      </div>
+      <div className="px-4 py-3.5">
+        <p className="text-[12.5px] font-bold text-ink/60">{card.campaignName}</p>
+        <div className="mt-3 divide-y divide-primary/6 rounded-xl border border-primary/8">
+          {card.lineItems.map((li, i) => (
+            <div key={i} className="flex items-center justify-between px-3 py-2 text-[12px]">
+              <span className="min-w-0 flex-1 truncate pr-2 text-ink/70">{li.desc} {li.qty > 1 && <span className="text-ink/40">×{li.qty}</span>}</span>
+              <span className="flex-shrink-0 font-bold text-ink">{euro(li.qty * li.rate)}</span>
+            </div>
+          ))}
+          <div className="flex items-center justify-between bg-surface-sub px-3 py-2.5">
+            <span className="text-[12.5px] font-bold text-ink">Total</span>
+            <span className={`text-[15px] font-black ${GRAD_TEXT}`}>{euro(total)}</span>
+          </div>
+        </div>
+        <p className="mt-2.5 text-[11.5px] font-semibold text-ink/45">Due {card.dueDate}</p>
+        {card.notes && <p className="mt-1.5 text-[12px] leading-[1.55] text-ink/55">{card.notes}</p>}
+      </div>
+      <div className="flex items-center justify-between border-t border-primary/8 bg-surface-sub px-4 py-3">
+        <button className="flex items-center gap-1.5 text-[12px] font-bold text-primary hover:underline">
+          <DownloadIcon s={13}/>Download PDF
+        </button>
+        <span className="text-[11px] font-semibold text-ink/40">
+          {card.status === 'sent' ? 'Awaiting payment' : card.status === 'paid' ? 'Payment received' : 'Past due date'}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   MESSAGE BUBBLE
+   ════════════════════════════════════════════════════════════════════ */
+function MessageBubble({ msg, convoId, brandName, brandColor, brandInitials, brandLogoUrl, onCardAction, onOfferAccept, onOfferDecline, onOfferCounter, onDisputeOpen, onCountersign }: {
   msg: Message
   convoId: string
   brandName: string
@@ -481,26 +768,29 @@ function MessageBubble({ msg, convoId, brandName, brandColor, brandInitials, bra
   brandInitials: string
   brandLogoUrl: string | null
   onCardAction: (convoId: string, kind: string, action: string) => void
+  onOfferAccept: (convoId: string) => void
+  onOfferDecline: (convoId: string) => void
+  onOfferCounter: (convoId: string, amount: string, note: string) => void
+  onDisputeOpen: () => void
+  onCountersign: (convoId: string) => void
 }) {
   const isMe = msg.sender === 'creator'
 
-  /* Card layout — same outer flex shell, card component inside */
   if (msg.card) {
     return (
       <div className={`flex items-end gap-2.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
         {!isMe && <BrandAvatar initials={brandInitials} color={brandColor} logoUrl={brandLogoUrl} size={30}/>}
         <div className={`flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
-          {msg.card.kind === 'invite' && (
-            <InviteCard card={msg.card} convoId={convoId}
-              onAction={(id, k, a) => onCardAction(id, k, a)}/>
+          {msg.card.kind === 'invite' && <InviteCard card={msg.card} convoId={convoId} onAction={(id, k, a) => onCardAction(id, k, a)}/>}
+          {msg.card.kind === 'contract' && <ContractCard card={msg.card} convoId={convoId} onAction={(id, k, a) => onCardAction(id, k, a)}/>}
+          {msg.card.kind === 'payment' && <PaymentCard card={msg.card} brandName={brandName}/>}
+          {msg.card.kind === 'offer' && (
+            <OfferCard card={msg.card} convoId={convoId} brandName={brandName}
+              onAccept={onOfferAccept} onDecline={onOfferDecline} onCounter={onOfferCounter}/>
           )}
-          {msg.card.kind === 'contract' && (
-            <ContractCard card={msg.card} convoId={convoId}
-              onAction={(id, k, a) => onCardAction(id, k, a)}/>
-          )}
-          {msg.card.kind === 'payment' && (
-            <PaymentCard card={msg.card} convoId={convoId} brandName={brandName}/>
-          )}
+          {msg.card.kind === 'dispute' && <DisputeCard card={msg.card} onOpen={onDisputeOpen}/>}
+          {msg.card.kind === 'sign_details' && <SignDetailsCard card={msg.card} convoId={convoId} brandName={brandName} onCountersign={onCountersign}/>}
+          {msg.card.kind === 'invoice' && <InvoiceCard card={msg.card}/>}
           <span className="px-1 text-[10.5px] font-medium text-ink/35">{msg.time}</span>
         </div>
         {isMe && <div className="h-[30px] w-[30px] flex-shrink-0"/>}
@@ -508,15 +798,12 @@ function MessageBubble({ msg, convoId, brandName, brandColor, brandInitials, bra
     )
   }
 
-  /* Plain text bubble */
   return (
     <div className={`flex items-end gap-2.5 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
       {!isMe && <BrandAvatar initials={brandInitials} color={brandColor} logoUrl={brandLogoUrl} size={30}/>}
       <div className={`flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
         <div className={`max-w-[340px] rounded-2xl px-4 py-2.5 text-[13.5px] leading-[1.55] ${
-          isMe
-            ? `${GRAD_BTN} text-white shadow-[0_4px_14px_-4px_rgba(139,49,232,0.40)]`
-            : 'bg-surface-sub text-ink/80'
+          isMe ? `${GRAD_BTN} text-white shadow-[0_4px_14px_-4px_rgba(139,49,232,0.40)]` : 'bg-surface-sub text-ink/80'
         }`} style={isMe ? { borderBottomRightRadius: 6 } : { borderBottomLeftRadius: 6 }}>
           {msg.text}
         </div>
@@ -528,7 +815,7 @@ function MessageBubble({ msg, convoId, brandName, brandColor, brandInitials, bra
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   CONVERSATION LIST ROW — brand logo tile instead of circle
+   CONVERSATION LIST ROW
    ════════════════════════════════════════════════════════════════════ */
 function ConvoRow({ convo, active, onClick }: { convo: Conversation; active: boolean; onClick: () => void }) {
   return (
@@ -538,9 +825,7 @@ function ConvoRow({ convo, active, onClick }: { convo: Conversation; active: boo
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className={`truncate text-[13.5px] ${convo.unread > 0 ? 'font-bold text-ink' : 'font-semibold text-ink/75'}`}>
-              {convo.brandName}
-            </span>
+            <span className={`truncate text-[13.5px] ${convo.unread > 0 ? 'font-bold text-ink' : 'font-semibold text-ink/75'}`}>{convo.brandName}</span>
             <span className={`flex-shrink-0 flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[9.5px] font-bold ${convo.brandType === 'agency' ? 'bg-blue-50 text-blue-600' : 'bg-primary/[0.07] text-primary'}`}>
               {convo.brandType === 'agency' ? <AgencyIcon s={9}/> : <BuildingIcon s={9}/>}
             </span>
@@ -548,13 +833,9 @@ function ConvoRow({ convo, active, onClick }: { convo: Conversation; active: boo
           <span className="flex-shrink-0 text-[10.5px] font-medium text-ink/35">{convo.lastTime}</span>
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">
-          <span className={`truncate text-[12px] ${convo.unread > 0 ? 'font-semibold text-ink/60' : 'text-ink/40'}`}>
-            {convo.lastMessage}
-          </span>
+          <span className={`truncate text-[12px] ${convo.unread > 0 ? 'font-semibold text-ink/60' : 'text-ink/40'}`}>{convo.lastMessage}</span>
           {convo.unread > 0 && (
-            <span className={`flex h-[18px] min-w-[18px] flex-shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-black text-white ${GRAD_BTN}`}>
-              {convo.unread}
-            </span>
+            <span className={`flex h-[18px] min-w-[18px] flex-shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-black text-white ${GRAD_BTN}`}>{convo.unread}</span>
           )}
         </div>
       </div>
@@ -563,22 +844,34 @@ function ConvoRow({ convo, active, onClick }: { convo: Conversation; active: boo
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   PAYMENT REQUEST MODAL
-   Creator fills in amount, campaign name, note, due date.
-   On confirm → inserts a payment card into the thread (sentByMe = true).
+   SHARED MODAL FIELD ATOMS
    ════════════════════════════════════════════════════════════════════ */
-function PaymentRequestModal({ open, brandName, onClose, onSend }: {
-  open: boolean
-  brandName: string
-  onClose: () => void
-  onSend: (amount: string, dueDate: string, campaignName: string, note: string) => void
-}) {
-  const [amount,       setAmount]       = useState('')
-  const [dueDate,      setDueDate]      = useState('')
-  const [campaignName, setCampaignName] = useState('')
-  const [note,         setNote]         = useState('')
-  const [sending,      setSending]      = useState(false)
+const M_INP = 'w-full rounded-xl border border-primary/12 bg-surface-sub px-4 py-3 text-[13.5px] text-ink outline-none transition placeholder:text-ink/28 focus:border-primary focus:bg-white focus:shadow-[0_0_0_3px_rgba(139,49,232,0.10)]'
+const M_LBL = 'mb-1.5 block text-[11px] font-bold uppercase tracking-[0.10em] text-ink/45'
 
+function CampaignPicker({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: string[] }) {
+  return (
+    <div>
+      <label className={M_LBL}>Related campaign</label>
+      <input className={M_INP} value={value} onChange={e => onChange(e.target.value)} placeholder="Type or pick a campaign below"/>
+      {options.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {options.map(o => (
+            <button key={o} type="button" onClick={() => onChange(o)}
+              className={`rounded-lg border px-2.5 py-1 text-[11.5px] font-semibold transition ${value === o ? 'border-primary bg-primary/[0.08] text-primary' : 'border-primary/12 bg-white text-ink/55 hover:border-primary/25'}`}>
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ModalShell({ open, onClose, icon, title, subtitle, children, footer }: {
+  open: boolean; onClose: () => void; icon: ReactNode; title: string; subtitle: string
+  children: ReactNode; footer: ReactNode
+}) {
   useEffect(() => {
     if (!open) return
     document.body.style.overflow = 'hidden'
@@ -586,107 +879,331 @@ function PaymentRequestModal({ open, brandName, onClose, onSend }: {
     window.addEventListener('keydown', esc)
     return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', esc) }
   }, [open, onClose])
-
   if (!open) return null
+  return (
+    <div className="fixed inset-0 z-[700] flex items-end justify-center p-0 sm:items-center sm:p-6"
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="absolute inset-0 bg-ink/45 backdrop-blur-sm" onClick={onClose}/>
+      <div className={`relative z-10 flex w-full max-w-[500px] max-h-[90vh] flex-col overflow-hidden rounded-t-3xl bg-white sm:rounded-3xl ${CARD}`}>
+        <div className="mx-auto mt-3 h-1 w-10 flex-shrink-0 rounded-full bg-ink/12 sm:hidden"/>
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-primary/10 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${GRAD_BTN} text-white shadow-[0_4px_12px_-4px_rgba(139,49,232,0.45)]`}>{icon}</div>
+            <div><p className="text-[15px] font-extrabold text-ink">{title}</p><p className="text-[11.5px] text-ink/45">{subtitle}</p></div>
+          </div>
+          <button onClick={onClose} className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-surface-sub text-ink/50 transition hover:bg-ink/10"><XIcon s={13}/></button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">{children}</div>
+        <div className="flex flex-shrink-0 gap-2.5 border-t border-primary/10 px-6 py-4">{footer}</div>
+      </div>
+    </div>
+  )
+}
 
+/* ════════════════════════════════════════════════════════════════════
+   PAYMENT REQUEST MODAL (quick ask)
+   ════════════════════════════════════════════════════════════════════ */
+function PaymentRequestModal({ open, brandName, campaignOptions, onClose, onSend }: {
+  open: boolean; brandName: string; campaignOptions: string[]
+  onClose: () => void
+  onSend: (amount: string, dueDate: string, campaignName: string, note: string) => void
+}) {
+  const [amount, setAmount] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [campaignName, setCampaignName] = useState('')
+  const [note, setNote] = useState('')
+  const [sending, setSending] = useState(false)
   const valid = amount.trim().length > 0 && campaignName.trim().length > 0
 
   const handleSend = async () => {
     if (!valid) return
     setSending(true)
     await new Promise(r => setTimeout(r, 700))
-    onSend(
-      amount.trim().startsWith('€') ? amount.trim() : `€${amount.trim()}`,
-      dueDate || 'On receipt',
-      campaignName.trim(),
-      note.trim() || `Payment request for ${campaignName.trim()}.`
-    )
+    onSend(amount.trim().startsWith('€') ? amount.trim() : `€${amount.trim()}`, dueDate || 'On receipt', campaignName.trim(), note.trim() || `Payment request for ${campaignName.trim()}.`)
     setAmount(''); setDueDate(''); setCampaignName(''); setNote(''); setSending(false)
     onClose()
   }
 
-  const INP = 'w-full rounded-xl border border-primary/12 bg-surface-sub px-4 py-3 text-[13.5px] text-ink outline-none transition placeholder:text-ink/28 focus:border-primary focus:bg-white focus:shadow-[0_0_0_3px_rgba(139,49,232,0.10)]'
-  const LBL = 'mb-1.5 block text-[11px] font-bold uppercase tracking-[0.10em] text-ink/45'
-
   return (
-    <div className="fixed inset-0 z-[700] flex items-end justify-center p-0 sm:items-center sm:p-6"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="absolute inset-0 bg-ink/45 backdrop-blur-sm" onClick={onClose}/>
-      <div className={`relative z-10 w-full max-w-[480px] overflow-hidden rounded-t-3xl bg-white sm:rounded-3xl ${CARD}`}>
-
-        {/* Drag handle — mobile */}
-        <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-ink/12 sm:hidden"/>
-
-        {/* Modal header */}
-        <div className="flex items-center justify-between border-b border-primary/10 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${GRAD_BTN} text-white shadow-[0_4px_12px_-4px_rgba(139,49,232,0.45)]`}>
-              <EuroIcon s={18}/>
-            </div>
-            <div>
-              <p className="text-[15px] font-extrabold text-ink">Request payment</p>
-              <p className="text-[11.5px] text-ink/45">From {brandName}</p>
-            </div>
-          </div>
-          <button onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl bg-surface-sub text-ink/50 transition hover:bg-ink/10">
-            <XIcon s={13}/>
-          </button>
-        </div>
-
-        <div className="px-6 py-5 space-y-4">
-          <p className="text-[12.5px] leading-[1.65] text-ink/55">
-            This sends a formal payment request to {brandName} inside the conversation thread. They'll see the amount, due date, and your note.
-          </p>
-
-          {/* Amount */}
-          <div>
-            <label className={LBL}>Amount *</label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-ink/38">€</span>
-              <input className={`${INP} pl-8`} type="number" min={1}
-                value={amount} onChange={e => setAmount(e.target.value)}
-                placeholder="800"/>
-            </div>
-          </div>
-
-          {/* Campaign name */}
-          <div>
-            <label className={LBL}>Campaign / deliverable *</label>
-            <input className={INP} value={campaignName} onChange={e => setCampaignName(e.target.value)}
-              placeholder="e.g. Vitamin-C Recovery Stack — 3 Reels"/>
-          </div>
-
-          {/* Due date */}
-          <div>
-            <label className={LBL}>Due date (optional)</label>
-            <input type="date" className={INP} value={dueDate} onChange={e => setDueDate(e.target.value)}/>
-          </div>
-
-          {/* Note */}
-          <div>
-            <label className={LBL}>Note / invoice detail (optional)</label>
-            <textarea className={`${INP} min-h-[80px] resize-none leading-relaxed text-[13px]`}
-              value={note} onChange={e => setNote(e.target.value)}
-              placeholder="e.g. All 3 reels posted on Jun 18 as per contract. Tracked affiliate commission totals €800 for the period."/>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex gap-2.5 border-t border-primary/10 px-6 py-4">
-          <button onClick={onClose}
-            className="flex-1 rounded-xl border border-primary/15 bg-white py-3 text-[13.5px] font-bold text-ink/55 transition hover:bg-surface-sub">
-            Cancel
-          </button>
+    <ModalShell open={open} onClose={onClose} icon={<EuroIcon s={18}/>} title="Request payment" subtitle={`From ${brandName}`}
+      footer={
+        <>
+          <button onClick={onClose} className="flex-1 rounded-xl border border-primary/15 bg-white py-3 text-[13.5px] font-bold text-ink/55 transition hover:bg-surface-sub">Cancel</button>
           <button onClick={handleSend} disabled={!valid || sending}
             className={`flex flex-[2] items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-bold text-white transition ${valid && !sending ? `${GRAD_BTN} shadow-[0_8px_24px_-6px_rgba(139,49,232,0.45)] hover:-translate-y-0.5` : 'cursor-not-allowed bg-ink/10 text-ink/30'}`}>
-            {sending
-              ? <><span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"/>Sending…</>
-              : <><SendIcon s={14}/>Send payment request</>
-            }
+            {sending ? <><span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"/>Sending…</> : <><SendIcon s={14}/>Send request</>}
           </button>
+        </>
+      }>
+      <p className="text-[12.5px] leading-[1.65] text-ink/55">A quick, informal ask — good for a fast nudge. For a formal line-itemized bill, use Send invoice instead.</p>
+      <div>
+        <label className={M_LBL}>Amount *</label>
+        <div className="relative"><span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-ink/38">€</span>
+          <input className={`${M_INP} pl-8`} type="number" min={1} value={amount} onChange={e => setAmount(e.target.value)} placeholder="800"/>
         </div>
       </div>
+      <CampaignPicker value={campaignName} onChange={setCampaignName} options={campaignOptions}/>
+      <div><label className={M_LBL}>Due date (optional)</label><input type="date" className={M_INP} value={dueDate} onChange={e => setDueDate(e.target.value)}/></div>
+      <div><label className={M_LBL}>Note (optional)</label>
+        <textarea className={`${M_INP} min-h-[80px] resize-none leading-relaxed text-[13px]`} value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. All 3 reels posted on Jun 18 as per contract."/>
+      </div>
+    </ModalShell>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   MAKE AN OFFER MODAL
+   ════════════════════════════════════════════════════════════════════ */
+function OfferModal({ open, brandName, campaignOptions, onClose, onSend }: {
+  open: boolean; brandName: string; campaignOptions: string[]
+  onClose: () => void; onSend: (campaignName: string, amount: string, note: string) => void
+}) {
+  const [campaignName, setCampaignName] = useState('')
+  const [amount, setAmount] = useState('')
+  const [note, setNote] = useState('')
+  const valid = campaignName.trim().length > 0 && amount.trim().length > 0
+
+  const handleSend = () => {
+    if (!valid) return
+    onSend(campaignName.trim(), amount.trim().startsWith('€') ? amount.trim() : `€${amount.trim()}`, note.trim())
+    setCampaignName(''); setAmount(''); setNote(''); onClose()
+  }
+
+  return (
+    <ModalShell open={open} onClose={onClose} icon={<HandshakeIcon s={17}/>} title="Make an offer" subtitle={`To ${brandName}`}
+      footer={
+        <>
+          <button onClick={onClose} className="flex-1 rounded-xl border border-primary/15 bg-white py-3 text-[13.5px] font-bold text-ink/55 transition hover:bg-surface-sub">Cancel</button>
+          <button onClick={handleSend} disabled={!valid}
+            className={`flex flex-[2] items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-bold text-white transition ${valid ? `${GRAD_BTN} shadow-[0_8px_24px_-6px_rgba(139,49,232,0.45)] hover:-translate-y-0.5` : 'cursor-not-allowed bg-ink/10 text-ink/30'}`}>
+            <SendIcon s={14}/>Send offer
+          </button>
+        </>
+      }>
+      <p className="text-[12.5px] leading-[1.65] text-ink/55">Propose a rate for a new deliverable, or open a negotiation on an existing one. {brandName} can accept, counter, or decline right in the thread.</p>
+      <CampaignPicker value={campaignName} onChange={setCampaignName} options={campaignOptions}/>
+      <div><label className={M_LBL}>Your offer *</label>
+        <div className="relative"><span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] font-bold text-ink/38">€</span>
+          <input className={`${M_INP} pl-8`} type="number" min={1} value={amount} onChange={e => setAmount(e.target.value)} placeholder="300"/>
+        </div>
+      </div>
+      <div><label className={M_LBL}>Note (optional)</label>
+        <textarea className={`${M_INP} min-h-[70px] resize-none leading-relaxed text-[13px]`} value={note} onChange={e => setNote(e.target.value)} placeholder="Explain what's included, timeline, or why this rate."/>
+      </div>
+    </ModalShell>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   SIGN DETAILS MODAL
+   ════════════════════════════════════════════════════════════════════ */
+function SignDetailsModal({ open, brandName, campaignOptions, onClose, onSend }: {
+  open: boolean; brandName: string; campaignOptions: string[]
+  onClose: () => void; onSend: (campaignName: string, terms: TermRow[]) => void
+}) {
+  const [campaignName, setCampaignName] = useState('')
+  const [terms, setTerms] = useState<TermRow[]>([
+    { label: 'Rate', value: '' }, { label: 'Deliverables', value: '' }, { label: 'Timeline', value: '' },
+  ])
+  const valid = campaignName.trim().length > 0 && terms.some(t => t.label.trim() && t.value.trim())
+
+  const updTerm = (i: number, patch: Partial<TermRow>) => setTerms(prev => prev.map((t, idx) => idx === i ? { ...t, ...patch } : t))
+  const addTerm = () => setTerms(prev => [...prev, { label: '', value: '' }])
+  const rmTerm  = (i: number) => setTerms(prev => prev.filter((_, idx) => idx !== i))
+
+  const handleSend = () => {
+    const clean = terms.filter(t => t.label.trim() && t.value.trim())
+    if (!campaignName.trim() || clean.length === 0) return
+    onSend(campaignName.trim(), clean)
+    setCampaignName(''); setTerms([{ label: 'Rate', value: '' }, { label: 'Deliverables', value: '' }, { label: 'Timeline', value: '' }]); onClose()
+  }
+
+  return (
+    <ModalShell open={open} onClose={onClose} icon={<PenIcon s={17}/>} title="Sign details" subtitle={`Confirm final terms with ${brandName}`}
+      footer={
+        <>
+          <button onClick={onClose} className="flex-1 rounded-xl border border-primary/15 bg-white py-3 text-[13.5px] font-bold text-ink/55 transition hover:bg-surface-sub">Cancel</button>
+          <button onClick={handleSend} disabled={!valid}
+            className={`flex flex-[2] items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-bold text-white transition ${valid ? `${GRAD_BTN} shadow-[0_8px_24px_-6px_rgba(139,49,232,0.45)] hover:-translate-y-0.5` : 'cursor-not-allowed bg-ink/10 text-ink/30'}`}>
+            <PenIcon s={14}/>Sign & send
+          </button>
+        </>
+      }>
+      <p className="text-[12.5px] leading-[1.65] text-ink/55">A lightweight terms summary — good after a rate is agreed, before a full contract is drawn up. Your signature is added automatically; {brandName} countersigns from their side.</p>
+      <CampaignPicker value={campaignName} onChange={setCampaignName} options={campaignOptions}/>
+      <div>
+        <label className={M_LBL}>Terms</label>
+        <div className="space-y-2">
+          {terms.map((t, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input className={`${M_INP} w-[38%]`} value={t.label} onChange={e => updTerm(i, { label: e.target.value })} placeholder="Label"/>
+              <input className={`${M_INP} flex-1`} value={t.value} onChange={e => updTerm(i, { value: e.target.value })} placeholder="Value"/>
+              <button type="button" onClick={() => rmTerm(i)} className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/35 transition hover:border-rose-200 hover:text-rose-500"><TrashIcon s={13}/></button>
+            </div>
+          ))}
+          <button type="button" onClick={addTerm} className="text-[12.5px] font-bold text-primary hover:underline">+ Add a term</button>
+        </div>
+      </div>
+    </ModalShell>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   INVOICE MODAL
+   ════════════════════════════════════════════════════════════════════ */
+let _invCounter = 1043
+function InvoiceModal({ open, brandName, campaignOptions, onClose, onSend }: {
+  open: boolean; brandName: string; campaignOptions: string[]
+  onClose: () => void; onSend: (campaignName: string, lineItems: LineItem[], dueDate: string, notes: string) => void
+}) {
+  const [campaignName, setCampaignName] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [notes, setNotes] = useState('')
+  const [items, setItems] = useState<LineItem[]>([{ desc: '', qty: 1, rate: 0 }])
+
+  const updItem = (i: number, patch: Partial<LineItem>) => setItems(prev => prev.map((it, idx) => idx === i ? { ...it, ...patch } : it))
+  const addItem = () => setItems(prev => [...prev, { desc: '', qty: 1, rate: 0 }])
+  const rmItem  = (i: number) => setItems(prev => prev.filter((_, idx) => idx !== i))
+  const total = items.reduce((s, it) => s + (it.qty || 0) * (it.rate || 0), 0)
+  const valid = campaignName.trim().length > 0 && items.some(it => it.desc.trim() && it.rate > 0)
+
+  const handleSend = () => {
+    const clean = items.filter(it => it.desc.trim() && it.rate > 0)
+    if (!campaignName.trim() || clean.length === 0) return
+    onSend(campaignName.trim(), clean, dueDate || 'On receipt', notes.trim())
+    setCampaignName(''); setDueDate(''); setNotes(''); setItems([{ desc: '', qty: 1, rate: 0 }]); onClose()
+  }
+
+  return (
+    <ModalShell open={open} onClose={onClose} icon={<ReceiptIcon s={17}/>} title="Send invoice" subtitle={`Invoice #INV-${_invCounter} · to ${brandName}`}
+      footer={
+        <>
+          <button onClick={onClose} className="flex-1 rounded-xl border border-primary/15 bg-white py-3 text-[13.5px] font-bold text-ink/55 transition hover:bg-surface-sub">Cancel</button>
+          <button onClick={handleSend} disabled={!valid}
+            className={`flex flex-[2] items-center justify-center gap-2 rounded-xl py-3 text-[14px] font-bold text-white transition ${valid ? `${GRAD_BTN} shadow-[0_8px_24px_-6px_rgba(139,49,232,0.45)] hover:-translate-y-0.5` : 'cursor-not-allowed bg-ink/10 text-ink/30'}`}>
+            <SendIcon s={14}/>Send invoice · {euro(total)}
+          </button>
+        </>
+      }>
+      <p className="text-[12.5px] leading-[1.65] text-ink/55">A formal, line-itemized bill. Good for closing out a completed campaign with a proper paper trail.</p>
+      <CampaignPicker value={campaignName} onChange={setCampaignName} options={campaignOptions}/>
+      <div>
+        <label className={M_LBL}>Line items</label>
+        <div className="space-y-2">
+          {items.map((it, i) => (
+            <div key={i} className="grid grid-cols-[1fr_50px_80px_36px] items-center gap-2">
+              <input className={M_INP} value={it.desc} onChange={e => updItem(i, { desc: e.target.value })} placeholder="Description"/>
+              <input className={M_INP} type="number" min={1} value={it.qty} onChange={e => updItem(i, { qty: parseInt(e.target.value, 10) || 1 })} placeholder="Qty"/>
+              <div className="relative"><span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] font-bold text-ink/35">€</span>
+                <input className={`${M_INP} pl-5`} type="number" min={0} value={it.rate || ''} onChange={e => updItem(i, { rate: parseFloat(e.target.value) || 0 })} placeholder="0"/>
+              </div>
+              <button type="button" onClick={() => rmItem(i)} className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg border border-primary/10 bg-white text-ink/35 transition hover:border-rose-200 hover:text-rose-500"><TrashIcon s={13}/></button>
+            </div>
+          ))}
+          <button type="button" onClick={addItem} className="text-[12.5px] font-bold text-primary hover:underline">+ Add line item</button>
+        </div>
+        <div className="mt-3 flex items-center justify-between rounded-xl bg-surface-sub px-4 py-2.5">
+          <span className="text-[12.5px] font-bold text-ink/60">Total</span>
+          <span className={`text-[16px] font-black ${GRAD_TEXT}`}>{euro(total)}</span>
+        </div>
+      </div>
+      <div><label className={M_LBL}>Due date (optional)</label><input type="date" className={M_INP} value={dueDate} onChange={e => setDueDate(e.target.value)}/></div>
+      <div><label className={M_LBL}>Notes (optional)</label>
+        <textarea className={`${M_INP} min-h-[70px] resize-none leading-relaxed text-[13px]`} value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. Reel live since Jun 12. Commission calculated through Jun 20."/>
+      </div>
+    </ModalShell>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   RAISE DISPUTE MODAL
+   ════════════════════════════════════════════════════════════════════ */
+function DisputeModal({ open, brandName, campaignOptions, onClose, onSend }: {
+  open: boolean; brandName: string; campaignOptions: string[]
+  onClose: () => void; onSend: (campaignName: string, reason: string, description: string) => void
+}) {
+  const [campaignName, setCampaignName] = useState('')
+  const [reason, setReason] = useState('')
+  const [description, setDescription] = useState('')
+  const valid = campaignName.trim().length > 0 && reason.length > 0 && description.trim().length > 0
+
+  const handleSend = () => {
+    if (!valid) return
+    onSend(campaignName.trim(), reason, description.trim())
+    setCampaignName(''); setReason(''); setDescription(''); onClose()
+  }
+
+  return (
+    <ModalShell open={open} onClose={onClose} icon={<ScaleIcon s={17}/>} title="Raise a dispute" subtitle={`Regarding ${brandName}`}
+      footer={
+        <>
+          <button onClick={onClose} className="flex-1 rounded-xl border border-primary/15 bg-white py-3 text-[13.5px] font-bold text-ink/55 transition hover:bg-surface-sub">Cancel</button>
+          <button onClick={handleSend} disabled={!valid}
+            className={`flex flex-[2] items-center justify-center gap-2 rounded-xl bg-rose-500 py-3 text-[14px] font-bold text-white transition ${valid ? 'hover:-translate-y-0.5 hover:bg-rose-600' : 'cursor-not-allowed opacity-40'}`}>
+            <ScaleIcon s={14}/>Submit dispute
+          </button>
+        </>
+      }>
+      <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] leading-[1.6] text-amber-700">
+        This notifies Nexfluence support and flags the conversation for review. Use this if a direct message hasn't resolved the issue.
+      </p>
+      <CampaignPicker value={campaignName} onChange={setCampaignName} options={campaignOptions}/>
+      <div>
+        <label className={M_LBL}>Reason *</label>
+        <div className="flex flex-wrap gap-2">
+          {DISPUTE_REASONS.map(r => (
+            <button key={r} type="button" onClick={() => setReason(r)}
+              className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold transition ${reason === r ? 'border-rose-400 bg-rose-50 text-rose-600' : 'border-primary/12 bg-white text-ink/55 hover:border-primary/25'}`}>
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div><label className={M_LBL}>Describe what happened *</label>
+        <textarea className={`${M_INP} min-h-[100px] resize-none leading-relaxed text-[13px]`} value={description} onChange={e => setDescription(e.target.value)} placeholder="Give dates, amounts, and what you're asking to be resolved."/>
+      </div>
+    </ModalShell>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   QUICK ACTIONS POPOVER — replaces the single € header button
+   ════════════════════════════════════════════════════════════════════ */
+function QuickActionsMenu({ onSelect }: { onSelect: (action: 'payment' | 'offer' | 'sign' | 'invoice' | 'dispute') => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h)
+  }, [])
+  const items: { key: 'payment' | 'offer' | 'sign' | 'invoice' | 'dispute'; label: string; sub: string; icon: ReactNode; tone: string }[] = [
+    { key: 'payment', label: 'Request payment', sub: 'Quick, informal ask',        icon: <EuroIcon s={15}/>,      tone: 'text-primary bg-primary/[0.08]' },
+    { key: 'offer',   label: 'Make an offer',   sub: 'Propose or negotiate a rate', icon: <HandshakeIcon s={15}/>, tone: 'text-primary bg-primary/[0.08]' },
+    { key: 'sign',    label: 'Sign details',    sub: 'Confirm final terms',         icon: <PenIcon s={14}/>,       tone: 'text-primary bg-primary/[0.08]' },
+    { key: 'invoice', label: 'Send invoice',    sub: 'Formal line-itemized bill',   icon: <ReceiptIcon s={14}/>,   tone: 'text-primary bg-primary/[0.08]' },
+    { key: 'dispute', label: 'Raise a dispute', sub: 'Flag an issue for review',    icon: <ScaleIcon s={14}/>,     tone: 'text-rose-600 bg-rose-50' },
+  ]
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button onClick={() => setOpen(o => !o)} title="Quick actions" aria-label="Quick actions"
+        className={`flex h-9 w-9 items-center justify-center rounded-xl transition ${open ? `${GRAD_BTN} text-white shadow-[0_4px_10px_-4px_rgba(139,49,232,0.45)]` : 'bg-primary/[0.08] text-primary hover:bg-primary/[0.14]'}`}
+        style={{ transform: open ? 'rotate(45deg)' : 'none', transition: 'transform 0.18s ease, background 0.18s ease' }}>
+        <PlusIcon s={17}/>
+      </button>
+      {open && (
+        <div className={`absolute bottom-[calc(100%+8px)] right-0 z-30 w-[250px] overflow-hidden rounded-2xl border border-primary/10 bg-white ${CARD}`}>
+          {items.map(it => (
+            <button key={it.key} onClick={() => { onSelect(it.key); setOpen(false) }}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-primary/[0.05]">
+              <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${it.tone}`}>{it.icon}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-bold text-ink">{it.label}</span>
+                <span className="block text-[11px] text-ink/45">{it.sub}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -697,178 +1214,201 @@ function PaymentRequestModal({ open, brandName, onClose, onSend }: {
 export default function CreatorMessagesPage() {
   const router = useRouter()
 
-  const [convos,    setConvos]    = useState<Conversation[]>(INITIAL_CONVOS)
-  const [activeId,  setActiveId]  = useState<string>(INITIAL_CONVOS[0]!.id)
-  const [draft,     setDraft]     = useState('')
-  const [search,    setSearch]    = useState('')
-  const [showList,  setShowList]  = useState(true)   /* mobile toggle */
-  const [payModal,  setPayModal]  = useState(false)
+  const [convos,   setConvos]   = useState<Conversation[]>(INITIAL_CONVOS)
+  const [activeId, setActiveId] = useState<string>(INITIAL_CONVOS[0]!.id)
+  const [draft,    setDraft]    = useState('')
+  const [search,   setSearch]   = useState('')
+  const [showList, setShowList] = useState(true)
+
+  const [payModal,      setPayModal]      = useState(false)
+  const [offerModal,    setOfferModal]    = useState(false)
+  const [signModal,     setSignModal]     = useState(false)
+  const [invoiceModal,  setInvoiceModal]  = useState(false)
+  const [disputeModal,  setDisputeModal]  = useState(false)
 
   const threadEnd = useRef<HTMLDivElement>(null)
-
-  const UNREAD_NOTIFS  = 2
+  const UNREAD_NOTIFS = 2
 
   const active   = convos.find(c => c.id === activeId)!
-  const filtered = convos.filter(c =>
-    c.brandName.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = convos.filter(c => c.brandName.toLowerCase().includes(search.toLowerCase()))
   const totalUnread = convos.reduce((n, c) => n + c.unread, 0)
+  const campaignOptions = useMemo(() => extractCampaignNames(active), [active])
 
-  /* Auto-scroll to latest message */
-  useEffect(() => {
-    threadEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [activeId, active?.thread.length])
+  useEffect(() => { threadEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [activeId, active?.thread.length])
 
-  /* Mark read on open */
   const openConvo = (id: string) => {
     setActiveId(id)
     setConvos(prev => prev.map(c => c.id === id ? { ...c, unread: 0 } : c))
     setShowList(false)
   }
 
-  /* Send plain text */
+  const appendCard = (convoId: string, card: SpecialCard, lastMessage: string, extraText?: string) => {
+    setConvos(prev => prev.map(c => {
+      if (c.id !== convoId) return c
+      const msgs: Message[] = [{ id: newId('m'), sender: 'creator', time: 'Just now', card }]
+      if (extraText) msgs.push({ id: newId('m'), sender: 'creator', text: extraText, time: 'Just now' })
+      return { ...c, thread: [...c.thread, ...msgs], lastMessage, lastTime: 'Just now' }
+    }))
+  }
+
   const sendMessage = () => {
     const text = draft.trim(); if (!text) return
-    const msg: Message = { id: `m${Date.now()}`, sender: 'creator', text, time: 'Just now' }
-    setConvos(prev => prev.map(c => c.id !== activeId ? c : {
-      ...c, thread: [...c.thread, msg], lastMessage: text, lastTime: 'Just now',
-    }))
+    const msg: Message = { id: newId('m'), sender: 'creator', text, time: 'Just now' }
+    setConvos(prev => prev.map(c => c.id !== activeId ? c : { ...c, thread: [...c.thread, msg], lastMessage: text, lastTime: 'Just now' }))
     setDraft('')
   }
 
-  /* Send payment request card */
+  /* ── Payment request ── */
   const sendPaymentRequest = (amount: string, dueDate: string, campaignName: string, note: string) => {
-    const card: SpecialCard = { kind: 'payment', amount, dueDate, campaignName, note, status: 'pending', sentByMe: true }
-    const msg: Message = { id: `m${Date.now()}`, sender: 'creator', time: 'Just now', card }
-    setConvos(prev => prev.map(c => c.id !== activeId ? c : {
-      ...c,
-      thread: [...c.thread, msg],
-      lastMessage: `Payment request: ${amount}`,
-      lastTime: 'Just now',
+    appendCard(activeId, { kind: 'payment', amount, dueDate, campaignName, note, status: 'pending', sentByMe: true }, `Payment request: ${amount}`)
+  }
+
+  /* ── Offer / counter-offer ── */
+  const sendNewOffer = (campaignName: string, amount: string, note: string) => {
+    appendCard(activeId, { kind: 'offer', campaignName, amount, note, offerBy: 'creator', status: 'pending' }, `Offer sent: ${amount}`)
+  }
+  const respondOfferAccept = (convoId: string) => {
+    setConvos(prev => prev.map(c => {
+      if (c.id !== convoId) return c
+      let acceptedAmount = ''
+      const thread = c.thread.map(m => {
+        if (m.card?.kind === 'offer' && m.card.status === 'pending' && m.card.offerBy === 'brand') {
+          acceptedAmount = m.card.amount
+          return { ...m, card: { ...m.card, status: 'accepted' as OfferStatus } }
+        }
+        return m
+      })
+      return {
+        ...c,
+        thread: [...thread, { id: newId('m'), sender: 'creator' as const, text: `Accepted — ${acceptedAmount} works for me. Let's move forward.`, time: 'Just now' }],
+        lastMessage: `Offer accepted — ${acceptedAmount}`, lastTime: 'Just now',
+      }
+    }))
+  }
+  const respondOfferDecline = (convoId: string) => {
+    setConvos(prev => prev.map(c => {
+      if (c.id !== convoId) return c
+      const thread = c.thread.map(m => m.card?.kind === 'offer' && m.card.status === 'pending' && m.card.offerBy === 'brand'
+        ? { ...m, card: { ...m.card, status: 'declined' as OfferStatus } } : m)
+      return { ...c, thread: [...thread, { id: newId('m'), sender: 'creator' as const, text: "That rate doesn't work for me on this one — happy to discuss alternatives.", time: 'Just now' }], lastMessage: 'Offer declined', lastTime: 'Just now' }
+    }))
+  }
+  const respondOfferCounter = (convoId: string, amount: string, note: string) => {
+    setConvos(prev => prev.map(c => {
+      if (c.id !== convoId) return c
+      let campaignName = ''
+      const thread = c.thread.map(m => {
+        if (m.card?.kind === 'offer' && m.card.status === 'pending' && m.card.offerBy === 'brand') {
+          campaignName = m.card.campaignName
+          return { ...m, card: { ...m.card, status: 'countered' as OfferStatus } }
+        }
+        return m
+      })
+      const newOffer: Message = { id: newId('m'), sender: 'creator', time: 'Just now', card: { kind: 'offer', campaignName, amount, note, offerBy: 'creator', status: 'pending' } }
+      return { ...c, thread: [...thread, newOffer], lastMessage: `Countered at ${amount}`, lastTime: 'Just now' }
     }))
   }
 
-  /* Handle special card actions from creator's perspective */
+  /* ── Sign details ── */
+  const sendSignDetails = (campaignName: string, terms: TermRow[]) => {
+    appendCard(activeId, { kind: 'sign_details', campaignName, terms, sentByMe: true, status: 'awaiting_counterparty' }, `Sent final terms to sign — ${campaignName}`)
+  }
+  const countersignDetails = (convoId: string) => {
+    setConvos(prev => prev.map(c => {
+      if (c.id !== convoId) return c
+      const thread = c.thread.map(m => m.card?.kind === 'sign_details' && m.card.status === 'awaiting_counterparty' && !m.card.sentByMe
+        ? { ...m, card: { ...m.card, status: 'fully_signed' as SignStatus } } : m)
+      return { ...c, thread: [...thread, { id: newId('m'), sender: 'creator' as const, text: 'Signed my side — all set on the final terms.', time: 'Just now' }], lastMessage: 'Details fully signed ✓', lastTime: 'Just now' }
+    }))
+  }
+
+  /* ── Invoice ── */
+  const sendInvoice = (campaignName: string, lineItems: LineItem[], dueDate: string, notes: string) => {
+    const invoiceNumber = `INV-${_invCounter++}`
+    appendCard(activeId, { kind: 'invoice', invoiceNumber, campaignName, lineItems, dueDate, notes, status: 'sent', sentByMe: true }, `Invoice ${invoiceNumber} sent`)
+  }
+
+  /* ── Dispute ── */
+  const sendDispute = (campaignName: string, reason: string, description: string) => {
+    appendCard(activeId, { kind: 'dispute', campaignName, reason, description, sentByMe: true, status: 'open' }, `Dispute raised: ${reason}`)
+  }
+  const openDisputeCenter = () => router.push('/creator-dispute')
+
+  /* ── Invite / contract actions ── */
   const handleCardAction = (convoId: string, kind: string, action: string) => {
-
-    /* ── INVITE actions ── */
     if (kind === 'invite' && action === 'accept') {
-      setConvos(prev => prev.map(c => {
-        if (c.id !== convoId) return c
-        return {
-          ...c,
-          lastMessage: "I'd love to work on this campaign!",
-          lastTime: 'Just now',
-          thread: [
-            ...c.thread.map(m => m.card?.kind === 'invite' && m.card.status === 'pending'
-              ? { ...m, card: { ...m.card, status: 'accepted' as InviteStatus } }
-              : m
-            ),
-            { id: `m${Date.now()}`, sender: 'creator' as const, text: "Accepted! I'd love to work on this campaign. Looking forward to it.", time: 'Just now' },
-          ],
-        }
+      setConvos(prev => prev.map(c => c.id !== convoId ? c : {
+        ...c, lastMessage: "I'd love to work on this campaign!", lastTime: 'Just now',
+        thread: [
+          ...c.thread.map(m => m.card?.kind === 'invite' && m.card.status === 'pending' ? { ...m, card: { ...m.card, status: 'accepted' as InviteStatus } } : m),
+          { id: newId('m'), sender: 'creator' as const, text: "Accepted! I'd love to work on this campaign. Looking forward to it.", time: 'Just now' },
+        ],
       }))
       return
     }
-
     if (kind === 'invite' && action === 'decline') {
-      setConvos(prev => prev.map(c => {
-        if (c.id !== convoId) return c
-        return {
-          ...c,
-          lastMessage: "Thanks, not the right fit for me right now.",
-          lastTime: 'Just now',
-          thread: [
-            ...c.thread.map(m => m.card?.kind === 'invite' && m.card.status === 'pending'
-              ? { ...m, card: { ...m.card, status: 'declined' as InviteStatus } }
-              : m
-            ),
-            { id: `m${Date.now()}`, sender: 'creator' as const, text: "Thanks for thinking of me — this isn't quite the right fit right now.", time: 'Just now' },
-          ],
-        }
+      setConvos(prev => prev.map(c => c.id !== convoId ? c : {
+        ...c, lastMessage: 'Thanks, not the right fit for me right now.', lastTime: 'Just now',
+        thread: [
+          ...c.thread.map(m => m.card?.kind === 'invite' && m.card.status === 'pending' ? { ...m, card: { ...m.card, status: 'declined' as InviteStatus } } : m),
+          { id: newId('m'), sender: 'creator' as const, text: "Thanks for thinking of me — this isn't quite the right fit right now.", time: 'Just now' },
+        ],
       }))
       return
     }
+    if (kind === 'invite' && action === 'view') { router.push('/creator-opportunity'); return }
 
-    if (kind === 'invite' && action === 'view') {
-      router.push('/creator/opportunity/current')
-      return
-    }
-
-    /* ── CONTRACT actions ── */
     if (kind === 'contract' && action === 'sign') {
-      setConvos(prev => prev.map(c => {
-        if (c.id !== convoId) return c
-        return {
-          ...c,
-          lastMessage: 'Contract signed ✓',
-          lastTime: 'Just now',
-          thread: [
-            ...c.thread.map(m => m.card?.kind === 'contract' && m.card.status === 'pending'
-              ? { ...m, card: { ...m.card, status: 'signed' as ContractStatus } }
-              : m
-            ),
-            { id: `m${Date.now()}`, sender: 'creator' as const, text: 'Contract signed ✓ — looking forward to working together!', time: 'Just now' },
-          ],
-        }
+      setConvos(prev => prev.map(c => c.id !== convoId ? c : {
+        ...c, lastMessage: 'Contract signed ✓', lastTime: 'Just now',
+        thread: [
+          ...c.thread.map(m => m.card?.kind === 'contract' && m.card.status === 'pending' ? { ...m, card: { ...m.card, status: 'signed' as ContractStatus } } : m),
+          { id: newId('m'), sender: 'creator' as const, text: 'Contract signed ✓ — looking forward to working together!', time: 'Just now' },
+        ],
       }))
       return
     }
-
     if (kind === 'contract' && action === 'changes') {
-      setConvos(prev => prev.map(c => {
-        if (c.id !== convoId) return c
-        return {
-          ...c,
-          lastMessage: "I've noted some changes I'd need — please review.",
-          lastTime: 'Just now',
-          thread: [
-            ...c.thread.map(m => m.card?.kind === 'contract' && m.card.status === 'pending'
-              ? { ...m, card: { ...m.card, status: 'changes_requested' as ContractStatus } }
-              : m
-            ),
-            { id: `m${Date.now()}`, sender: 'creator' as const, text: "I've flagged some changes I'd need before signing — check the contract for my notes.", time: 'Just now' },
-          ],
-        }
+      setConvos(prev => prev.map(c => c.id !== convoId ? c : {
+        ...c, lastMessage: "I've noted some changes I'd need — please review.", lastTime: 'Just now',
+        thread: [
+          ...c.thread.map(m => m.card?.kind === 'contract' && m.card.status === 'pending' ? { ...m, card: { ...m.card, status: 'changes_requested' as ContractStatus } } : m),
+          { id: newId('m'), sender: 'creator' as const, text: "I've flagged some changes I'd need before signing — check the contract for my notes.", time: 'Just now' },
+        ],
       }))
       return
     }
+    if (kind === 'contract' && action === 'view') { router.push('/creator-contract'); return }
+    if (kind === 'contract' && action === 'download') { return }
+  }
 
-    if (kind === 'contract' && action === 'view') {
-      router.push('/creator/contract/current')
-      return
-    }
-
-    if (kind === 'contract' && action === 'download') {
-      /* mock download */
-      return
-    }
+  const onQuickAction = (action: 'payment' | 'offer' | 'sign' | 'invoice' | 'dispute') => {
+    if (action === 'payment') setPayModal(true)
+    if (action === 'offer')   setOfferModal(true)
+    if (action === 'sign')    setSignModal(true)
+    if (action === 'invoice') setInvoiceModal(true)
+    if (action === 'dispute') setDisputeModal(true)
   }
 
   const NAV_LEFT = [
-    { label: 'Dashboard', active: false, action: () => router.push('/dashboard/creator') },
+    { label: 'Dashboard', active: false, action: () => router.push('/creator-dashboard') },
     { label: 'Messages',  active: true,  action: () => {} },
   ]
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas font-rubik text-ink antialiased">
 
-      {/* ════ PAYMENT REQUEST MODAL ════ */}
-      <PaymentRequestModal
-        open={payModal}
-        brandName={active?.brandName ?? ''}
-        onClose={() => setPayModal(false)}
-        onSend={sendPaymentRequest}
-      />
+      <PaymentRequestModal open={payModal} brandName={active?.brandName ?? ''} campaignOptions={campaignOptions} onClose={() => setPayModal(false)} onSend={sendPaymentRequest}/>
+      <OfferModal          open={offerModal} brandName={active?.brandName ?? ''} campaignOptions={campaignOptions} onClose={() => setOfferModal(false)} onSend={sendNewOffer}/>
+      <SignDetailsModal    open={signModal} brandName={active?.brandName ?? ''} campaignOptions={campaignOptions} onClose={() => setSignModal(false)} onSend={sendSignDetails}/>
+      <InvoiceModal        open={invoiceModal} brandName={active?.brandName ?? ''} campaignOptions={campaignOptions} onClose={() => setInvoiceModal(false)} onSend={sendInvoice}/>
+      <DisputeModal         open={disputeModal} brandName={active?.brandName ?? ''} campaignOptions={campaignOptions} onClose={() => setDisputeModal(false)} onSend={sendDispute}/>
 
-      {/* ════ HEADER — exact creator dashboard pattern ════ */}
       <header className="sticky top-0 z-40 border-b border-primary/10 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto max-w-[1080px] px-4 pb-3 pt-3 sm:px-6">
           <div className="relative flex w-full items-center justify-between rounded-2xl px-3 py-2.5" style={{ overflow: 'visible' }}>
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-2xl backdrop-blur-xl"
               style={{ background: 'linear-gradient(90deg, rgba(139,49,232,0.05) 0%, rgba(139,49,232,0.05) 30%, rgba(255,255,255,0) 42%, rgba(255,255,255,0) 58%, rgba(139,49,232,0.05) 70%, rgba(139,49,232,0.05) 100%)' }}/>
-
-            {/* Left nav */}
             <div className="relative z-10 flex items-center gap-0.5">
               {NAV_LEFT.map(n => (
                 <button key={n.label} onClick={n.action}
@@ -880,27 +1420,14 @@ export default function CreatorMessagesPage() {
                 </button>
               ))}
             </div>
-
             <div className="w-12 flex-shrink-0 sm:w-16" aria-hidden="true"/>
-
-            {/* Right nav — icon buttons matching creator dashboard */}
             <div className="relative z-10 flex items-center gap-1.5">
-              <button title="Notifications" aria-label="Notifications"
-                className="relative flex h-9 w-9 items-center justify-center rounded-lg text-ink/60 transition hover:bg-primary/[0.08] hover:text-primary">
+              <button title="Notifications" aria-label="Notifications" className="relative flex h-9 w-9 items-center justify-center rounded-lg text-ink/60 transition hover:bg-primary/[0.08] hover:text-primary">
                 <BellIcon s={18}/>
-                {UNREAD_NOTIFS > 0 && (
-                  <span className={`absolute -right-0.5 -top-0.5 flex h-[15px] min-w-[15px] items-center justify-center rounded-full px-1 text-[8.5px] font-black text-white ${GRAD_BTN}`}>
-                    {UNREAD_NOTIFS}
-                  </span>
-                )}
+                {UNREAD_NOTIFS > 0 && <span className={`absolute -right-0.5 -top-0.5 flex h-[15px] min-w-[15px] items-center justify-center rounded-full px-1 text-[8.5px] font-black text-white ${GRAD_BTN}`}>{UNREAD_NOTIFS}</span>}
               </button>
-              <button onClick={() => router.push('/creator/profile')}
-                className="hidden items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary sm:flex">
-                My Profile
-              </button>
+              <button onClick={() => router.push('/display')} className="hidden items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary sm:flex">My Profile</button>
             </div>
-
-            {/* NexLogo pill — centred */}
             <div className="pointer-events-none absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2">
               <NexLogo className="pointer-events-auto h-8 drop-shadow-[0_4px_14px_rgba(139,49,232,0.4)] sm:h-9"/>
             </div>
@@ -908,32 +1435,22 @@ export default function CreatorMessagesPage() {
         </div>
       </header>
 
-      {/* ════ MESSENGER PANEL ════ */}
       <div className="mx-auto flex w-full max-w-[1080px] flex-1 px-4 py-5 sm:px-6">
         <div className={`flex h-[calc(100vh-88px)] w-full overflow-hidden rounded-2xl border border-primary/10 bg-white ${CARD}`}>
 
           {/* ── LEFT: Conversation list ── */}
           <div className={`flex w-full flex-shrink-0 flex-col border-r border-primary/8 sm:w-[280px] lg:w-[300px] ${showList ? 'flex' : 'hidden sm:flex'}`}>
-
-            {/* List header */}
             <div className="flex items-center justify-between border-b border-primary/8 px-4 py-4">
               <h2 className="text-[15px] font-extrabold text-ink">Messages</h2>
-              <button className={`flex h-8 w-8 items-center justify-center rounded-xl ${GRAD_BTN} text-white shadow-[0_4px_10px_-4px_rgba(139,49,232,0.45)]`}>
-                <ChatBubbleIcon s={15}/>
-              </button>
+              <button className={`flex h-8 w-8 items-center justify-center rounded-xl ${GRAD_BTN} text-white shadow-[0_4px_10px_-4px_rgba(139,49,232,0.45)]`}><ChatBubbleIcon s={15}/></button>
             </div>
-
-            {/* Search */}
             <div className="px-4 py-3">
               <div className="relative">
                 <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink/35"><SearchIcon s={14}/></span>
-                <input value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="Search brands…"
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search brands…"
                   className="w-full rounded-xl border border-primary/10 bg-surface-sub py-2.5 pl-9 pr-4 text-[13px] text-ink outline-none transition focus:border-primary focus:bg-white focus:shadow-[0_0_0_3px_rgba(139,49,232,0.08)] placeholder:text-ink/35"/>
               </div>
             </div>
-
-            {/* Convo list */}
             <div className="flex-1 overflow-y-auto">
               {filtered.length === 0
                 ? <p className="px-4 py-8 text-center text-[13px] text-ink/40">No conversations found</p>
@@ -944,17 +1461,11 @@ export default function CreatorMessagesPage() {
 
           {/* ── RIGHT: Thread ── */}
           <div className={`flex min-w-0 flex-1 flex-col ${!showList ? 'flex' : 'hidden sm:flex'}`}>
-
-            {/* Thread header */}
             <div className="flex flex-shrink-0 items-center gap-3 border-b border-primary/8 px-5 py-3.5">
-              {/* Mobile back */}
-              <button className="flex h-8 w-8 items-center justify-center rounded-lg text-ink/50 transition hover:bg-surface-sub sm:hidden"
-                onClick={() => setShowList(true)}>
+              <button className="flex h-8 w-8 items-center justify-center rounded-lg text-ink/50 transition hover:bg-surface-sub sm:hidden" onClick={() => setShowList(true)}>
                 <ArrowLeftIcon s={16}/>
               </button>
-
               <BrandAvatar initials={active.initials} color={active.color} logoUrl={active.logoUrl} size={36} online={active.online}/>
-
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="truncate text-[14px] font-extrabold text-ink">{active.brandName}</p>
@@ -962,28 +1473,16 @@ export default function CreatorMessagesPage() {
                     {active.brandType === 'agency' ? <><AgencyIcon s={9}/>Agency</> : <><BuildingIcon s={9}/>Brand</>}
                   </span>
                 </div>
-                <p className="text-[11.5px] font-medium text-ink/45">
-                  {active.online ? 'Active now' : 'Last seen recently'}
-                </p>
+                <p className="text-[11.5px] font-medium text-ink/45">{active.online ? 'Active now' : 'Last seen recently'}</p>
               </div>
-
-              {/* Quick actions — creator only has payment request */}
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPayModal(true)}
-                  title="Request payment"
-                  className={`flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-bold transition ${GRAD_BTN} text-white shadow-[0_4px_10px_-4px_rgba(139,49,232,0.40)] hover:-translate-y-0.5`}>
-                  <EuroIcon s={14}/>
-                  <span className="hidden sm:inline">Request payment</span>
-                </button>
-                <button title="More options"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-ink/45 transition hover:bg-primary/[0.07] hover:text-primary">
-                  <MoreIcon s={18}/>
-                </button>
-              </div>
+              <button title="More options" className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-ink/45 transition hover:bg-primary/[0.07] hover:text-primary">
+                <MoreIcon s={18}/>
+              </button>
             </div>
 
-            {/* Thread messages */}
+            {/* Deal context bar — OLX-style pinned strip */}
+            <DealContextBar convo={active} onView={() => router.push('/creator-deal')}/>
+
             <div className="flex-1 overflow-y-auto px-5 py-5">
               <div className="flex flex-col gap-4">
                 {active.thread.map(msg => (
@@ -996,6 +1495,11 @@ export default function CreatorMessagesPage() {
                     brandInitials={active.initials}
                     brandLogoUrl={active.logoUrl}
                     onCardAction={handleCardAction}
+                    onOfferAccept={respondOfferAccept}
+                    onOfferDecline={respondOfferDecline}
+                    onOfferCounter={respondOfferCounter}
+                    onDisputeOpen={openDisputeCenter}
+                    onCountersign={countersignDetails}
                   />
                 ))}
                 <div ref={threadEnd}/>
@@ -1004,36 +1508,27 @@ export default function CreatorMessagesPage() {
 
             {/* Composer */}
             <div className="flex flex-shrink-0 items-end gap-2.5 border-t border-primary/8 px-4 py-3.5">
-              <button
-                title="Attach file"
-                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-ink/40 transition hover:bg-primary/[0.07] hover:text-primary">
+              <button title="Attach file" className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl text-ink/40 transition hover:bg-primary/[0.07] hover:text-primary">
                 <PaperclipIcon s={17}/>
               </button>
 
+              <QuickActionsMenu onSelect={onQuickAction}/>
+
               <div className="flex-1 overflow-hidden rounded-2xl border border-primary/12 bg-surface-sub transition focus-within:border-primary focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(139,49,232,0.08)]">
                 <textarea
-                  value={draft}
-                  onChange={e => setDraft(e.target.value)}
+                  value={draft} onChange={e => setDraft(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-                  placeholder={`Message ${active.brandName}…`}
-                  rows={1}
+                  placeholder={`Message ${active.brandName}…`} rows={1}
                   className="block w-full resize-none bg-transparent px-4 py-2.5 text-[13.5px] text-ink outline-none placeholder:text-ink/35"
                   style={{ maxHeight: 120, minHeight: 40 }}
-                  onInput={e => {
-                    const t = e.currentTarget
-                    t.style.height = 'auto'
-                    t.style.height = `${Math.min(t.scrollHeight, 120)}px`
-                  }}/>
+                  onInput={e => { const t = e.currentTarget; t.style.height = 'auto'; t.style.height = `${Math.min(t.scrollHeight, 120)}px` }}/>
               </div>
 
-              <button
-                onClick={sendMessage}
-                disabled={!draft.trim()}
+              <button onClick={sendMessage} disabled={!draft.trim()}
                 className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl transition ${draft.trim() ? `${GRAD_BTN} text-white shadow-[0_4px_12px_-4px_rgba(139,49,232,0.45)] hover:-translate-y-0.5` : 'bg-ink/8 text-ink/30 cursor-not-allowed'}`}>
                 <SendIcon s={15}/>
               </button>
             </div>
-
           </div>
         </div>
       </div>
