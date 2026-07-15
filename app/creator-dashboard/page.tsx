@@ -6,20 +6,36 @@ import { useRouter } from 'next/navigation'
 /* ════════════════════════════════════════════════════════════════════
    Creator dashboard — app/dashboard/creator/page.tsx  (Nexfluence v4, LIGHT)
    ════════════════════════════════════════════════════════════════════
-   CHANGES v2:
-   • Removed MessagesPanel (messages is its own page at /creator/messages)
-   • Removed all Conversation / Message types and mock data
-   • Added InvitesRow — horizontal scrollable invite cards from brands/agencies
-   • Added InviteDetailModal — full invite + Accept (with message) / Reject flow
-   • Invites section sits between DiscoverStrip and ActiveDealsRow
+   CHANGES v3:
+   • Route fixes: /creator-message, /creator-search, /creator-deal?id=,
+     /display — matching the real route list, no more 404s.
+   • Earnings arc gauge (confirmed vs. in-pipeline) replaces the linear
+     goal bar; monthly goal + avg-per-deal are now one editable sentence.
+   • Notifications moved to the top as a horizontally scrollable card row,
+     including a locked "Nexus Pro" teaser card → opens SubscriptionModal.
+   • Portfolio "lite" preview card near the top.
+   • Invites / Active deals / Goals / To-do / Performance are all
+     collapsible cards.
+   • New: Goals section, To-do list (with smart + manual items, each
+     wired to a real route).
+   • Active deals now show expected-earnings RANGES; the mean of each
+     range feeds the "in pipeline" figure in the earnings arc. Negotiating
+     deals can be "finalized" inline, which recomputes everything live.
+   • Views chart is now a bar chart, with save-events overlaid as markers.
+   • Every "major" action (accept/reject invite, finalize deal, edit goal,
+     reach a goal) logs a chart event + shows a "Saved" toast.
    ════════════════════════════════════════════════════════════════════ */
 
 const CARD      = 'shadow-[0_1px_2px_rgba(10,6,18,0.04),0_12px_32px_-12px_rgba(139,49,232,0.16)]'
 const GRAD_BTN  = 'bg-gradient-to-r from-primary via-primary-lt to-magenta'
 const GRAD_TEXT = 'bg-gradient-to-r from-primary via-primary-lt to-magenta bg-clip-text text-transparent'
 
-const CREATOR = { firstName: 'Amelia', publicSlug: 'amelia-roze' }
+const CREATOR = { firstName: 'Amelia' }
 const UNREAD_MESSAGES = 3
+
+let _uid = 0
+const newId = (p: string) => `${p}_${++_uid}`
+const euro = (n: number) => `€${n.toLocaleString()}`
 
 /* ─── Range ─────────────────────────────────────────────────────── */
 type RangeOption = 7 | 14 | 28
@@ -142,24 +158,24 @@ const INITIAL_INVITES: Invite[] = [
   },
 ]
 
-/* ─── Active deals ───────────────────────────────────────────────── */
+/* ─── Active deals — now with expected-earnings RANGES ───────────── */
 type DealStatus = 'active' | 'review' | 'negotiation'
 type ActiveDeal = {
   id: string
   brandName: string; brandColor: string; brandInitials: string; brandLogoUrl: string | null
   campaignTitle: string; objective: string; status: DealStatus
   piecesCommitted: number; piecesSubmitted: number; piecesApproved: number
-  payment: string; endDate: string
+  payMin: number; payMax: number; endDate: string
 }
 
-const ACTIVE_DEALS: ActiveDeal[] = [
+const INITIAL_ACTIVE_DEALS: ActiveDeal[] = [
   {
     id: 'd1',
     brandName: 'Kinetics', brandColor: '#8B31E8', brandInitials: 'KI', brandLogoUrl: null,
     campaignTitle: 'Vitamin-C Recovery Stack',
     objective: 'Conversions', status: 'active',
     piecesCommitted: 3, piecesSubmitted: 2, piecesApproved: 1,
-    payment: '€380', endDate: 'Jun 30',
+    payMin: 340, payMax: 420, endDate: 'Jun 30',
   },
   {
     id: 'd2',
@@ -167,7 +183,7 @@ const ACTIVE_DEALS: ActiveDeal[] = [
     campaignTitle: 'Morning Ritual',
     objective: 'Awareness', status: 'review',
     piecesCommitted: 2, piecesSubmitted: 2, piecesApproved: 1,
-    payment: '€250', endDate: 'Jul 5',
+    payMin: 200, payMax: 300, endDate: 'Jul 5',
   },
   {
     id: 'd3',
@@ -175,18 +191,48 @@ const ACTIVE_DEALS: ActiveDeal[] = [
     campaignTitle: 'Training Block Q3',
     objective: 'UGC', status: 'negotiation',
     piecesCommitted: 4, piecesSubmitted: 0, piecesApproved: 0,
-    payment: '€500', endDate: 'Jul 20',
+    payMin: 450, payMax: 550, endDate: 'Jul 20',
   },
 ]
 
+const dealRange = (d: ActiveDeal) => `${euro(d.payMin)}–${euro(d.payMax)}`
+const dealMean  = (d: ActiveDeal) => Math.round((d.payMin + d.payMax) / 2)
+
 /* ─── Earnings goal ──────────────────────────────────────────────── */
-const AVG_CAMPAIGN_OPTIONS = [
-  { label: '€50',   value: 50   }, { label: '€100',  value: 100  },
-  { label: '€200',  value: 200  }, { label: '€350',  value: 350  },
-  { label: '€500',  value: 500  }, { label: '€750',  value: 750  },
-  { label: '€1000', value: 1000 }, { label: '€1500', value: 1500 },
-]
 const EARNED_THIS_MONTH = 840
+
+/* ─── Goals ───────────────────────────────────────────────────────── */
+type GoalIcon = 'users' | 'handshake' | 'grid' | 'euro'
+interface GoalItem { id: string; label: string; current: number; target: number; unit: string; icon: GoalIcon }
+
+const INITIAL_GOALS: GoalItem[] = [
+  { id: 'g1', label: 'Grow Instagram to 50K followers',        current: 41200, target: 50000, unit: 'followers', icon: 'users'     },
+  { id: 'g2', label: 'Land 5 new brand deals this quarter',    current: 3,     target: 5,     unit: 'deals',     icon: 'handshake' },
+  { id: 'g3', label: 'Publish 12 portfolio photos',            current: 6,     target: 12,    unit: 'photos',    icon: 'grid'      },
+  { id: 'g4', label: 'Diversify into 3 income types',          current: 2,     target: 3,     unit: 'types',     icon: 'euro'      },
+]
+
+const BUMP_STEP: Record<string, number> = { followers: 500, deals: 1, photos: 1, types: 1, goal: 1 }
+
+/* ─── To-do ──────────────────────────────────────────────────────── */
+interface ManualTodo { id: string; label: string; done: boolean; href?: string; cta?: string }
+
+const INITIAL_MANUAL_TODOS: ManualTodo[] = [
+  { id: 'm1', label: 'Add 6 more portfolio photos to reach 12',   done: false, href: '/creator-studio',         cta: 'Open studio'    },
+  { id: 'm2', label: 'Verify your primary platform stats are current', done: false, href: '/creator-studio',   cta: 'Open studio'    },
+  { id: 'm3', label: 'Submit your next content piece for Kinetics', done: false, href: '/creator-content-submit', cta: 'Submit content' },
+  { id: 'm4', label: 'Review your active contract terms',         done: false, href: '/creator-contract',      cta: 'View contract'  },
+  { id: 'm5', label: 'Set up your payout method',                 done: false, href: '/creator-payment-withdraw', cta: 'Set up payouts' },
+]
+
+/* ─── Portfolio lite preview ─────────────────────────────────────── */
+const PORTFOLIO_LITE = [
+  { id: 'p1', tone: '#8B31E8' }, { id: 'p2', tone: '#FF33BC' }, { id: 'p3', tone: '#2563EB' },
+  { id: 'p4', tone: '#059669' }, { id: 'p5', tone: '#D97706' }, { id: 'p6', tone: '#DB2777' },
+]
+
+/* ─── Chart events (save log) ────────────────────────────────────── */
+interface ChartEvent { id: string; label: string; dayIndex: number }
 
 /* ════════════════════════════════════════════════════════════════════
    ICONS
@@ -262,6 +308,25 @@ function BuildingIcon({ s = 13 }: { s?: number }) {
 function UsersIcon({ s = 13 }: { s?: number }) {
   return <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M2 20v-1a7 7 0 0114 0v1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M16 11a3 3 0 000-6M22 20v-1a7 7 0 00-5-6.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
 }
+function GridIcon({ s = 18 }: { s?: number }) {
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.6" stroke="currentColor" strokeWidth="1.7"/><rect x="13" y="3" width="8" height="8" rx="1.6" stroke="currentColor" strokeWidth="1.7"/><rect x="3" y="13" width="8" height="8" rx="1.6" stroke="currentColor" strokeWidth="1.7"/><rect x="13" y="13" width="8" height="8" rx="1.6" stroke="currentColor" strokeWidth="1.7"/></svg>
+}
+function PlusIcon({ s = 16 }: { s?: number }) {
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+}
+function LockIcon({ s = 16 }: { s?: number }) {
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+}
+function UserCircleIcon({ s = 18 }: { s?: number }) {
+  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M6.2 18.2c1.1-2.4 3.2-3.7 5.8-3.7s4.7 1.3 5.8 3.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+}
+function IconChevron({ s = 16, open }: { s?: number; open: boolean }) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none' }}>
+      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
 
 function NexLogo({ className = '' }: { className?: string }) {
   return <img src="/Nex.webp" alt="Nexfluence" className={`w-auto object-contain ${className}`}/> // eslint-disable-line @next/next/no-img-element
@@ -288,7 +353,37 @@ function LogoTile({ name, color, logoUrl, initials, size = 40 }: {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   STAT CARD — identical to brand dashboard
+   COLLAPSIBLE CARD — generic wrapper used by Goals / To-do / Performance
+   ════════════════════════════════════════════════════════════════════ */
+function CollapsibleCard({ icon, title, meta, headerRight, defaultOpen = true, children }: {
+  icon: ReactNode; title: string; meta?: string; headerRight?: ReactNode; defaultOpen?: boolean; children: ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className={`rounded-2xl border border-primary/10 bg-white ${CARD}`}>
+      <div className="flex items-center justify-between gap-3 px-5 py-4">
+        <button type="button" onClick={() => setOpen(o => !o)} className="flex flex-1 items-center gap-2.5 text-left">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary/[0.08] text-primary">{icon}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-bold text-ink">{title}</span>
+            {meta && <span className="block text-[11px] text-ink/40">{meta}</span>}
+          </span>
+        </button>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {open && headerRight}
+          <button type="button" onClick={() => setOpen(o => !o)}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-ink/40 transition hover:bg-primary/[0.06] hover:text-primary">
+            <IconChevron s={16} open={open}/>
+          </button>
+        </div>
+      </div>
+      {open && <div className="border-t border-primary/8 px-5 pb-5 pt-4">{children}</div>}
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   STAT CARD
    ════════════════════════════════════════════════════════════════════ */
 function StatCard({ icon, label, value, delta, sublabel }: {
   icon: ReactNode; label: string; value: string
@@ -314,9 +409,9 @@ function StatCard({ icon, label, value, delta, sublabel }: {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   DISCOVER STRIP — same visual as brand's CampaignStrip, creator copy
+   DISCOVER STRIP
    ════════════════════════════════════════════════════════════════════ */
-function DiscoverStrip({ onClick }: { onClick: () => void }) {
+function DiscoverStrip({ onClick, dealsCount }: { onClick: () => void; dealsCount: number }) {
   const [hovered, setHovered] = useState(false)
   const orbs = [
     { w: 180, h: 180, top: '-40%', left: '-3%',  op: 0.18, blur: 48 },
@@ -367,7 +462,7 @@ function DiscoverStrip({ onClick }: { onClick: () => void }) {
         <div className="flex flex-shrink-0 items-center gap-3">
           <div className="hidden text-right sm:block">
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/50">Active deals</p>
-            <p className="text-[22px] font-black leading-none text-white">{ACTIVE_DEALS.length}</p>
+            <p className="text-[22px] font-black leading-none text-white">{dealsCount}</p>
           </div>
           <button type="button"
             className="flex items-center gap-2.5 rounded-xl bg-white px-6 py-3.5 text-[14px] font-bold text-primary shadow-[0_4px_16px_rgba(10,6,18,0.18)]"
@@ -383,10 +478,283 @@ function DiscoverStrip({ onClick }: { onClick: () => void }) {
 }
 
 /* ════════════════════════════════════════════════════════════════════
+   PHOTOS CARD — portfolio lite preview
+   ════════════════════════════════════════════════════════════════════ */
+function PhotosCard({ onManage }: { onManage: () => void }) {
+  return (
+    <div className={`rounded-2xl border border-primary/10 bg-white p-5 ${CARD}`}>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/[0.08] text-primary"><GridIcon s={15}/></span>
+          <div>
+            <h3 className="text-[14px] font-bold text-ink">Your portfolio</h3>
+            <p className="text-[11px] text-ink/40">{PORTFOLIO_LITE.length} photos · 2 videos · updated 2 days ago</p>
+          </div>
+        </div>
+        <button onClick={onManage}
+          className="hidden items-center gap-1.5 rounded-lg border border-primary/15 px-3.5 py-2 text-[12px] font-bold text-primary transition hover:bg-primary/[0.04] sm:flex">
+          Manage<ArrowRightIcon s={12}/>
+        </button>
+      </div>
+      <div className="flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {PORTFOLIO_LITE.map(p => (
+          <div key={p.id} className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl text-white"
+            style={{ background: `linear-gradient(135deg, ${p.tone}, ${p.tone}cc)` }}>
+            <GridIcon s={18}/>
+          </div>
+        ))}
+        <button onClick={onManage}
+          className="flex h-20 w-20 flex-shrink-0 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-primary/25 text-primary transition hover:border-primary/45 hover:bg-primary/[0.04]">
+          <PlusIcon s={16}/>
+          <span className="text-[9.5px] font-bold">Add</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ARC GAUGE + INLINE-EDITABLE EARNINGS CARD
+   ════════════════════════════════════════════════════════════════════ */
+function ArcGauge({ earnedFrac, expectedFrac }: { earnedFrac: number; expectedFrac: number }) {
+  const r = 84, cx = 100, cy = 104
+  const circumference = Math.PI * r
+  const trackPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`
+  const dash = (frac: number) => `${circumference * Math.min(1, Math.max(0, frac))} ${circumference}`
+  return (
+    <svg viewBox="0 0 200 120" className="w-full">
+      <defs>
+        <linearGradient id="arc-grad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#8B31E8"/><stop offset="100%" stopColor="#FF33BC"/>
+        </linearGradient>
+      </defs>
+      <path d={trackPath} fill="none" stroke="#8B31E8" strokeOpacity="0.08" strokeWidth="14" strokeLinecap="round"/>
+      <path d={trackPath} fill="none" stroke="#8B31E8" strokeOpacity="0.22" strokeWidth="14" strokeLinecap="round" strokeDasharray={dash(expectedFrac)}/>
+      <path d={trackPath} fill="none" stroke="url(#arc-grad)" strokeWidth="14" strokeLinecap="round" strokeDasharray={dash(earnedFrac)}/>
+    </svg>
+  )
+}
+
+function InlineNumberEdit({ value, onCommit }: { value: number; onCommit: (v: number) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft]     = useState(String(value))
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => { if (editing) ref.current?.focus() }, [editing])
+  const commit = () => {
+    const n = parseInt(draft.replace(/[^0-9]/g, ''), 10)
+    if (!isNaN(n) && n > 0) onCommit(n)
+    setEditing(false)
+  }
+  if (editing) {
+    return (
+      <input ref={ref} value={draft}
+        onChange={e => setDraft(e.target.value.replace(/[^0-9]/g, ''))}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(String(value)); setEditing(false) } }}
+        className="inline-block w-[74px] rounded-md border border-primary/30 bg-white px-1.5 py-0.5 text-center font-extrabold text-primary outline-none focus:shadow-[0_0_0_2px_rgba(139,49,232,0.15)]"/>
+    )
+  }
+  return (
+    <button type="button" onClick={() => { setDraft(String(value)); setEditing(true) }}
+      className="font-extrabold text-primary underline decoration-primary/30 decoration-2 underline-offset-4 hover:decoration-primary">
+      {euro(value)}
+    </button>
+  )
+}
+
+function EarningsArcCard({ monthlyGoal, avgCampaign, earned, expected, onGoalCommit, onAvgCommit }: {
+  monthlyGoal: number; avgCampaign: number; earned: number; expected: number
+  onGoalCommit: (v: number) => void; onAvgCommit: (v: number) => void
+}) {
+  const earnedFrac   = Math.min(1, earned / Math.max(monthlyGoal, 1))
+  const expectedFrac = Math.min(1, (earned + expected) / Math.max(monthlyGoal, 1))
+  const remaining    = Math.max(0, monthlyGoal - earned - expected)
+  const dealsNeeded  = remaining > 0 ? Math.ceil(remaining / Math.max(avgCampaign, 1)) : 0
+  const isGoalMet    = earned >= monthlyGoal
+
+  return (
+    <div className={`rounded-2xl border border-primary/10 bg-white p-6 ${CARD}`}>
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/[0.08] text-primary"><TargetIcon s={18}/></span>
+        <div>
+          <p className="text-[13px] font-bold uppercase tracking-[0.1em] text-ink/50">This month's earnings</p>
+          <p className="mt-0.5 text-[11.5px] text-ink/35">Confirmed income vs. what's still in the pipeline</p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:gap-8">
+        <div className="relative w-full max-w-[280px] flex-shrink-0">
+          <ArcGauge earnedFrac={earnedFrac} expectedFrac={expectedFrac}/>
+          <div className="pointer-events-none absolute inset-x-0 top-[54%] flex flex-col items-center">
+            <span className="text-[30px] font-black leading-none tracking-[-0.03em] text-ink">{euro(earned)}</span>
+            <span className="mt-1 text-[11.5px] font-semibold text-ink/40">of {euro(monthlyGoal)} goal</span>
+          </div>
+        </div>
+        <div className="mt-1 flex-1 sm:mt-0">
+          <div className="flex flex-wrap gap-4 text-[12px]">
+            <span className="flex items-center gap-1.5"><span className={`h-2.5 w-2.5 rounded-full ${GRAD_BTN}`}/>Confirmed · {euro(earned)}</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-primary/25"/>In progress · {euro(expected)}</span>
+          </div>
+          <p className="mt-3 text-[14.5px] leading-[1.8] text-ink/70">
+            I want to earn <InlineNumberEdit value={monthlyGoal} onCommit={onGoalCommit}/> this month, averaging <InlineNumberEdit value={avgCampaign} onCommit={onAvgCommit}/> per deal
+            {isGoalMet
+              ? <> — goal reached, amazing work! 🎉</>
+              : <> — that's <span className="font-extrabold text-ink">{dealsNeeded} more deal{dealsNeeded !== 1 ? 's' : ''}</span> needed to hit my goal.</>}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   SUBSCRIPTION MODAL — "Nexus Pro" upsell
+   ════════════════════════════════════════════════════════════════════ */
+function SubscriptionModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [billing, setBilling] = useState<'monthly' | 'annual'>('monthly')
+  const [claimed, setClaimed] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    document.body.style.overflow = 'hidden'
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', esc)
+    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', esc) }
+  }, [open, onClose])
+
+  if (!open) return null
+  const price = billing === 'monthly' ? 19 : 15
+  const perks = [
+    'See exactly who viewed your profile — industry, role, and company',
+    'Full analytics history, no 28-day limit',
+    'Priority placement in brand search results',
+    'Early access to high-budget campaign invites',
+  ]
+  return (
+    <div className="fixed inset-0 z-[700] flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="absolute inset-0 bg-ink/55 backdrop-blur-sm" onClick={onClose}/>
+      <div className={`relative z-10 w-full max-w-[440px] overflow-hidden rounded-3xl bg-white ${CARD}`}>
+        <div className={`px-7 pb-6 pt-7 text-white ${GRAD_BTN}`}>
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[10.5px] font-black uppercase tracking-[0.08em]">
+              <LockIcon s={10}/>Nexus Pro
+            </span>
+            <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 transition hover:bg-white/25"><XIcon s={13}/></button>
+          </div>
+          <h2 className="mt-4 text-[21px] font-black leading-tight tracking-[-0.02em]">See who's checking out your profile</h2>
+          <p className="mt-1.5 text-[13px] text-white/80">Someone from the Design industry viewed you today — unlock their name & role.</p>
+        </div>
+        <div className="px-7 py-6">
+          <div className="mb-5 flex rounded-xl border border-primary/12 bg-surface-sub p-1">
+            {(['monthly', 'annual'] as const).map(b => (
+              <button key={b} onClick={() => setBilling(b)}
+                className={`flex-1 rounded-lg py-2 text-[12.5px] font-bold transition ${billing === b ? `${GRAD_BTN} text-white` : 'text-ink/50'}`}>
+                {b === 'monthly' ? 'Monthly' : 'Annual · save 20%'}
+              </button>
+            ))}
+          </div>
+          <div className="mb-5 flex items-baseline gap-1.5">
+            <span className="text-[32px] font-black tracking-[-0.03em] text-ink">€{price}</span>
+            <span className="text-[13px] font-medium text-ink/40">/ month</span>
+          </div>
+          <ul className="mb-6 space-y-2.5">
+            {perks.map((p, i) => (
+              <li key={i} className="flex items-start gap-2.5 text-[13px] leading-[1.5] text-ink/70">
+                <span className="mt-0.5 flex-shrink-0 text-emerald-500"><CheckCircleIcon s={15}/></span>{p}
+              </li>
+            ))}
+          </ul>
+          {!claimed ? (
+            <button onClick={() => setClaimed(true)}
+              className={`w-full rounded-xl ${GRAD_BTN} py-3.5 text-[14px] font-bold text-white shadow-[0_8px_24px_-8px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5`}>
+              Upgrade to Pro
+            </button>
+          ) : (
+            <div className="rounded-xl bg-emerald-50 px-4 py-3.5 text-center">
+              <p className="text-[13px] font-bold text-emerald-700">Demo mode — billing isn't connected yet</p>
+              <p className="mt-1 text-[11.5px] text-emerald-600/80">This is where checkout would open in the live product.</p>
+            </div>
+          )}
+          <p className="mt-3 text-center text-[11px] text-ink/30">Cancel anytime · billed in EUR</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   NOTIFICATIONS — top scrollable card row
+   ════════════════════════════════════════════════════════════════════ */
+const NOTIFICATION_STYLE: Record<NotificationType, { icon: ReactNode; bg: string; text: string }> = {
+  message:      { icon: <ChatBubbleIcon s={16}/>, bg: 'bg-primary/[0.08]', text: 'text-primary'     },
+  profile_view: { icon: <EyeIcon s={16}/>,        bg: 'bg-sky-50',         text: 'text-sky-600'     },
+  payment:      { icon: <EuroIcon s={16}/>,       bg: 'bg-emerald-50',     text: 'text-emerald-600' },
+  deal:         { icon: <HandshakeIcon s={16}/>,  bg: 'bg-amber-50',       text: 'text-amber-600'   },
+  insight:      { icon: <LightbulbIcon s={16}/>,  bg: 'bg-violet-50',      text: 'text-violet-600'  },
+}
+
+function NotificationCard({ n, onClick }: { n: NotificationItem; onClick: () => void }) {
+  const style = NOTIFICATION_STYLE[n.type]
+  return (
+    <button onClick={onClick}
+      className={`flex w-[240px] flex-shrink-0 flex-col rounded-2xl border bg-white p-4 text-left transition ${CARD} ${n.unread ? 'border-primary/20' : 'border-primary/10 opacity-70'}`}>
+      <div className="flex items-center justify-between">
+        <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${style.bg} ${style.text}`}>{style.icon}</span>
+        {n.unread && <span className={`h-2 w-2 rounded-full ${GRAD_BTN}`}/>}
+      </div>
+      <p className="mt-2.5 line-clamp-3 text-[12.5px] leading-[1.45] text-ink/80">{n.title}</p>
+      <p className="mt-2 text-[10.5px] font-medium text-ink/35">{n.time}</p>
+    </button>
+  )
+}
+
+function PremiumTeaserCard({ onUnlock }: { onUnlock: () => void }) {
+  return (
+    <button onClick={onUnlock}
+      className={`relative flex w-[240px] flex-shrink-0 flex-col overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4 text-left transition hover:-translate-y-0.5 ${CARD}`}>
+      <div className="flex items-center justify-between">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600"><EyeIcon s={15}/></span>
+        <span className="flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[9.5px] font-black text-white"><LockIcon s={9}/>PRO</span>
+      </div>
+      <p className="mt-2.5 text-[12.5px] font-semibold leading-[1.45] text-ink/85">
+        Someone from the <span className="font-extrabold text-ink">Design</span> industry viewed your profile
+      </p>
+      <p className="mt-2 select-none text-[13px] font-bold leading-tight text-ink/40" style={{ filter: 'blur(4px)' }}>
+        Elīna ██████ · Creative Director
+      </p>
+      <p className="mt-2.5 flex items-center gap-1 text-[11px] font-bold text-amber-600">
+        Unlock with Nexus Pro<ArrowRightIcon s={11}/>
+      </p>
+    </button>
+  )
+}
+
+function NotificationsTopCard({ items, onMarkRead, onMarkAllRead, onUnlockPremium }: {
+  items: NotificationItem[]; onMarkRead: (id: string) => void; onMarkAllRead: () => void; onUnlockPremium: () => void
+}) {
+  const unread = items.filter(n => n.unread).length
+  return (
+    <div className={`rounded-2xl border border-primary/10 bg-white p-5 ${CARD}`}>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/[0.08] text-primary"><BellIcon s={15}/></span>
+          <div>
+            <h3 className="text-[14px] font-bold text-ink">Notifications{unread > 0 && <span className="ml-1.5 text-primary">({unread})</span>}</h3>
+            <p className="text-[11px] text-ink/40">Scroll for more · tap to open</p>
+          </div>
+        </div>
+        {unread > 0 && <button onClick={onMarkAllRead} className="text-[12px] font-bold text-primary hover:underline">Mark all read</button>}
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <PremiumTeaserCard onUnlock={onUnlockPremium}/>
+        {items.map(n => <NotificationCard key={n.id} n={n} onClick={() => onMarkRead(n.id)}/>)}
+      </div>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
    INVITE DETAIL MODAL
-   Opens when a creator clicks an invite card.
-   Full brief, dos/don'ts, deal terms. Accept (+ compose a message)
-   or Reject. Accept routes to /creator/messages.
    ════════════════════════════════════════════════════════════════════ */
 const DEAL_TYPE_META: Record<DealType, { label: string; bg: string; text: string }> = {
   paid:      { label: 'Paid',      bg: 'bg-violet-50',  text: 'text-violet-700'  },
@@ -437,7 +805,6 @@ function InviteDetailModal({ invite, onClose, onAccept, onReject }: {
       <div className={`relative z-10 flex w-full max-w-[680px] flex-col overflow-hidden rounded-3xl bg-white ${CARD}`}
         style={{ maxHeight: 'min(92vh, 780px)' }}>
 
-        {/* ── Modal header ── */}
         <div className="flex flex-shrink-0 items-start justify-between gap-4 border-b border-primary/10 px-6 py-5">
           <div className="flex items-center gap-3.5">
             <LogoTile name={invite.senderName} color={invite.senderColor} logoUrl={invite.senderLogoUrl} initials={invite.senderInitials} size={44}/>
@@ -462,10 +829,7 @@ function InviteDetailModal({ invite, onClose, onAccept, onReject }: {
           </button>
         </div>
 
-        {/* ── Modal body ── */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
-          {/* Deal terms strip */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { label: 'Rate',      value: invite.rate },
@@ -480,14 +844,12 @@ function InviteDetailModal({ invite, onClose, onAccept, onReject }: {
             ))}
           </div>
 
-          {/* Rate note */}
           {invite.rateNote && (
             <p className="rounded-xl border border-primary/12 bg-primary/[0.04] px-4 py-3 text-[12.5px] text-ink/60">
               <span className="font-bold text-primary">Rate note: </span>{invite.rateNote}
             </p>
           )}
 
-          {/* Formats */}
           <div>
             <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-ink/40">Formats required</p>
             <div className="flex flex-wrap gap-2">
@@ -497,13 +859,11 @@ function InviteDetailModal({ invite, onClose, onAccept, onReject }: {
             </div>
           </div>
 
-          {/* Brief */}
           <div>
             <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.1em] text-ink/40">Campaign brief</p>
             <p className="rounded-xl bg-surface-sub px-4 py-3.5 text-[13.5px] leading-[1.65] text-ink/75">{invite.brief}</p>
           </div>
 
-          {/* Dos & Don'ts */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-xl bg-emerald-50 px-4 py-3.5">
               <p className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-emerald-700">Do</p>
@@ -527,7 +887,6 @@ function InviteDetailModal({ invite, onClose, onAccept, onReject }: {
             </div>
           </div>
 
-          {/* Accept message composer — shown after clicking Accept */}
           {step === 'accept' && (
             <div className="rounded-2xl border-2 border-primary/20 bg-primary/[0.03] p-5">
               <p className="mb-1 text-[13px] font-bold text-ink">Add a message to {invite.senderName}</p>
@@ -541,7 +900,6 @@ function InviteDetailModal({ invite, onClose, onAccept, onReject }: {
             </div>
           )}
 
-          {/* Rejected state */}
           {step === 'rejected' && (
             <div className="flex items-center justify-center rounded-2xl bg-rose-50 py-6">
               <div className="flex items-center gap-2 text-rose-600">
@@ -552,7 +910,6 @@ function InviteDetailModal({ invite, onClose, onAccept, onReject }: {
           )}
         </div>
 
-        {/* ── Modal footer ── */}
         {step !== 'rejected' && (
           <div className="flex flex-shrink-0 items-center justify-between gap-3 border-t border-primary/10 bg-surface-sub px-6 py-4">
             <button onClick={handleReject}
@@ -579,10 +936,7 @@ function InviteDetailModal({ invite, onClose, onAccept, onReject }: {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   INVITES ROW
-   Horizontal scrollable cards. Each card is a compact invite preview.
-   Clicking opens InviteDetailModal.
-   Accepted/rejected cards show their resolved state inline.
+   INVITES ROW — collapsible
    ════════════════════════════════════════════════════════════════════ */
 function InviteCard({ invite, onClick }: { invite: Invite; onClick: () => void }) {
   const [hovered, setHovered] = useState(false)
@@ -599,8 +953,6 @@ function InviteCard({ invite, onClick }: { invite: Invite; onClick: () => void }
         transform: (!isResolved && hovered) ? 'translateY(-3px)' : 'none',
         boxShadow: (!isResolved && hovered) ? '0 16px 40px -12px rgba(139,49,232,0.28)' : undefined,
       }}>
-
-      {/* Brand + title */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <LogoTile name={invite.senderName} color={invite.senderColor} logoUrl={invite.senderLogoUrl} initials={invite.senderInitials} size={36}/>
@@ -614,7 +966,6 @@ function InviteCard({ invite, onClick }: { invite: Invite; onClick: () => void }
             <span className="block line-clamp-2 text-[13px] font-extrabold leading-tight text-ink">{invite.campaignTitle}</span>
           </div>
         </div>
-        {/* Status resolved badge */}
         {isResolved && (
           <span className={`flex flex-shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-bold ${invite.status === 'accepted' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
             {invite.status === 'accepted' ? <><CheckIcon s={10}/>Accepted</> : <><XIcon s={10}/>Declined</>}
@@ -625,13 +976,11 @@ function InviteCard({ invite, onClick }: { invite: Invite; onClick: () => void }
         )}
       </div>
 
-      {/* Objective + deal type */}
       <div className="mt-3 flex items-center gap-2">
         <span className={`rounded-lg px-2.5 py-0.5 text-[10.5px] font-bold ${obj}`}>{invite.objective}</span>
         <span className={`rounded-lg px-2.5 py-0.5 text-[10.5px] font-bold ${dt.bg} ${dt.text}`}>{dt.label}</span>
       </div>
 
-      {/* Rate + deadline */}
       <div className="mt-4 flex items-center justify-between border-t border-primary/8 pt-4">
         <span className="text-[12.5px] font-bold text-ink">{invite.rate.split('+')[0]?.trim()}</span>
         <span className="flex items-center gap-1 text-[11px] font-medium text-ink/40">
@@ -639,10 +988,9 @@ function InviteCard({ invite, onClick }: { invite: Invite; onClick: () => void }
         </span>
       </div>
 
-      {/* CTA hint — only on pending */}
       {!isResolved && (
         <div className={`mt-3 flex items-center justify-center gap-1.5 rounded-xl py-2 text-[11.5px] font-bold transition ${hovered ? `${GRAD_BTN} text-white` : 'bg-primary/[0.06] text-primary'}`}>
-          View & respond <ArrowRightIcon s={11}/>
+          View & respond<ArrowRightIcon s={11}/>
         </div>
       )}
       <style>{`@keyframes pulse-badge { 0%{box-shadow:0 0 0 0 rgba(139,49,232,0.5)} 70%{box-shadow:0 0 0 6px rgba(139,49,232,0)} 100%{box-shadow:0 0 0 0 rgba(139,49,232,0)} }`}</style>
@@ -654,11 +1002,12 @@ function InvitesRow({ invites, onOpenInvite }: {
   invites: Invite[]
   onOpenInvite: (id: string) => void
 }) {
+  const [open, setOpen] = useState(true)
   const pending = invites.filter(i => i.status === 'pending').length
   return (
     <div className={`rounded-2xl border border-primary/10 bg-white p-5 ${CARD}`}>
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
+        <button type="button" onClick={() => setOpen(o => !o)} className="flex flex-1 items-center gap-2.5 text-left">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/[0.08] text-primary"><InboxIcon s={15}/></span>
           <div>
             <h3 className="flex items-center gap-2 text-[14px] font-bold text-ink">
@@ -671,27 +1020,33 @@ function InvitesRow({ invites, onOpenInvite }: {
               {pending > 0 ? `${pending} pending invite${pending !== 1 ? 's' : ''} — click to view full brief and respond` : 'No pending invites right now'}
             </p>
           </div>
-        </div>
+        </button>
+        <button type="button" onClick={() => setOpen(o => !o)}
+          className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-ink/40 transition hover:bg-primary/[0.06] hover:text-primary">
+          <IconChevron s={16} open={open}/>
+        </button>
       </div>
-      {invites.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-primary/20 py-10 text-center">
-          <InboxIcon s={28}/>
-          <p className="mt-3 text-[13px] font-semibold text-ink/45">No invites yet</p>
-          <p className="mt-1 text-[12px] text-ink/35">Complete your profile to start receiving collaboration requests from brands.</p>
-        </div>
-      ) : (
-        <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {invites.map(inv => (
-            <InviteCard key={inv.id} invite={inv} onClick={() => onOpenInvite(inv.id)}/>
-          ))}
-        </div>
+      {open && (
+        invites.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-primary/20 py-10 text-center">
+            <InboxIcon s={28}/>
+            <p className="mt-3 text-[13px] font-semibold text-ink/45">No invites yet</p>
+            <p className="mt-1 text-[12px] text-ink/35">Complete your profile to start receiving collaboration requests from brands.</p>
+          </div>
+        ) : (
+          <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {invites.map(inv => (
+              <InviteCard key={inv.id} invite={inv} onClick={() => onOpenInvite(inv.id)}/>
+            ))}
+          </div>
+        )
       )}
     </div>
   )
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   ACTIVE DEALS ROW
+   ACTIVE DEALS ROW — collapsible, range/mean earnings
    ════════════════════════════════════════════════════════════════════ */
 const DEAL_STATUS_META: Record<DealStatus, { label: string; dot: string; bg: string; text: string }> = {
   active:      { label: 'Active',      dot: 'bg-emerald-400', bg: 'bg-emerald-50', text: 'text-emerald-700' },
@@ -699,15 +1054,15 @@ const DEAL_STATUS_META: Record<DealStatus, { label: string; dot: string; bg: str
   negotiation: { label: 'Negotiating', dot: 'bg-sky-400',     bg: 'bg-sky-50',     text: 'text-sky-700'     },
 }
 
-function DealCard({ deal, onClick }: { deal: ActiveDeal; onClick: () => void }) {
+function DealCard({ deal, onClick, onFinalize }: { deal: ActiveDeal; onClick: () => void; onFinalize: (id: string) => void }) {
   const [hovered, setHovered] = useState(false)
   const st = DEAL_STATUS_META[deal.status]
   const objCls = OBJECTIVE_COLOR[deal.objective] ?? 'text-ink/60 bg-surface-sub'
   const contentProg = deal.piecesCommitted > 0 ? Math.round((deal.piecesApproved / deal.piecesCommitted) * 100) : 0
   return (
-    <button type="button" onClick={onClick}
+    <div role="button" tabIndex={0} onClick={onClick} onKeyDown={e => { if (e.key === 'Enter') onClick() }}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      className={`flex w-[290px] flex-shrink-0 flex-col rounded-2xl border border-primary/10 bg-white p-5 text-left transition ${CARD}`}
+      className={`flex w-[290px] flex-shrink-0 cursor-pointer flex-col rounded-2xl border border-primary/10 bg-white p-5 text-left transition ${CARD}`}
       style={{
         transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         transform: hovered ? 'translateY(-3px)' : 'none',
@@ -743,41 +1098,56 @@ function DealCard({ deal, onClick }: { deal: ActiveDeal; onClick: () => void }) 
         </div>
       </div>
       <div className="mt-4 flex items-center justify-between border-t border-primary/8 pt-3.5">
-        <span className="flex items-center gap-1.5 text-[11.5px] font-medium text-ink/50"><FileTextIcon s={13}/>Deal value</span>
-        <span className="text-[13px] font-bold text-ink">{deal.payment}</span>
+        <span className="flex items-center gap-1.5 text-[11.5px] font-medium text-ink/50"><FileTextIcon s={13}/>Expected value</span>
+        <span className="text-[13px] font-bold text-ink">{dealRange(deal)} <span className="font-medium text-ink/40">avg {euro(dealMean(deal))}</span></span>
       </div>
-    </button>
+      {deal.status === 'negotiation' && (
+        <button type="button" onClick={e => { e.stopPropagation(); onFinalize(deal.id) }}
+          className={`mt-3 flex items-center justify-center gap-1.5 rounded-xl py-2 text-[11.5px] font-bold text-white transition hover:-translate-y-0.5 ${GRAD_BTN}`}>
+          <CheckIcon s={12}/>Mark terms finalized
+        </button>
+      )}
+    </div>
   )
 }
 
-function ActiveDealsRow({ onDealClick, onViewAll }: {
-  onDealClick: (id: string) => void; onViewAll: () => void
+function ActiveDealsRow({ deals, onDealClick, onViewAll, onFinalize }: {
+  deals: ActiveDeal[]; onDealClick: (id: string) => void; onViewAll: () => void; onFinalize: (id: string) => void
 }) {
+  const [open, setOpen] = useState(true)
   return (
     <div className={`rounded-2xl border border-primary/10 bg-white p-5 ${CARD}`}>
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
+        <button type="button" onClick={() => setOpen(o => !o)} className="flex flex-1 items-center gap-2.5 text-left">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/[0.08] text-primary"><HandshakeIcon s={14}/></span>
           <div>
             <h3 className="text-[14px] font-bold text-ink">Active deals</h3>
-            <p className="text-[11px] text-ink/40">{ACTIVE_DEALS.length} in progress — click any to open the campaign</p>
+            <p className="text-[11px] text-ink/40">{deals.length} in progress — click any to open the campaign</p>
           </div>
+        </button>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <button onClick={onViewAll}
+            className="hidden items-center gap-1.5 rounded-lg border border-primary/15 px-3.5 py-2 text-[12px] font-bold text-primary transition hover:bg-primary/[0.04] sm:flex">
+            View all<ArrowRightIcon s={12}/>
+          </button>
+          <button type="button" onClick={() => setOpen(o => !o)}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-ink/40 transition hover:bg-primary/[0.06] hover:text-primary">
+            <IconChevron s={16} open={open}/>
+          </button>
         </div>
-        <button onClick={onViewAll}
-          className="hidden items-center gap-1.5 rounded-lg border border-primary/15 px-3.5 py-2 text-[12px] font-bold text-primary transition hover:bg-primary/[0.04] sm:flex">
-          View all<ArrowRightIcon s={12}/>
-        </button>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {ACTIVE_DEALS.map(d => (
-          <DealCard key={d.id} deal={d} onClick={() => onDealClick(d.id)}/>
-        ))}
-        <button type="button" onClick={() => onDealClick('discover')}
-          className="flex w-[200px] flex-shrink-0 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-primary/20 bg-surface-sub/50 p-5 text-center transition hover:border-primary/40 hover:bg-primary/[0.03]">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/[0.08] text-primary"><SearchIcon s={16}/></span>
-          <span className="text-[12.5px] font-bold leading-tight text-ink/50">Find a new deal</span>
-        </button>
-      </div>
+      {open && (
+        <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {deals.map(d => (
+            <DealCard key={d.id} deal={d} onClick={() => onDealClick(d.id)} onFinalize={onFinalize}/>
+          ))}
+          <button type="button" onClick={() => onDealClick('discover')}
+            className="flex w-[200px] flex-shrink-0 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-primary/20 bg-surface-sub/50 p-5 text-center transition hover:border-primary/40 hover:bg-primary/[0.03]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/[0.08] text-primary"><SearchIcon s={16}/></span>
+            <span className="text-[12.5px] font-bold leading-tight text-ink/50">Find a new deal</span>
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -785,8 +1155,8 @@ function ActiveDealsRow({ onDealClick, onViewAll }: {
 /* ════════════════════════════════════════════════════════════════════
    ALL DEALS MODAL
    ════════════════════════════════════════════════════════════════════ */
-function AllDealsModal({ open, onClose, onSelect }: {
-  open: boolean; onClose: () => void; onSelect: (id: string) => void
+function AllDealsModal({ open, deals, onClose, onSelect, onFinalize }: {
+  open: boolean; deals: ActiveDeal[]; onClose: () => void; onSelect: (id: string) => void; onFinalize: (id: string) => void
 }) {
   useEffect(() => {
     if (!open) return
@@ -805,20 +1175,21 @@ function AllDealsModal({ open, onClose, onSelect }: {
         <div className="flex flex-shrink-0 items-center justify-between border-b border-primary/10 px-6 py-5">
           <div>
             <h2 className="text-[18px] font-extrabold tracking-[-0.02em] text-ink">All deals</h2>
-            <p className="mt-0.5 text-[12px] text-ink/45">{ACTIVE_DEALS.length} active deals · click any to open the campaign</p>
+            <p className="mt-0.5 text-[12px] text-ink/45">{deals.length} active deals · click any to open the campaign</p>
           </div>
           <button onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-sub text-[15px] text-ink/50 transition hover:bg-ink/10">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-5">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {ACTIVE_DEALS.map(d => {
+            {deals.map(d => {
               const st = DEAL_STATUS_META[d.status]
               const objCls = OBJECTIVE_COLOR[d.objective] ?? 'text-ink/60 bg-surface-sub'
               const pct = d.piecesCommitted > 0 ? Math.round((d.piecesApproved / d.piecesCommitted) * 100) : 0
               return (
-                <button key={d.id} type="button"
+                <div key={d.id} role="button" tabIndex={0}
                   onClick={() => { onClose(); onSelect(d.id) }}
-                  className={`group flex flex-col rounded-2xl border border-primary/10 bg-white p-5 text-left transition hover:-translate-y-1 ${CARD}`}
+                  onKeyDown={e => { if (e.key === 'Enter') { onClose(); onSelect(d.id) } }}
+                  className={`group flex cursor-pointer flex-col rounded-2xl border border-primary/10 bg-white p-5 text-left transition hover:-translate-y-1 ${CARD}`}
                   style={{ transition: 'transform 0.18s ease, box-shadow 0.18s ease' }}>
                   <div className="flex items-start gap-3">
                     <LogoTile name={d.brandName} color={d.brandColor} logoUrl={d.brandLogoUrl} initials={d.brandInitials} size={40}/>
@@ -845,12 +1216,18 @@ function AllDealsModal({ open, onClose, onSelect }: {
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t border-primary/8 pt-3.5">
                     <span className="flex items-center gap-1 text-[11px] text-ink/40"><ClockIcon s={11}/>Due {d.endDate}</span>
-                    <span className="text-[13px] font-bold text-ink">{d.payment}</span>
+                    <span className="text-[13px] font-bold text-ink">{dealRange(d)} <span className="font-medium text-ink/40">avg {euro(dealMean(d))}</span></span>
                   </div>
+                  {d.status === 'negotiation' && (
+                    <button type="button" onClick={e => { e.stopPropagation(); onFinalize(d.id) }}
+                      className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border border-primary/20 bg-white py-2 text-[11.5px] font-bold text-primary transition hover:bg-primary/[0.05]">
+                      <CheckIcon s={12}/>Mark terms finalized
+                    </button>
+                  )}
                   <div className={`mt-3 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-[12px] font-bold transition group-hover:opacity-100 ${GRAD_BTN} text-white opacity-0`}>
-                    Open campaign <ArrowRightIcon s={12}/>
+                    Open campaign<ArrowRightIcon s={12}/>
                   </div>
-                </button>
+                </div>
               )
             })}
           </div>
@@ -867,127 +1244,200 @@ function AllDealsModal({ open, onClose, onSelect }: {
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   EARNINGS GOAL CARD
+   GOALS SECTION
    ════════════════════════════════════════════════════════════════════ */
-function EarningsGoalCard() {
-  const [monthlyGoal,  setMonthlyGoal]  = useState(2000)
-  const [avgCampaign,  setAvgCampaign]  = useState(350)
-  const [editingGoal,  setEditingGoal]  = useState(false)
-  const [goalInput,    setGoalInput]    = useState('2000')
-  const [campaignOpen, setCampaignOpen] = useState(false)
-  const campaignRef   = useRef<HTMLDivElement>(null)
-  const goalInputRef  = useRef<HTMLInputElement>(null)
+const GOAL_ICON: Record<GoalIcon, ReactNode> = {
+  users: <UsersIcon s={15}/>, handshake: <HandshakeIcon s={15}/>, grid: <GridIcon s={15}/>, euro: <EuroIcon s={15}/>,
+}
 
-  useEffect(() => {
-    const h = (e: MouseEvent) => { if (campaignRef.current && !campaignRef.current.contains(e.target as Node)) setCampaignOpen(false) }
-    document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h)
-  }, [])
-  useEffect(() => { if (editingGoal) goalInputRef.current?.focus() }, [editingGoal])
-
-  const earned      = EARNED_THIS_MONTH
-  const remaining   = Math.max(0, monthlyGoal - earned)
-  const progress    = Math.min(100, Math.round((earned / Math.max(monthlyGoal, 1)) * 100))
-  const dealsNeeded = remaining > 0 ? Math.ceil(remaining / Math.max(avgCampaign, 1)) : 0
-  const isGoalMet   = earned >= monthlyGoal
-
-  const commitGoal = () => {
-    const v = parseInt(goalInput.replace(/[^0-9]/g, ''), 10)
-    if (!isNaN(v) && v > 0) setMonthlyGoal(v); else setGoalInput(String(monthlyGoal))
-    setEditingGoal(false)
-  }
-
+function GoalRow({ goal, onBump, onRemove }: { goal: GoalItem; onBump: (id: string) => void; onRemove: (id: string) => void }) {
+  const pct  = Math.min(100, Math.round((goal.current / Math.max(goal.target, 1)) * 100))
+  const done = goal.current >= goal.target
   return (
-    <div className={`flex h-full w-full flex-col rounded-2xl border border-primary/10 bg-white p-6 ${CARD}`}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/[0.08] text-primary"><TargetIcon s={18}/></span>
-          <div>
-            <p className="text-[13px] font-bold uppercase tracking-[0.1em] text-ink/50">Monthly earnings goal</p>
-            <p className="mt-0.5 text-[11.5px] text-ink/35">Set your target — we'll tell you how many deals you need</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[12px] font-medium text-ink/45">Goal:</span>
-            {editingGoal ? (
-              <div className="flex items-center gap-1">
-                <span className="text-[13px] font-bold text-ink/60">€</span>
-                <input ref={goalInputRef} value={goalInput}
-                  onChange={e => setGoalInput(e.target.value.replace(/[^0-9]/g, ''))}
-                  onBlur={commitGoal}
-                  onKeyDown={e => { if (e.key === 'Enter') commitGoal(); if (e.key === 'Escape') { setEditingGoal(false); setGoalInput(String(monthlyGoal)) } }}
-                  className="w-20 rounded-lg border border-primary/25 bg-white px-2 py-1 text-[13px] font-bold text-ink outline-none focus:border-primary focus:shadow-[0_0_0_2px_rgba(139,49,232,0.12)]"/>
-              </div>
-            ) : (
-              <button onClick={() => { setGoalInput(String(monthlyGoal)); setEditingGoal(true) }}
-                className="flex items-center gap-1.5 rounded-lg border border-primary/15 bg-primary/[0.05] px-2.5 py-1 text-[13px] font-bold text-primary transition hover:bg-primary/[0.09]">
-                €{monthlyGoal.toLocaleString()}<EditIcon s={12}/>
-              </button>
-            )}
-          </div>
-          <div ref={campaignRef} className="relative">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[12px] font-medium text-ink/45">Avg. per deal:</span>
-              <button onClick={() => setCampaignOpen(o => !o)}
-                className="flex items-center gap-1.5 rounded-lg border border-primary/15 bg-primary/[0.05] px-2.5 py-1 text-[13px] font-bold text-primary transition hover:bg-primary/[0.09]">
-                €{avgCampaign.toLocaleString()}
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" className={`text-primary/60 transition-transform ${campaignOpen ? 'rotate-180' : ''}`}>
-                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            </div>
-            {campaignOpen && (
-              <div className={`absolute right-0 top-[calc(100%+6px)] z-20 w-[140px] overflow-hidden rounded-xl border border-primary/10 bg-white ${CARD}`}>
-                {AVG_CAMPAIGN_OPTIONS.map(opt => (
-                  <button key={opt.value} onClick={() => { setAvgCampaign(opt.value); setCampaignOpen(false) }}
-                    className={`flex w-full items-center justify-between px-4 py-2.5 text-[13px] font-semibold transition hover:bg-primary/[0.06] ${avgCampaign === opt.value ? 'bg-primary/[0.07] text-primary' : 'text-ink/75'}`}>
-                    {opt.label}{avgCampaign === opt.value && <span className={`h-2 w-2 rounded-full ${GRAD_BTN}`}/>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="mt-5">
-        <div className="mb-2 flex items-end justify-between">
-          <span className="text-[12px] font-medium text-ink/45">
-            <span className="text-[15px] font-extrabold text-ink">€{earned.toLocaleString()}</span>{' '}earned of €{monthlyGoal.toLocaleString()}
+    <div className="rounded-xl border border-primary/10 bg-surface-sub p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${done ? 'bg-emerald-100 text-emerald-600' : 'bg-primary/[0.08] text-primary'}`}>
+            {done ? <CheckIcon s={14}/> : GOAL_ICON[goal.icon]}
           </span>
-          <span className={`text-[13px] font-bold ${isGoalMet ? 'text-emerald-600' : 'text-ink/55'}`}>{progress}%</span>
+          <div>
+            <p className="text-[13px] font-bold text-ink">{goal.label}</p>
+            <p className="text-[11px] font-medium text-ink/40">{goal.current.toLocaleString()} / {goal.target.toLocaleString()} {goal.unit}</p>
+          </div>
         </div>
-        <div className="h-3 w-full overflow-hidden rounded-full bg-primary/[0.08]">
-          <div className={`h-full rounded-full transition-all duration-700 ease-out ${isGoalMet ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : GRAD_BTN}`}
-            style={{ width: `${progress}%` }}/>
+        <div className="flex flex-shrink-0 items-center gap-1.5">
+          {!done && (
+            <button onClick={() => onBump(goal.id)}
+              className="rounded-lg border border-primary/15 bg-white px-2.5 py-1 text-[11px] font-bold text-primary transition hover:bg-primary/[0.05]">
+              + Update
+            </button>
+          )}
+          <button onClick={() => onRemove(goal.id)} className="flex h-7 w-7 items-center justify-center rounded-lg text-ink/30 transition hover:text-red-500">✕</button>
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        {isGoalMet ? (
-          <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2.5">
-            <span className="text-emerald-500"><CheckCircleIcon s={16}/></span>
-            <span className="text-[13px] font-bold text-emerald-700">Goal reached — great month! 🎉</span>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-2 rounded-xl bg-surface-sub px-4 py-2.5">
-              <EuroIcon s={15}/>
-              <span className="text-[13px] font-semibold text-ink/70"><span className="font-extrabold text-ink">€{remaining.toLocaleString()}</span> still to earn</span>
-            </div>
-            <div className={`flex items-center gap-2 rounded-xl px-4 py-2.5 ${GRAD_BTN}`}>
-              <HandshakeIcon s={15}/>
-              <span className="text-[13px] font-bold text-white">{dealsNeeded} more deal{dealsNeeded !== 1 ? 's' : ''} needed</span>
-            </div>
-            <p className="ml-1 text-[11.5px] text-ink/35">Based on €{avgCampaign.toLocaleString()} avg. per campaign</p>
-          </>
-        )}
+      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-primary/[0.08]">
+        <div className={`h-full rounded-full transition-all duration-700 ${done ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : GRAD_BTN}`} style={{ width: `${pct}%` }}/>
       </div>
     </div>
   )
 }
 
+function AddGoalForm({ onAdd }: { onAdd: (label: string, target: number) => void }) {
+  const [open, setOpen]     = useState(false)
+  const [label, setLabel]   = useState('')
+  const [target, setTarget] = useState('')
+  const submit = () => {
+    const t = parseInt(target.replace(/[^0-9]/g, ''), 10)
+    if (label.trim() && !isNaN(t) && t > 0) { onAdd(label.trim(), t); setLabel(''); setTarget(''); setOpen(false) }
+  }
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/20 bg-white py-3 text-[12.5px] font-bold text-primary transition hover:border-primary/40 hover:bg-primary/[0.04]">
+        <PlusIcon s={13}/>Add a goal
+      </button>
+    )
+  }
+  return (
+    <div className="rounded-xl border border-primary/15 bg-white p-4">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[1fr_120px]">
+        <input value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Reach 100 brand messages"
+          className="rounded-lg border border-primary/12 bg-surface-sub px-3 py-2 text-[13px] text-ink outline-none focus:border-primary"/>
+        <input value={target} onChange={e => setTarget(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Target #"
+          className="rounded-lg border border-primary/12 bg-surface-sub px-3 py-2 text-[13px] text-ink outline-none focus:border-primary"/>
+      </div>
+      <div className="mt-2.5 flex justify-end gap-2">
+        <button onClick={() => setOpen(false)} className="rounded-lg px-3 py-1.5 text-[12px] font-bold text-ink/40 hover:text-ink/60">Cancel</button>
+        <button onClick={submit} className={`rounded-lg ${GRAD_BTN} px-4 py-1.5 text-[12px] font-bold text-white`}>Add goal</button>
+      </div>
+    </div>
+  )
+}
+
+function GoalsSection({ goals, onBump, onRemove, onAdd }: {
+  goals: GoalItem[]; onBump: (id: string) => void; onRemove: (id: string) => void; onAdd: (label: string, target: number) => void
+}) {
+  const doneCount = goals.filter(g => g.current >= g.target).length
+  return (
+    <CollapsibleCard icon={<TargetIcon s={15}/>} title="Goals" meta={`${doneCount}/${goals.length} reached`} defaultOpen>
+      <div className="space-y-3">
+        {goals.map(g => <GoalRow key={g.id} goal={g} onBump={onBump} onRemove={onRemove}/>)}
+        <AddGoalForm onAdd={onAdd}/>
+      </div>
+    </CollapsibleCard>
+  )
+}
+
 /* ════════════════════════════════════════════════════════════════════
-   RANGE DROPDOWN — identical to brand dashboard
+   TO-DO SECTION
    ════════════════════════════════════════════════════════════════════ */
+function TodoRow({ label, done, cta, onGo, onToggle }: {
+  label: string; done: boolean; cta?: string; onGo?: () => void; onToggle?: () => void
+}) {
+  return (
+    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition ${done ? 'border-emerald-100 bg-emerald-50/50' : 'border-primary/10 bg-white'}`}>
+      <button type="button" onClick={onToggle} disabled={!onToggle}
+        className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border-2 transition ${done ? 'border-emerald-400 bg-emerald-400 text-white' : 'border-primary/25 bg-white'} ${!onToggle ? 'cursor-default' : ''}`}>
+        {done && <CheckIcon s={11}/>}
+      </button>
+      <span className={`flex-1 text-[13px] font-medium leading-snug ${done ? 'text-ink/40 line-through' : 'text-ink/80'}`}>{label}</span>
+      {onGo && !done && (
+        <button onClick={onGo} className="flex-shrink-0 rounded-lg border border-primary/15 bg-white px-3 py-1.5 text-[11.5px] font-bold text-primary transition hover:bg-primary/[0.05]">
+          {cta ?? 'Open'}
+        </button>
+      )}
+    </div>
+  )
+}
+
+function AddTodoForm({ onAdd }: { onAdd: (label: string) => void }) {
+  const [open, setOpen]   = useState(false)
+  const [label, setLabel] = useState('')
+  const submit = () => { if (label.trim()) { onAdd(label.trim()); setLabel(''); setOpen(false) } }
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)}
+        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/20 bg-white py-3 text-[12.5px] font-bold text-primary transition hover:border-primary/40 hover:bg-primary/[0.04]">
+        <PlusIcon s={13}/>Add a task
+      </button>
+    )
+  }
+  return (
+    <div className="flex items-center gap-2 rounded-xl border border-primary/15 bg-white p-2.5">
+      <input value={label} onChange={e => setLabel(e.target.value)} autoFocus
+        onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setOpen(false) }}
+        placeholder="e.g. Update my media kit"
+        className="flex-1 rounded-lg border border-primary/12 bg-surface-sub px-3 py-2 text-[13px] text-ink outline-none focus:border-primary"/>
+      <button onClick={submit} className={`rounded-lg ${GRAD_BTN} px-3.5 py-2 text-[12px] font-bold text-white`}>Add</button>
+      <button onClick={() => setOpen(false)} className="rounded-lg px-2 py-2 text-[12px] font-bold text-ink/40 hover:text-ink/60">✕</button>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   VIEWS BAR CHART — with save-event markers
+   ════════════════════════════════════════════════════════════════════ */
+function ViewsBarChart({ data, events }: { data: { label: string; views: number }[]; events: { id: string; label: string; idx: number }[] }) {
+  const rawId = useId()
+  const id    = rawId.replace(/:/g, '')
+  const [hover, setHover] = useState<number | null>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
+  const W = 700, H = 220, PL = 8, PR = 8, PT = 26, PB = 24
+  const iW = W - PL - PR, iH = H - PT - PB
+  const n = data.length
+  const maxV = Math.max(...data.map(d => d.views), 1)
+  const barGap = iW / n * 0.3
+  const barW = Math.max(2, iW / n - barGap)
+  const xAt = (i: number) => PL + (i + 0.5) * (iW / n)
+  const hAt = (v: number) => (v / (maxV * 1.15)) * iH
+  const te = Math.max(1, Math.ceil(n / 6))
+  const ticks = data.map((_, i) => i).filter(i => i % te === 0 || i === n - 1)
+  const handleMove = (e: ReactMouseEvent<SVGSVGElement>) => {
+    const svg = svgRef.current; if (!svg) return
+    const r = svg.getBoundingClientRect()
+    const relX = (e.clientX - r.left) / r.width * W
+    const idx = Math.floor((relX - PL) / (iW / n))
+    setHover(Math.min(n - 1, Math.max(0, idx)))
+  }
+  const hp = hover !== null ? data[hover] : null
+  return (
+    <div className="relative h-full min-h-[180px] w-full flex-1">
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full cursor-crosshair"
+        onMouseMove={handleMove} onMouseLeave={() => setHover(null)}>
+        <defs>
+          <linearGradient id={`${id}-bar`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#B44AF0"/><stop offset="100%" stopColor="#8B31E8"/>
+          </linearGradient>
+        </defs>
+        {[0, 0.25, 0.5, 0.75, 1].map(p => <line key={p} x1={PL} x2={W - PR} y1={PT + iH * p} y2={PT + iH * p} stroke="#8B31E8" strokeOpacity="0.06" strokeWidth="1"/>)}
+        {data.map((d, i) => {
+          const h = hAt(d.views), x = xAt(i) - barW / 2, y = PT + iH - h
+          const active = hover === i
+          return (
+            <rect key={i} x={x} y={y} width={barW} height={h} rx={Math.min(barW * 0.28, 6)}
+              fill={active ? '#FF33BC' : `url(#${id}-bar)`} opacity={hover === null || active ? 1 : 0.55}
+              style={{ transition: 'opacity 0.15s' }}/>
+          )
+        })}
+        {ticks.map(i => <text key={i} x={xAt(i)} y={H - 6} textAnchor="middle" fontSize="9.5" fontWeight={700} className="fill-ink/35">{data[i]?.label}</text>)}
+        {events.map(ev => ev.idx >= 0 && ev.idx < n && (
+          <g key={ev.id}>
+            <title>{ev.label}</title>
+            <line x1={xAt(ev.idx)} x2={xAt(ev.idx)} y1={PT - 14} y2={PT + iH} stroke="#F59E0B" strokeDasharray="2 3" strokeWidth="1.4" opacity="0.7"/>
+            <circle cx={xAt(ev.idx)} cy={PT - 14} r="4" fill="#F59E0B"/>
+          </g>
+        ))}
+      </svg>
+      {hp && hover !== null && (
+        <div className="pointer-events-none absolute z-10 whitespace-nowrap rounded-lg border border-primary/10 bg-ink px-2.5 py-1.5 text-[11px] font-bold text-white shadow-lg"
+          style={{ left: `${(xAt(hover) / W) * 100}%`, top: `${(hAt(hp.views) > 0 ? (PT + iH - hAt(hp.views)) : PT) / H * 100}%`, transform: 'translate(-50%, -135%)' }}>
+          {hp.label} · {hp.views.toLocaleString()} unique visitors
+        </div>
+      )}
+    </div>
+  )
+}
+
 function RangeDropdown({ value, onChange }: { value: RangeOption; onChange: (v: RangeOption) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -1021,62 +1471,11 @@ function RangeDropdown({ value, onChange }: { value: RangeOption; onChange: (v: 
   )
 }
 
-/* ════════════════════════════════════════════════════════════════════
-   VIEWS CHART — identical SVG logic to brand dashboard
-   ════════════════════════════════════════════════════════════════════ */
-function ViewsChart({ data }: { data: { label: string; views: number }[] }) {
-  const rawId = useId()
-  const id    = rawId.replace(/:/g, '')
-  const [hover, setHover] = useState<number | null>(null)
-  const svgRef = useRef<SVGSVGElement>(null)
-  const W = 700, H = 220, PL = 8, PR = 8, PT = 14, PB = 24
-  const iW = W - PL - PR, iH = H - PT - PB
-  const n = data.length, vals = data.map(d => d.views)
-  const mx = Math.max(...vals), mn = Math.min(...vals), sp = Math.max(mx - mn, 1)
-  const xAt = (i: number) => PL + (n === 1 ? iW / 2 : (i / (n - 1)) * iW)
-  const yAt = (v: number) => PT + iH - ((v - mn) / sp) * iH
-  const lp = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i).toFixed(2)} ${yAt(d.views).toFixed(2)}`).join(' ')
-  const ap = `${lp} L ${xAt(n - 1).toFixed(2)} ${(PT + iH).toFixed(2)} L ${xAt(0).toFixed(2)} ${(PT + iH).toFixed(2)} Z`
-  const te = Math.max(1, Math.ceil(n / 6))
-  const ticks = data.map((_, i) => i).filter(i => i % te === 0 || i === n - 1)
-  const handleMove = (e: ReactMouseEvent<SVGSVGElement>) => {
-    const svg = svgRef.current; if (!svg) return
-    const r = svg.getBoundingClientRect()
-    let idx = Math.round((((e.clientX - r.left) / r.width * W) - PL) / iW * (n - 1))
-    setHover(Math.min(n - 1, Math.max(0, idx)))
-  }
-  const hp = hover !== null ? data[hover] : null
-  return (
-    <div className="relative h-full min-h-[180px] w-full flex-1">
-      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="h-full w-full cursor-crosshair" onMouseMove={handleMove} onMouseLeave={() => setHover(null)}>
-        <defs>
-          <linearGradient id={`${id}-a`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8B31E8" stopOpacity="0.26"/><stop offset="100%" stopColor="#FF33BC" stopOpacity="0"/></linearGradient>
-          <linearGradient id={`${id}-l`} x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#8B31E8"/><stop offset="55%" stopColor="#A855F7"/><stop offset="100%" stopColor="#FF33BC"/></linearGradient>
-        </defs>
-        {[0, 0.25, 0.5, 0.75, 1].map(p => <line key={p} x1={PL} x2={W - PR} y1={PT + iH * p} y2={PT + iH * p} stroke="#8B31E8" strokeOpacity="0.06" strokeWidth="1"/>)}
-        <path d={ap} fill={`url(#${id}-a)`}/>
-        <path d={lp} fill="none" stroke={`url(#${id}-l)`} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-        {ticks.map(i => <text key={i} x={xAt(i)} y={H - 6} textAnchor="middle" fontSize="9.5" fontWeight={700} className="fill-ink/35">{data[i]?.label}</text>)}
-        {hp && hover !== null && (
-          <g>
-            <line x1={xAt(hover)} x2={xAt(hover)} y1={PT} y2={PT + iH} stroke="#8B31E8" strokeOpacity="0.25" strokeWidth="1.5" strokeDasharray="3 3"/>
-            <circle cx={xAt(hover)} cy={yAt(hp.views)} r="4.5" fill="white" stroke="#8B31E8" strokeWidth="2.5"/>
-          </g>
-        )}
-      </svg>
-      {hp && hover !== null && (
-        <div className="pointer-events-none absolute z-10 whitespace-nowrap rounded-lg border border-primary/10 bg-ink px-2.5 py-1.5 text-[11px] font-bold text-white shadow-lg"
-          style={{ left: `${(xAt(hover) / W) * 100}%`, top: `${(yAt(hp.views) / H) * 100}%`, transform: 'translate(-50%, -135%)' }}>
-          {hp.label} · {hp.views.toLocaleString()} unique visitors
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ViewsCard({ range, onRangeChange }: { range: RangeOption; onRangeChange: (r: RangeOption) => void }) {
+function ViewsCard({ range, onRangeChange, events }: { range: RangeOption; onRangeChange: (r: RangeOption) => void; events: ChartEvent[] }) {
   const n = UNIQUE_VISITORS_DATA.length, slice = UNIQUE_VISITORS_DATA.slice(n - range)
   const total = slice.reduce((s, d) => s + d.views, 0)
+  const sliceStart = n - range
+  const visibleEvents = events.filter(e => e.dayIndex >= sliceStart).map(e => ({ id: e.id, label: e.label, idx: e.dayIndex - sliceStart }))
   let delta: { label: string; positive: boolean } | null = null
   if (range * 2 <= n) {
     const prev = UNIQUE_VISITORS_DATA.slice(n - range * 2, n - range), pt = prev.reduce((s, d) => s + d.views, 0)
@@ -1086,56 +1485,44 @@ function ViewsCard({ range, onRangeChange }: { range: RangeOption; onRangeChange
     <div className={`flex h-full w-full flex-col rounded-2xl border border-primary/10 bg-white p-6 ${CARD}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink/40">Unique profile visitors</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink/40">Unique profile visitors — growth</p>
           <div className="mt-1.5 flex items-baseline gap-2.5">
             <span className="text-[32px] font-black tracking-[-0.03em] text-ink">{total.toLocaleString()}</span>
             {delta && <span className={`flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[12px] font-bold ${delta.positive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}><TrendIcon up={delta.positive} s={11}/>{delta.label}</span>}
           </div>
-          <p className="mt-1 text-[12px] font-medium text-ink/40">{delta ? `vs previous ${range} days` : `Last ${range} days`} · brands discovering your profile</p>
+          <p className="mt-1 text-[12px] font-medium text-ink/40">{delta ? `vs previous ${range} days` : `Last ${range} days`} · amber markers = your saved changes</p>
         </div>
         <RangeDropdown value={range} onChange={onRangeChange}/>
       </div>
-      <div className="mt-6 flex flex-1 flex-col min-h-0"><ViewsChart data={slice}/></div>
+      <div className="mt-6 flex flex-1 flex-col min-h-0"><ViewsBarChart data={slice} events={visibleEvents}/></div>
     </div>
   )
 }
 
-/* ════════════════════════════════════════════════════════════════════
-   NOTIFICATIONS PANEL — identical to brand dashboard
-   ════════════════════════════════════════════════════════════════════ */
-const NOTIFICATION_STYLE: Record<NotificationType, { icon: ReactNode; bg: string; text: string }> = {
-  message:      { icon: <ChatBubbleIcon s={16}/>, bg: 'bg-primary/[0.08]', text: 'text-primary'     },
-  profile_view: { icon: <EyeIcon s={16}/>,        bg: 'bg-sky-50',         text: 'text-sky-600'     },
-  payment:      { icon: <EuroIcon s={16}/>,       bg: 'bg-emerald-50',     text: 'text-emerald-600' },
-  deal:         { icon: <HandshakeIcon s={16}/>,  bg: 'bg-amber-50',       text: 'text-amber-600'   },
-  insight:      { icon: <LightbulbIcon s={16}/>,  bg: 'bg-violet-50',      text: 'text-violet-600'  },
-}
-
-function NotificationsPanel({ items, onMarkRead, onMarkAllRead }: {
-  items: NotificationItem[]; onMarkRead: (id: string) => void; onMarkAllRead: () => void
-}) {
-  const unread = items.filter(n => n.unread).length
+function ChartEventsPanel({ events }: { events: ChartEvent[] }) {
+  const recent = [...events].slice(-6).reverse()
   return (
     <div className={`flex h-full flex-col overflow-hidden rounded-2xl border border-primary/10 bg-white ${CARD}`}>
-      <div className="flex flex-shrink-0 items-center justify-between border-b border-primary/8 px-5 py-4">
-        <h3 className="text-[14.5px] font-bold text-ink">Notifications{unread > 0 && <span className="ml-1.5 text-primary">({unread})</span>}</h3>
-        {unread > 0 && <button onClick={onMarkAllRead} className="text-[12px] font-bold text-primary hover:underline">Mark all read</button>}
+      <div className="flex-shrink-0 border-b border-primary/8 px-5 py-4">
+        <h3 className="text-[14.5px] font-bold text-ink">Saved changes</h3>
+        <p className="mt-0.5 text-[11.5px] text-ink/40">Major updates are logged here and marked on the chart</p>
       </div>
-      <div className="max-h-[420px] flex-1 divide-y divide-primary/6 overflow-y-auto">
-        {items.map(n => {
-          const style = NOTIFICATION_STYLE[n.type]
-          return (
-            <button key={n.id} onClick={() => onMarkRead(n.id)}
-              className={`flex w-full items-start gap-3 px-5 py-3.5 text-left transition hover:bg-primary/[0.03] ${n.unread ? 'bg-primary/[0.02]' : ''}`}>
-              <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${style.bg} ${style.text}`}>{style.icon}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[13px] leading-[1.4] text-ink/80">{n.title}</span>
-                <span className="mt-0.5 block text-[11px] font-medium text-ink/40">{n.time}</span>
-              </span>
-              {n.unread && <span className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${GRAD_BTN}`}/>}
-            </button>
-          )
-        })}
+      <div className="max-h-[420px] flex-1 space-y-1 overflow-y-auto p-3">
+        {recent.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center py-10 text-center">
+            <SparkleIcon s={20}/>
+            <p className="mt-2 text-[12.5px] font-semibold text-ink/40">No changes yet</p>
+            <p className="mt-1 text-[11.5px] text-ink/30">Edit your goal or accept an invite to see it here.</p>
+          </div>
+        ) : recent.map(ev => (
+          <div key={ev.id} className="flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-primary/[0.03]">
+            <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-amber-400"/>
+            <div className="min-w-0 flex-1">
+              <p className="text-[12.5px] leading-[1.4] text-ink/80">{ev.label}</p>
+              <p className="mt-0.5 text-[10.5px] font-medium text-ink/35">Marked on chart · today</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -1143,19 +1530,6 @@ function NotificationsPanel({ items, onMarkRead, onMarkAllRead }: {
 
 /* ════════════════════════════════════════════════════════════════════
    PAGE
-   ════════════════════════════════════════════════════════════════════
-   Layout order:
-   1. Header: NexLogo pill + left nav + right icon buttons
-   2. InviteDetailModal portal
-   3. AllDealsModal portal
-   4. Main:
-      a. Title row + "View public profile"
-      b. DiscoverStrip
-      c. InvitesRow  ← NEW: brand/agency invites
-      d. ActiveDealsRow
-      e. 4 stat cards
-      f. EarningsGoalCard
-      g. ViewsCard + NotificationsPanel
    ════════════════════════════════════════════════════════════════════ */
 export default function CreatorDashboardPage() {
   const router = useRouter()
@@ -1163,36 +1537,110 @@ export default function CreatorDashboardPage() {
   const [range,          setRange]          = useState<RangeOption>(7)
   const [notifications,  setNotifications]  = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS)
   const [invites,        setInvites]        = useState<Invite[]>(INITIAL_INVITES)
+  const [deals,          setDeals]          = useState<ActiveDeal[]>(INITIAL_ACTIVE_DEALS)
+  const [goals,          setGoals]          = useState<GoalItem[]>(INITIAL_GOALS)
+  const [manualTodos,    setManualTodos]    = useState<ManualTodo[]>(INITIAL_MANUAL_TODOS)
   const [openInviteId,   setOpenInviteId]   = useState<string | null>(null)
   const [allDealsOpen,   setAllDealsOpen]   = useState(false)
+  const [subOpen,        setSubOpen]        = useState(false)
 
-  const openInvite        = invites.find(i => i.id === openInviteId) ?? null
-  const unreadNotifs      = notifications.filter(n => n.unread).length
-  const pendingInvites    = invites.filter(i => i.status === 'pending').length
+  const [monthlyGoal, setMonthlyGoal] = useState(2000)
+  const [avgCampaign, setAvgCampaign] = useState(350)
+
+  const [chartEvents, setChartEvents] = useState<ChartEvent[]>([])
+  const [toast,       setToast]       = useState<string | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const logChartEvent = (label: string) => {
+    setChartEvents(prev => [...prev, { id: newId('evt'), label, dayIndex: UNIQUE_VISITORS_DATA.length - 1 }])
+    setToast(label)
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToast(null), 2600)
+  }
+
+  const openInvite     = invites.find(i => i.id === openInviteId) ?? null
+  const unreadNotifs   = notifications.filter(n => n.unread).length
+  const pendingInvites = invites.filter(i => i.status === 'pending').length
+  const negotiationDeal = deals.find(d => d.status === 'negotiation')
+  const expectedFromDeals = deals.filter(d => d.status !== 'negotiation').reduce((s, d) => s + dealMean(d), 0)
 
   const markNotifRead    = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, unread: false } : n))
   const markAllNotifRead = () => setNotifications(prev => prev.map(n => ({ ...n, unread: false })))
 
   const handleAcceptInvite = (id: string, _message: string) => {
+    const inv = invites.find(i => i.id === id)
     setInvites(prev => prev.map(i => i.id === id ? { ...i, status: 'accepted' } : i))
     setOpenInviteId(null)
-    router.push('/creator/messages')
+    if (inv) logChartEvent(`Accepted ${inv.senderName} invite`)
+    router.push('/creator-message')
   }
   const handleRejectInvite = (id: string) => {
+    const inv = invites.find(i => i.id === id)
     setInvites(prev => prev.map(i => i.id === id ? { ...i, status: 'rejected' } : i))
     setOpenInviteId(null)
+    if (inv) logChartEvent(`Declined ${inv.senderName} invite`)
   }
 
-  const goToMessages  = () => router.push('/creator/messages')
-  const goToDiscover  = () => router.push('/discover/brands')
-  const goToDeal      = (id: string) => id === 'discover' ? goToDiscover() : router.push(`/creator/campaign/${id}`)
+  const finalizeDeal = (id: string) => {
+    const d = deals.find(x => x.id === id)
+    setDeals(prev => prev.map(x => x.id === id ? { ...x, status: 'active' } : x))
+    if (d) logChartEvent(`Finalized ${d.brandName} deal terms`)
+  }
+
+  const bumpGoal = (id: string) => {
+    setGoals(prev => prev.map(g => {
+      if (g.id !== id) return g
+      const step = BUMP_STEP[g.unit] ?? 1
+      const nextCurrent = Math.min(g.target, g.current + step)
+      if (nextCurrent >= g.target && g.current < g.target) logChartEvent(`Reached goal: ${g.label}`)
+      return { ...g, current: nextCurrent }
+    }))
+  }
+  const removeGoal = (id: string) => setGoals(prev => prev.filter(g => g.id !== id))
+  const addGoal = (label: string, target: number) => {
+    setGoals(prev => [...prev, { id: newId('goal'), label, current: 0, target, unit: 'goal', icon: 'grid' }])
+    logChartEvent(`Added goal: ${label}`)
+  }
+
+  const toggleManualTodo = (id: string) => setManualTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t))
+  const addManualTodo = (label: string) => setManualTodos(prev => [...prev, { id: newId('todo'), label, done: false }])
+
+  const handleGoalCommit = (v: number) => { setMonthlyGoal(v); logChartEvent(`Updated monthly goal to ${euro(v)}`) }
+  const handleAvgCommit  = (v: number) => { setAvgCampaign(v); logChartEvent(`Updated avg. deal estimate to ${euro(v)}`) }
+
+  const goToMessages  = () => router.push('/creator-message')
+  const goToDiscover  = () => router.push('/creator-search')
+  const goToDeal      = (id: string) => id === 'discover' ? goToDiscover() : router.push(`/creator-deal?id=${id}`)
+  const goToStudio    = () => router.push('/creator-studio')
+  const goToProfile   = () => router.push('/display')
 
   /* Derived stat values */
   const rangeSlice     = UNIQUE_VISITORS_DATA.slice(UNIQUE_VISITORS_DATA.length - range)
   const uniqueVisitors = rangeSlice.reduce((s, d) => s + d.views, 0)
   const profileClicks  = Math.round(uniqueVisitors * 0.31)
-  const activeDeals    = ACTIVE_DEALS.length
+  const activeDeals    = deals.length
   const savedByBrands  = 24
+
+  /* Smart to-dos — recomputed live from invites/deals state */
+  const smartTodos: { id: string; label: string; done: boolean; cta?: string; onGo?: () => void }[] = [
+    {
+      id: 'smart-invites',
+      label: pendingInvites > 0 ? `Reply to ${pendingInvites} pending invite${pendingInvites !== 1 ? 's' : ''}` : 'All invites answered',
+      done: pendingInvites === 0,
+      cta: 'Review',
+      onGo: pendingInvites > 0 ? () => { const first = invites.find(i => i.status === 'pending'); if (first) setOpenInviteId(first.id) } : undefined,
+    },
+    {
+      id: 'smart-negotiation',
+      label: negotiationDeal ? `Finish negotiating terms with ${negotiationDeal.brandName}` : 'No deals in negotiation',
+      done: !negotiationDeal,
+      cta: 'Review deal',
+      onGo: negotiationDeal ? () => setAllDealsOpen(true) : undefined,
+    },
+  ]
+
+  const doneManualCount = manualTodos.filter(t => t.done).length
+  const doneSmartCount  = smartTodos.filter(t => t.done).length
 
   const NAV_LEFT = [
     { label: 'Dashboard',        active: true,  action: () => {} },
@@ -1202,7 +1650,6 @@ export default function CreatorDashboardPage() {
   return (
     <div className="min-h-screen bg-canvas font-rubik text-ink antialiased">
 
-      {/* ════ INVITE DETAIL MODAL ════ */}
       {openInvite && (
         <InviteDetailModal
           invite={openInvite}
@@ -1212,21 +1659,32 @@ export default function CreatorDashboardPage() {
         />
       )}
 
-      {/* ════ ALL DEALS MODAL ════ */}
       <AllDealsModal
         open={allDealsOpen}
+        deals={deals}
         onClose={() => setAllDealsOpen(false)}
         onSelect={goToDeal}
+        onFinalize={finalizeDeal}
       />
 
-      {/* ════ HEADER — matches brand dashboard pattern exactly ════ */}
+      <SubscriptionModal open={subOpen} onClose={() => setSubOpen(false)}/>
+
+      {toast && (
+        <div className="fixed right-5 top-5 z-[750] flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-white px-4 py-3 shadow-lg">
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><CheckCircleIcon s={15}/></span>
+          <div>
+            <p className="text-[12.5px] font-bold text-emerald-700">Saved</p>
+            <p className="text-[11.5px] text-ink/50">{toast}</p>
+          </div>
+        </div>
+      )}
+
       <header className="sticky top-0 z-40 border-b border-primary/10 bg-white/95 backdrop-blur-xl">
         <div className="mx-auto max-w-[1080px] px-4 pb-3 pt-3 sm:px-6">
           <div className="relative flex w-full items-center justify-between rounded-2xl px-3 py-2.5" style={{ overflow: 'visible' }}>
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-2xl backdrop-blur-xl"
               style={{ background: 'linear-gradient(90deg, rgba(139,49,232,0.05) 0%, rgba(139,49,232,0.05) 30%, rgba(255,255,255,0) 42%, rgba(255,255,255,0) 58%, rgba(139,49,232,0.05) 70%, rgba(139,49,232,0.05) 100%)' }}/>
 
-            {/* Left nav */}
             <div className="relative z-10 flex items-center gap-0.5">
               {NAV_LEFT.map(n => (
                 <button key={n.label} onClick={n.action}
@@ -1238,9 +1696,7 @@ export default function CreatorDashboardPage() {
 
             <div className="w-12 flex-shrink-0 sm:w-16" aria-hidden="true"/>
 
-            {/* Right nav — icon buttons (matches brand dashboard) */}
             <div className="relative z-10 flex items-center gap-1.5">
-              {/* Messages icon */}
               <button onClick={goToMessages} title="Messages" aria-label="Messages"
                 className="relative flex h-9 w-9 items-center justify-center rounded-lg text-ink/60 transition hover:bg-primary/[0.08] hover:text-primary">
                 <ChatBubbleIcon s={18}/>
@@ -1250,7 +1706,6 @@ export default function CreatorDashboardPage() {
                   </span>
                 )}
               </button>
-              {/* Notifications bell */}
               <button title="Notifications" aria-label="Notifications"
                 className="relative flex h-9 w-9 items-center justify-center rounded-lg text-ink/60 transition hover:bg-primary/[0.08] hover:text-primary">
                 <BellIcon s={18}/>
@@ -1260,14 +1715,12 @@ export default function CreatorDashboardPage() {
                   </span>
                 )}
               </button>
-              {/* My Profile */}
-              <button onClick={() => router.push(`/creator/${CREATOR.publicSlug}`)}
-                className="hidden items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-semibold text-ink/70 transition hover:bg-primary/[0.08] hover:text-primary sm:flex">
-                My Profile
+              <button onClick={goToProfile} title="My Profile" aria-label="My Profile"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-ink/60 transition hover:bg-primary/[0.08] hover:text-primary">
+                <UserCircleIcon s={19}/>
               </button>
             </div>
 
-            {/* Logo — absolutely centred */}
             <div className="pointer-events-none absolute left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2">
               <NexLogo className="pointer-events-auto h-8 drop-shadow-[0_4px_14px_rgba(139,49,232,0.4)] sm:h-9"/>
             </div>
@@ -1275,10 +1728,8 @@ export default function CreatorDashboardPage() {
         </div>
       </header>
 
-      {/* ════ MAIN ════ */}
       <main className="mx-auto max-w-[1080px] px-6 py-8">
 
-        {/* Title row */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-[clamp(22px,3.2vw,30px)] font-black tracking-[-0.03em] text-ink">
@@ -1286,15 +1737,34 @@ export default function CreatorDashboardPage() {
             </h1>
             <p className="mt-1 text-[14px] text-ink/55">Here's how your profile and partnerships have been performing.</p>
           </div>
-          <a href={`/creator/${CREATOR.publicSlug}`}
+          <a href="/display"
             className="inline-flex w-fit items-center gap-2 rounded-xl border border-primary/15 bg-white px-4 py-2.5 text-[13px] font-semibold text-primary shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30">
             View public profile
           </a>
         </div>
 
+        {/* Notifications — top, scrollable */}
+        <div className="mt-6">
+          <NotificationsTopCard items={notifications} onMarkRead={markNotifRead} onMarkAllRead={markAllNotifRead} onUnlockPremium={() => setSubOpen(true)}/>
+        </div>
+
+        {/* Portfolio lite */}
+        <div className="mt-4">
+          <PhotosCard onManage={goToStudio}/>
+        </div>
+
+        {/* Earnings arc */}
+        <div className="mt-4">
+          <EarningsArcCard
+            monthlyGoal={monthlyGoal} avgCampaign={avgCampaign}
+            earned={EARNED_THIS_MONTH} expected={expectedFromDeals}
+            onGoalCommit={handleGoalCommit} onAvgCommit={handleAvgCommit}
+          />
+        </div>
+
         {/* Discover strip */}
         <div className="mt-6">
-          <DiscoverStrip onClick={goToDiscover}/>
+          <DiscoverStrip onClick={goToDiscover} dealsCount={activeDeals}/>
         </div>
 
         {/* Opportunities & invites */}
@@ -1304,28 +1774,45 @@ export default function CreatorDashboardPage() {
 
         {/* Active deals */}
         <div className="mt-4">
-          <ActiveDealsRow onDealClick={goToDeal} onViewAll={() => setAllDealsOpen(true)}/>
+          <ActiveDealsRow deals={deals} onDealClick={goToDeal} onViewAll={() => setAllDealsOpen(true)} onFinalize={finalizeDeal}/>
         </div>
 
-        {/* 4 stat cards */}
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatCard icon={<EyeIcon s={18}/>}            label="Unique visitors"  value={uniqueVisitors.toLocaleString()} sublabel="Each person counted once"          delta={{ label: '8.6%',               positive: true }}/>
-          <StatCard icon={<CursorClickIcon s={18}/>}    label="Profile clicks"   value={profileClicks.toLocaleString()}  sublabel="Brands clicking into your profile"  delta={{ label: '+12% vs prev period', positive: true }}/>
-          <StatCard icon={<HandshakeIcon s={18}/>}      label="Active deals"     value={String(activeDeals)}             sublabel="Currently in progress"              delta={{ label: '+2 this month',       positive: true }}/>
-          <StatCard icon={<BookmarkIcon s={18} filled/>} label="Saved by brands" value={String(savedByBrands)}           sublabel="Brands shortlisting you"            delta={{ label: '+5 this week',        positive: true }}/>
-        </div>
-
-        {/* Earnings goal */}
+        {/* Goals */}
         <div className="mt-4">
-          <EarningsGoalCard/>
+          <GoalsSection goals={goals} onBump={bumpGoal} onRemove={removeGoal} onAdd={addGoal}/>
         </div>
 
-        {/* Views chart + Notifications */}
-        <div className="mt-6 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
-          <div className="flex h-full lg:col-span-2">
-            <ViewsCard range={range} onRangeChange={setRange}/>
-          </div>
-          <NotificationsPanel items={notifications} onMarkRead={markNotifRead} onMarkAllRead={markAllNotifRead}/>
+        {/* To-do */}
+        <div className="mt-4">
+          <CollapsibleCard icon={<CheckCircleIcon s={15}/>} title="To-do" meta={`${doneSmartCount + doneManualCount}/${smartTodos.length + manualTodos.length} done`} defaultOpen>
+            <div className="space-y-2.5">
+              {smartTodos.map(t => <TodoRow key={t.id} label={t.label} done={t.done} cta={t.cta} onGo={t.onGo}/>)}
+              {manualTodos.map(t => (
+                <TodoRow key={t.id} label={t.label} done={t.done} cta={t.cta}
+                  onGo={t.href ? () => router.push(t.href!) : undefined}
+                  onToggle={() => toggleManualTodo(t.id)}/>
+              ))}
+              <AddTodoForm onAdd={addManualTodo}/>
+            </div>
+          </CollapsibleCard>
+        </div>
+
+        {/* Performance — stat cards + growth chart + saved-changes log */}
+        <div className="mt-4">
+          <CollapsibleCard icon={<TrendIcon up s={15}/>} title="Performance" meta="Views, clicks, and deal activity" defaultOpen>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <StatCard icon={<EyeIcon s={18}/>}            label="Unique visitors"  value={uniqueVisitors.toLocaleString()} sublabel="Each person counted once"          delta={{ label: '8.6%',               positive: true }}/>
+              <StatCard icon={<CursorClickIcon s={18}/>}    label="Profile clicks"   value={profileClicks.toLocaleString()}  sublabel="Brands clicking into your profile"  delta={{ label: '+12% vs prev period', positive: true }}/>
+              <StatCard icon={<HandshakeIcon s={18}/>}      label="Active deals"     value={String(activeDeals)}             sublabel="Currently in progress"              delta={{ label: '+2 this month',       positive: true }}/>
+              <StatCard icon={<BookmarkIcon s={18} filled/>} label="Saved by brands" value={String(savedByBrands)}           sublabel="Brands shortlisting you"            delta={{ label: '+5 this week',        positive: true }}/>
+            </div>
+            <div className="mt-6 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-3">
+              <div className="flex h-full lg:col-span-2">
+                <ViewsCard range={range} onRangeChange={setRange} events={chartEvents}/>
+              </div>
+              <ChartEventsPanel events={chartEvents}/>
+            </div>
+          </CollapsibleCard>
         </div>
 
       </main>

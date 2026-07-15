@@ -56,41 +56,66 @@ interface FormData {
   email: string; password: string; showPass: boolean
   otp: string[]
   name: string; niches: string[]; otherNiche: string
-  platforms: string[]; followerRange: string; earn: string
+  platforms: string[]; mainPlatform: string; followerRange: string; earn: string
   profilePic: string | null; profileFile: File | null
   links: Record<string, string>
 }
 
 /* ─── Statics ────────────────────────────────────────────────────────── */
 const NICHES = [
-  { e: '◈', l: 'Beauty' }, { e: '◇', l: 'Fashion' },
-  { e: '◉', l: 'Lifestyle' }, { e: '◎', l: 'Food & Drink' },
-  { e: '△', l: 'Fitness' }, { e: '◁', l: 'Travel' },
-  { e: '⬡', l: 'Tech' }, { e: '⬟', l: 'Home' },
-  { e: '○', l: 'Wellness' }, { e: '◆', l: 'Gaming' },
+  { e: '💄', l: 'Beauty' }, { e: '👗', l: 'Fashion' },
+  { e: '✨', l: 'Lifestyle' }, { e: '🍽️', l: 'Food & Drink' },
+  { e: '💪', l: 'Fitness' }, { e: '✈️', l: 'Travel' },
+  { e: '💻', l: 'Tech' }, { e: '🏠', l: 'Home' },
+  { e: '🧘', l: 'Wellness' }, { e: '🎮', l: 'Gaming' },
 ]
+
+/* Single source of truth for every platform: selection, main-platform pick,
+   social-link inputs, and earnings weighting all read from this one array. */
 const PLATFORMS = [
-  { id: 'instagram', label: 'Instagram',   logo: (s = 20) => <IGLogo        size={s} /> },
-  { id: 'tiktok',    label: 'TikTok',      logo: (s = 20) => <TikTokLogo    size={s} /> },
-  { id: 'youtube',   label: 'YouTube',     logo: (s = 20) => <YTLogo        size={s} /> },
-  { id: 'linkedin',  label: 'LinkedIn',    logo: (s = 20) => <LinkedInLogo  size={s} /> },
-  { id: 'pinterest', label: 'Pinterest',   logo: (s = 20) => <PinterestLogo size={s} /> },
-  { id: 'x',         label: 'X / Twitter', logo: (s = 20) => <XLogo         size={s} /> },
+  { id: 'instagram', label: 'Instagram',   group: 'short' as const, ph: 'instagram.com/yourhandle',       logo: (s = 20) => <IGLogo        size={s} /> },
+  { id: 'tiktok',    label: 'TikTok',      group: 'short' as const, ph: 'tiktok.com/@yourhandle',         logo: (s = 20) => <TikTokLogo    size={s} /> },
+  { id: 'x',         label: 'X / Twitter', group: 'short' as const, ph: 'x.com/yourhandle',               logo: (s = 20) => <XLogo         size={s} /> },
+  { id: 'pinterest', label: 'Pinterest',   group: 'short' as const, ph: 'pinterest.com/yourhandle',       logo: (s = 20) => <PinterestLogo size={s} /> },
+  { id: 'youtube',   label: 'YouTube',     group: 'long'  as const, ph: 'youtube.com/@yourchannel',       logo: (s = 20) => <YTLogo        size={s} /> },
+  { id: 'linkedin',  label: 'LinkedIn',    group: 'long'  as const, ph: 'linkedin.com/in/yourname',       logo: (s = 20) => <LinkedInLogo  size={s} /> },
+  { id: 'spotify',   label: 'Spotify',     group: 'long'  as const, ph: 'open.spotify.com/show/yourshow', logo: (s = 20) => <SpotifyLogo   size={s} /> },
+  { id: 'medium',    label: 'Medium',      group: 'long'  as const, ph: 'medium.com/@yourhandle',         logo: (s = 20) => <MediumLogo    size={s} /> },
 ]
+
+/* Base earning tiers (Instagram baseline) — every other platform is a
+   multiplier off this, so amounts change per platform, not just per follower count. */
 const RANGES = [
-  { l: '0 – 5K',      v: '0-5k',      earn: '€50 – €150'     },
-  { l: '5K – 20K',    v: '5k-20k',    earn: '€150 – €400'    },
-  { l: '20K – 50K',   v: '20k-50k',   earn: '€400 – €900'    },
-  { l: '50K – 100K',  v: '50k-100k',  earn: '€900 – €2,000'  },
-  { l: '100K – 500K', v: '100k-500k', earn: '€2,000 – €6,000'},
-  { l: '500K+',       v: '500k+',     earn: '€6,000+'        },
+  { l: '0 – 5K',      v: '0-5k',      lo: 50,   hi: 150   },
+  { l: '5K – 20K',    v: '5k-20k',    lo: 150,  hi: 400   },
+  { l: '20K – 50K',   v: '20k-50k',   lo: 400,  hi: 900   },
+  { l: '50K – 100K',  v: '50k-100k',  lo: 900,  hi: 2000  },
+  { l: '100K – 500K', v: '100k-500k', lo: 2000, hi: 6000  },
+  { l: '500K+',       v: '500k+',     lo: 6000, hi: 15000, plus: true },
 ]
-const SOCIAL_INPUTS = [
-  { id: 'instagram', label: 'Instagram', ph: 'instagram.com/yourhandle', logo: (s = 18) => <IGLogo       size={s} /> },
-  { id: 'tiktok',    label: 'TikTok',    ph: 'tiktok.com/@yourhandle',   logo: (s = 18) => <TikTokLogo   size={s} /> },
-  { id: 'youtube',   label: 'YouTube',   ph: 'youtube.com/@yourchannel', logo: (s = 18) => <YTLogo       size={s} /> },
-  { id: 'linkedin',  label: 'LinkedIn',  ph: 'linkedin.com/in/yourname', logo: (s = 18) => <LinkedInLogo size={s} /> },
-]
+
+const PLATFORM_MULTIPLIER: Record<string, number> = {
+  instagram: 1,
+  tiktok:    0.85,
+  x:         0.70,
+  pinterest: 0.65,
+  youtube:   1.45,
+  linkedin:  1.60,
+  spotify:   1.20,
+  medium:    0.90,
+}
+
+function computeEarn(platformId: string, rangeVal: string): string {
+  const range = RANGES.find(r => r.v === rangeVal)
+  if (!range || !platformId) return ''
+  const mult = PLATFORM_MULTIPLIER[platformId] ?? 1
+  const round = (n: number, step: number) => Math.round((n * mult) / step) * step
+  const lo = round(range.lo, range.lo >= 1000 ? 50 : 10)
+  const hi = round(range.hi, range.hi >= 1000 ? 50 : 10)
+  const fmt = (n: number) => `€${n.toLocaleString('en-US')}`
+  return range.plus ? `${fmt(lo)}+` : `${fmt(lo)} – ${fmt(hi)}`
+}
+
 const STEP_COUNT: Record<Role, number> = { creator: 8, brand: 2, agency: 2 }
 const ROLE_LABEL: Record<Role, string>  = { creator: 'Creator', brand: 'Brand', agency: 'Agency' }
 
@@ -168,12 +193,12 @@ function AgencyMark({ active }: { active: boolean }) {
     </svg>
   )
 }
+
 /* ══════════════════ PLATFORM BRAND LOGOS ═══════════════════════════════
    Accurate brand-colour SVG logos for every platform we support.
    `size` prop lets the same component scale for buttons (20) and inputs (18).
 ══════════════════════════════════════════════════════════════════════ */
 function IGLogo({ size = 20 }: { size?: number }) {
-  /* Instagram gradient camera — official brand colours */
   const id = 'ig-grad'
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -187,7 +212,6 @@ function IGLogo({ size = 20 }: { size?: number }) {
         </radialGradient>
       </defs>
       <rect x="2" y="2" width="20" height="20" rx="5.5" fill={`url(#${id})`}/>
-      <rect x="2" y="2" width="20" height="20" rx="5.5" fill="none" stroke="none"/>
       <circle cx="12" cy="12" r="4.3" stroke="#fff" strokeWidth="1.8" fill="none"/>
       <circle cx="17.3" cy="6.7" r="1.1" fill="#fff"/>
     </svg>
@@ -198,13 +222,10 @@ function TikTokLogo({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <rect width="24" height="24" rx="5.5" fill="#010101"/>
-      {/* Teal shadow */}
       <path d="M13.5 4.5 C13.5 4.5 13.5 11.5 13.5 13.5 C13.5 15.43 11.93 17 10 17 C8.07 17 6.5 15.43 6.5 13.5 C6.5 11.57 8.07 10 10 10 L10 7 C6.41 7 3.5 9.91 3.5 13.5 C3.5 17.09 6.41 20 10 20 C13.59 20 16.5 17.09 16.5 13.5 L16.5 9 C17.7 9.87 19.17 10.4 20.7 10.46 L20.7 7.46 C19.11 7.35 17.71 6.42 16.9 5.09 C16.55 4.51 16.35 3.83 16.35 3.1 L13.35 3.1 Z"
         fill="#69C9D0" transform="translate(0.3 0.3)"/>
-      {/* Red shadow */}
       <path d="M13.5 4.5 C13.5 4.5 13.5 11.5 13.5 13.5 C13.5 15.43 11.93 17 10 17 C8.07 17 6.5 15.43 6.5 13.5 C6.5 11.57 8.07 10 10 10 L10 7 C6.41 7 3.5 9.91 3.5 13.5 C3.5 17.09 6.41 20 10 20 C13.59 20 16.5 17.09 16.5 13.5 L16.5 9 C17.7 9.87 19.17 10.4 20.7 10.46 L20.7 7.46 C19.11 7.35 17.71 6.42 16.9 5.09 C16.55 4.51 16.35 3.83 16.35 3.1 L13.35 3.1 Z"
         fill="#EE1D52" transform="translate(-0.3 -0.3)"/>
-      {/* White main */}
       <path d="M13.5 4.5 C13.5 4.5 13.5 11.5 13.5 13.5 C13.5 15.43 11.93 17 10 17 C8.07 17 6.5 15.43 6.5 13.5 C6.5 11.57 8.07 10 10 10 L10 7 C6.41 7 3.5 9.91 3.5 13.5 C3.5 17.09 6.41 20 10 20 C13.59 20 16.5 17.09 16.5 13.5 L16.5 9 C17.7 9.87 19.17 10.4 20.7 10.46 L20.7 7.46 C19.11 7.35 17.71 6.42 16.9 5.09 C16.55 4.51 16.35 3.83 16.35 3.1 L13.35 3.1 Z"
         fill="#ffffff"/>
     </svg>
@@ -215,7 +236,6 @@ function YTLogo({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <rect width="24" height="24" rx="5.5" fill="#FF0000"/>
-      {/* Play triangle */}
       <path d="M10 8.5 L16.5 12 L10 15.5 Z" fill="#ffffff"/>
     </svg>
   )
@@ -246,6 +266,28 @@ function XLogo({ size = 20 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <rect width="24" height="24" rx="5.5" fill="#000000"/>
       <path d="M17.75 4 L13.37 9.08 L19.5 19.5 L14.5 19.5 L10.86 13.6 L6 19.5 L4 19.5 L8.69 14.07 L2.5 4 L7.5 4 L10.87 9.52 L15.5 4 Z" fill="#ffffff"/>
+    </svg>
+  )
+}
+
+function SpotifyLogo({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect width="24" height="24" rx="5.5" fill="#1DB954"/>
+      <path d="M6.4 9.6c3.7-1.05 7.7-.85 10.9 1" stroke="#0A2E16" strokeOpacity="0.9" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+      <path d="M6.8 13c3-.8 6.3-.65 9 .85" stroke="#0A2E16" strokeOpacity="0.9" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+      <path d="M7.2 16.1c2.4-.55 5-.45 7.2.7" stroke="#0A2E16" strokeOpacity="0.9" strokeWidth="1.4" strokeLinecap="round" fill="none"/>
+    </svg>
+  )
+}
+
+function MediumLogo({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect width="24" height="24" rx="5.5" fill="#000000"/>
+      <circle cx="8.3" cy="12" r="4" fill="#fff"/>
+      <ellipse cx="15.2" cy="12" rx="2.3" ry="4" fill="#fff"/>
+      <ellipse cx="19.6" cy="12" rx="0.9" ry="4" fill="#fff"/>
     </svg>
   )
 }
@@ -411,7 +453,6 @@ function ErrorMsg({ msg }: { msg: string }) {
   )
 }
 
-/* ─── Demo mode hint for OTP screen ─────────────────────────────────── */
 function DemoHint() {
   return (
     <div style={{
@@ -432,7 +473,6 @@ function DemoHint() {
   )
 }
 
-/* ─── Step dots ──────────────────────────────────────────────────────── */
 function StepDots({ current, total }: { current: number; total: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
@@ -450,7 +490,6 @@ function StepDots({ current, total }: { current: number; total: number }) {
   )
 }
 
-/* ─── Coming-soon social auth ────────────────────────────────────────── */
 function ComingSoonBtn({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <button type="button" disabled style={{
@@ -472,22 +511,64 @@ function ComingSoonBtn({ icon, label }: { icon: React.ReactNode; label: string }
   )
 }
 
+/* ══════════════════ ECOSYSTEM GRAPHIC ═════════════════════════════════
+   Shows the three-sided marketplace: Brand ↔ Agency ↔ Creator, with
+   campaigns/content/payouts flowing between them. Lives on the role screen.
+══════════════════════════════════════════════════════════════════════ */
+function EcosystemGraphic({ isMobile }: { isMobile: boolean }) {
+  return (
+    <div style={{ position: 'relative', width: '100%', maxWidth: 420, margin: '0 auto 28px' }}>
+      <svg viewBox="0 0 420 66" width="100%" height={isMobile ? 56 : 66} style={{ position: 'absolute', top: 16, left: 0 }} fill="none">
+        <defs>
+          <marker id="ecoArrow" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto">
+            <path d="M0,0 L5,2.5 L0,5 Z" fill="rgba(139,49,232,0.42)" />
+          </marker>
+        </defs>
+        <path d="M55 12 C 140 -12, 280 -12, 365 12" stroke="rgba(139,49,232,0.32)" strokeWidth="1.5" strokeDasharray="3 5" fill="none" markerEnd="url(#ecoArrow)" />
+        <path d="M365 40 C 280 62, 140 62, 55 40" stroke="rgba(139,49,232,0.32)" strokeWidth="1.5" strokeDasharray="3 5" fill="none" markerEnd="url(#ecoArrow)" />
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+        {[
+          { mark: <BrandMark active />,   label: 'Brand'   },
+          { mark: <AgencyMark active />,  label: 'Agency'  },
+          { mark: <CreatorMark active />, label: 'Creator' },
+        ].map((n, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: '50%', background: '#fff',
+              boxShadow: C.shadowCard, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+            }}>
+              <div style={{ transform: 'scale(0.72)' }}>{n.mark}</div>
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 700, color: C.inkDim, letterSpacing: '0.10em', textTransform: 'uppercase', fontFamily: C.font }}>
+              {n.label}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p style={{ textAlign: 'center', fontSize: 11, color: C.inkFaint, marginTop: 10, fontFamily: C.font, lineHeight: 1.5 }}>
+        One ecosystem — campaigns flow in, content flows out, payouts flow back.
+      </p>
+    </div>
+  )
+}
+
 /* ══════════════════ STEP 0 — ROLE SELECTOR ════════════════════════════ */
 function RoleSelector({ onSelect, isMobile }: {
   onSelect: (r: Role) => void; isMobile: boolean
 }) {
   const [hov, setHov] = useState<Role | null>(null)
   const roles = [
+    { id: 'agency'  as Role, mark: <AgencyMark  active={hov === 'agency' }/>,
+      title: "I'm an Agency", tagline: 'Manage campaigns at scale. Earn on every deal you run.' },
     { id: 'creator' as Role, mark: <CreatorMark active={hov === 'creator'}/>,
       title: "I'm a Creator", tagline: 'Build your portfolio. Get discovered. Earn from deals.' },
     { id: 'brand'   as Role, mark: <BrandMark   active={hov === 'brand'  }/>,
       title: "I'm a Brand",   tagline: 'Find creators. Launch campaigns. Pay for results.' },
-    { id: 'agency'  as Role, mark: <AgencyMark  active={hov === 'agency' }/>,
-      title: "I'm an Agency", tagline: 'Manage campaigns at scale. Earn on every deal you run.' },
   ]
   return (
     <div style={{ width: '100%', maxWidth: 520, animation: 'fadeUp 0.35s ease forwards' }}>
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 36 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 30 }}>
         <div style={{ width: 52, height: 52, borderRadius: C.rLg, overflow: 'hidden' }}>
           <img src="/Nex.webp" alt="Nexfluence"
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}/>
@@ -500,8 +581,10 @@ function RoleSelector({ onSelect, isMobile }: {
       }}>Who are you here as?</h1>
       <p style={{
         textAlign: 'center', fontFamily: C.font, color: C.inkDim,
-        fontSize: 14, marginBottom: 32, lineHeight: 1.7,
+        fontSize: 14, marginBottom: 22, lineHeight: 1.7,
       }}>Choose your role to get the right experience.</p>
+
+      <EcosystemGraphic isMobile={isMobile}/>
 
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 12 : 14 }}>
         {roles.map((r, i) => {
@@ -629,9 +712,9 @@ export default function AuthPage() {
     email: '', password: '', showPass: false,
     otp: ['', '', '', '', '', ''],
     name: '', niches: [], otherNiche: '',
-    platforms: [], followerRange: '', earn: '',
+    platforms: [], mainPlatform: '', followerRange: '', earn: '',
     profilePic: null, profileFile: null,
-    links: { instagram: '', tiktok: '', youtube: '', linkedin: '' },
+    links: {},
   })
   const patch = (p: Partial<FormData>) => setData(d => ({ ...d, ...p }))
 
@@ -657,9 +740,9 @@ export default function AuthPage() {
       email: '', password: '', showPass: false,
       otp: ['', '', '', '', '', ''],
       name: '', niches: [], otherNiche: '',
-      platforms: [], followerRange: '', earn: '',
+      platforms: [], mainPlatform: '', followerRange: '', earn: '',
       profilePic: null, profileFile: null,
-      links: { instagram: '', tiktok: '', youtube: '', linkedin: '' },
+      links: {},
     })
   }
 
@@ -667,8 +750,19 @@ export default function AuthPage() {
 
   const toggleNiche = (l: string) =>
     patch({ niches: data.niches.includes(l) ? data.niches.filter(x => x !== l) : [...data.niches, l] })
-  const togglePlat = (id: string) =>
-    patch({ platforms: data.platforms.includes(id) ? data.platforms.filter(x => x !== id) : [...data.platforms, id] })
+
+  const togglePlat = (id: string) => {
+    const active = data.platforms.includes(id)
+    const platforms = active ? data.platforms.filter(x => x !== id) : [...data.platforms, id]
+    const patchObj: Partial<FormData> = { platforms }
+    // if you deselect your current main platform, clear the dependent fields
+    if (active && data.mainPlatform === id) {
+      patchObj.mainPlatform = ''
+      patchObj.followerRange = ''
+      patchObj.earn = ''
+    }
+    patch(patchObj)
+  }
 
   const pickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]; if (!f) return
@@ -680,35 +774,31 @@ export default function AuthPage() {
     if (step === 1) return !!data.email && data.password.length >= 6
     if (step === 2) return data.otp.every(d => d !== '')
     if (role === 'creator') {
-      if (step === 3) {
+      if (step === 3) return data.platforms.length > 0
+      if (step === 4) return !!data.mainPlatform && !!data.followerRange
+      if (step === 5) {
         const ok = data.niches.some(n => n !== '__other__') ||
           (data.niches.includes('__other__') && !!data.otherNiche.trim())
         return !!data.name && data.niches.length > 0 && ok
       }
-      if (step === 4) return data.platforms.length > 0
-      if (step === 5) return !!data.followerRange
     }
     return true
   }
 
   /* ══════════════════ MOCK HANDLERS ══════════════════════════════════ */
 
-  // Step 1 — email + password
   const handleStep1 = async () => {
     setLoading(true); setError('')
     await mock()
     if (mode === 'login') {
-      // Login: skip OTP, jump straight to success
       if (role === 'brand' || role === 'agency') { setShortSuccess(true) }
       else { goTo(8) }
     } else {
-      // Signup: go to OTP
       next(); setResend(30)
     }
     setLoading(false)
   }
 
-  // Step 2 — OTP (any 6 digits pass)
   const handleVerifyOTP = useCallback(async () => {
     if (loading) return
     setLoading(true); setError('')
@@ -723,12 +813,10 @@ export default function AuthPage() {
     patch({ otp: Array(6).fill('') }); setResend(30)
   }
 
-  // Steps 3, 4, 5, 7 — save & advance
   const handleSave = async () => {
     setLoading(true); setError(''); await mock(500); next(); setLoading(false)
   }
 
-  // Step 6 — photo (feels like upload)
   const handlePhotoStep = async () => {
     if (!data.profileFile) { next(); return }
     setLoading(true); setError(''); await mock(900); next(); setLoading(false)
@@ -752,7 +840,6 @@ export default function AuthPage() {
     }}>{text}</p>
   )
 
-  /* ─── Role pill ── */
   const RolePill = () => {
     if (!role) return null
     const marks: Record<Role, React.ReactNode> = {
@@ -783,11 +870,20 @@ export default function AuthPage() {
     )
   }
 
+  const platformBtnStyle = (on: boolean): React.CSSProperties => ({
+    padding: isMobile ? '12px 10px' : '14px 14px', borderRadius: C.rMd,
+    border: on ? `1px solid ${C.primary}` : C.border,
+    background: on ? C.cardBgM : C.bgSub, color: on ? C.ink : C.inkDim,
+    fontSize: 14, fontWeight: on ? 700 : 500,
+    cursor: 'pointer', fontFamily: C.font, transition: 'all 0.15s',
+    boxShadow: on ? C.shadowSm : 'none',
+    display: 'flex', alignItems: 'center', gap: 10,
+  })
+
   /* ══════════════════════ STEP RENDERS ════════════════════════════════ */
   const renderStep = () => {
     if (!role) return null
 
-    // Brand / Agency: show inline success card after OTP
     if (shortSuccess && (role === 'brand' || role === 'agency')) {
       return (
         <ShortSuccess role={role} email={data.email} isMobile={isMobile}
@@ -882,10 +978,150 @@ export default function AuthPage() {
         </div>
       )
 
-      /* ── 3 (creator): Name + niches ── */
+      /* ── 3 (creator): Platforms — short-form / long-form segregated ── */
       case 3: if (role !== 'creator') return null; return (
         <div>
-          <Kicker text="Step 3 of 8 · Your content"/>
+          <Kicker text="Step 3 of 8 · Platforms"/>
+          <h2 style={h2}>Which platforms are you on?</h2>
+          <p style={sub}>Select every platform where you post or publish regularly.</p>
+
+          <label style={labelBase}>🎬 Short-form</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? 8 : 10, marginBottom: 20 }}>
+            {PLATFORMS.filter(p => p.group === 'short').map(p => {
+              const on = data.platforms.includes(p.id)
+              return (
+                <button key={p.id} onClick={() => togglePlat(p.id)} style={platformBtnStyle(on)}>
+                  <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>{p.logo(20)}</span>
+                  <span style={{ flex: 1, textAlign: 'left' }}>{p.label}</span>
+                  {on && (
+                    <span style={{
+                      width: 18, height: 18, borderRadius: '50%', background: C.grad,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 10, color: '#fff', fontWeight: 900, flexShrink: 0,
+                    }}>✓</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          <label style={labelBase}>🎙️ Long-form</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? 8 : 10, marginBottom: 24 }}>
+            {PLATFORMS.filter(p => p.group === 'long').map(p => {
+              const on = data.platforms.includes(p.id)
+              return (
+                <button key={p.id} onClick={() => togglePlat(p.id)} style={platformBtnStyle(on)}>
+                  <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>{p.logo(20)}</span>
+                  <span style={{ flex: 1, textAlign: 'left' }}>{p.label}</span>
+                  {on && (
+                    <span style={{
+                      width: 18, height: 18, borderRadius: '50%', background: C.grad,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 10, color: '#fff', fontWeight: 900, flexShrink: 0,
+                    }}>✓</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          <ErrorMsg msg={error}/>
+          <ContinueBtn disabled={!canContinue()} loading={loading} onClick={handleSave}/>
+        </div>
+      )
+
+      /* ── 4 (creator): Main platform + followers + earning potential (moved up) ── */
+      case 4: if (role !== 'creator') return null; return (
+        <div>
+          <Kicker text="Step 4 of 8 · Your reach"/>
+          <h2 style={h2}>Choose your main platform</h2>
+          <p style={sub}>The platform where you post the most — this is what brands see first.</p>
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 22 }}>
+            {PLATFORMS.filter(p => data.platforms.includes(p.id)).map(p => {
+              const on = data.mainPlatform === p.id
+              return (
+                <button key={p.id}
+                  onClick={() => patch({ mainPlatform: p.id, followerRange: '', earn: '' })}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: isMobile ? '9px 14px' : '10px 16px', borderRadius: C.rSm,
+                    border: on ? `1px solid ${C.primary}` : C.border,
+                    background: on ? C.cardBgM : C.bg, color: on ? C.ink : C.inkDim,
+                    fontSize: 14, fontWeight: on ? 700 : 500, cursor: 'pointer',
+                    fontFamily: C.font, transition: 'all 0.15s',
+                    boxShadow: on ? C.shadowSm : 'none',
+                  }}>
+                  <span style={{ display: 'flex', alignItems: 'center' }}>{p.logo(18)}</span>
+                  {p.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {data.mainPlatform && (
+            <>
+              <label style={labelBase}>
+                Followers on {PLATFORMS.find(p => p.id === data.mainPlatform)?.label}
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+                {RANGES.map(r => {
+                  const on = data.followerRange === r.v
+                  return (
+                    <button key={r.v}
+                      onClick={() => patch({ followerRange: r.v, earn: computeEarn(data.mainPlatform, r.v) })}
+                      style={{
+                        padding: isMobile ? '11px 8px' : '13px 10px', borderRadius: C.rSm,
+                        border: on ? `1px solid ${C.primary}` : C.border,
+                        background: on ? C.cardBgM : C.bgSub, color: on ? C.ink : C.inkDim,
+                        fontWeight: on ? 700 : 500, fontSize: isMobile ? 13 : 14,
+                        cursor: 'pointer', fontFamily: C.font, transition: 'all 0.15s',
+                        boxShadow: on ? C.shadowSm : 'none',
+                      }}>{r.l}</button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
+          {data.followerRange && data.mainPlatform && (
+            <div style={{
+              borderRadius: C.rLg, border: '1px solid rgba(139,49,232,0.18)',
+              background: C.cardBg, padding: isMobile ? 16 : 20,
+              marginBottom: 18, position: 'relative', overflow: 'hidden',
+              boxShadow: C.shadowCard,
+            }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+                background: 'linear-gradient(90deg,transparent,rgba(180,74,240,0.55),transparent)' }}/>
+              <p style={{ color: C.inkDim, fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 6, fontFamily: C.font }}>Your earning potential</p>
+              <p style={{ color: C.ink, fontWeight: 900, fontSize: isMobile ? 26 : 30, letterSpacing: '-0.03em', lineHeight: 1, fontFamily: C.font }}>{data.earn}</p>
+              <p style={{ color: C.inkDim, fontSize: 12, marginTop: 6, fontFamily: C.font }}>
+                per month on {PLATFORMS.find(p => p.id === data.mainPlatform)?.label} · based on creators like you
+              </p>
+              <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+                {[
+                  { e: '🤝', t: '3× more brand deals' },
+                  { e: '📩', t: 'Inbound inquiries' },
+                  { e: '⭐', t: 'Pro first impression' },
+                ].map((row, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontSize: 13 }}>{row.e}</span>
+                    <span style={{ color: C.inkDim, fontSize: 11, fontFamily: C.font }}>{row.t}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <ErrorMsg msg={error}/>
+          <ContinueBtn disabled={!canContinue()} loading={loading} onClick={handleSave}/>
+        </div>
+      )
+
+      /* ── 5 (creator): Name + niches ── */
+      case 5: if (role !== 'creator') return null; return (
+        <div>
+          <Kicker text="Step 5 of 8 · Your content"/>
           <h2 style={h2}>What do you create?</h2>
           <p style={sub}>This helps brands find creators like you.</p>
           <div style={{ marginBottom: 16 }}>
@@ -905,7 +1141,7 @@ export default function AuthPage() {
                   fontSize: 13, fontWeight: on ? 700 : 500,
                   cursor: 'pointer', fontFamily: C.font, transition: 'all 0.15s',
                 }}>
-                  <span style={{ fontSize: 12 }}>{n.e}</span>{n.l}
+                  <span style={{ fontSize: 13 }}>{n.e}</span>{n.l}
                 </button>
               )
             })}
@@ -927,94 +1163,6 @@ export default function AuthPage() {
               <LightInput label="What's your niche?" value={data.otherNiche}
                 onChange={v => patch({ otherNiche: v })}
                 placeholder="e.g. DIY Crafts, Motorsport, Parenting…"/>
-            </div>
-          )}
-          <ErrorMsg msg={error}/>
-          <ContinueBtn disabled={!canContinue()} loading={loading} onClick={handleSave}/>
-        </div>
-      )
-
-      /* ── 4 (creator): Platforms ── */
-      case 4: if (role !== 'creator') return null; return (
-        <div>
-          <Kicker text="Step 4 of 8 · Platforms"/>
-          <h2 style={h2}>Which platforms are you on?</h2>
-          <p style={sub}>Select every platform where you post regularly.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? 8 : 10, marginBottom: 24 }}>
-            {PLATFORMS.map(p => {
-              const on = data.platforms.includes(p.id)
-              return (
-                <button key={p.id} onClick={() => togglePlat(p.id)} style={{
-                  padding: isMobile ? '12px 10px' : '14px 14px', borderRadius: C.rMd,
-                  border: on ? `1px solid ${C.primary}` : C.border,
-                  background: on ? C.cardBgM : C.bgSub, color: on ? C.ink : C.inkDim,
-                  fontSize: 14, fontWeight: on ? 700 : 500,
-                  cursor: 'pointer', fontFamily: C.font, transition: 'all 0.15s',
-                  boxShadow: on ? C.shadowSm : 'none',
-                  display: 'flex', alignItems: 'center', gap: 10,
-                }}>
-                  {/* Brand logo */}
-                  <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                    {p.logo(20)}
-                  </span>
-                  <span style={{ flex: 1, textAlign: 'left' }}>{p.label}</span>
-                  {on && (
-                    <span style={{
-                      width: 18, height: 18, borderRadius: '50%', background: C.grad,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 10, color: '#fff', fontWeight: 900, flexShrink: 0,
-                    }}>✓</span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-          <ErrorMsg msg={error}/>
-          <ContinueBtn disabled={!canContinue()} loading={loading} onClick={handleSave}/>
-        </div>
-      )
-
-      /* ── 5 (creator): Follower range ── */
-      case 5: if (role !== 'creator') return null; return (
-        <div>
-          <Kicker text="Step 5 of 8 · Audience size"/>
-          <h2 style={h2}>What's your total follower count?</h2>
-          <p style={sub}>Combined across all platforms.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-            {RANGES.map(r => {
-              const on = data.followerRange === r.v
-              return (
-                <button key={r.v} onClick={() => patch({ followerRange: r.v, earn: r.earn })} style={{
-                  padding: isMobile ? '11px 8px' : '13px 10px', borderRadius: C.rSm,
-                  border: on ? `1px solid ${C.primary}` : C.border,
-                  background: on ? C.cardBgM : C.bgSub, color: on ? C.ink : C.inkDim,
-                  fontWeight: on ? 700 : 500, fontSize: isMobile ? 13 : 14,
-                  cursor: 'pointer', fontFamily: C.font, transition: 'all 0.15s',
-                  boxShadow: on ? C.shadowSm : 'none',
-                }}>{r.l}</button>
-              )
-            })}
-          </div>
-          {data.followerRange && (
-            <div style={{
-              borderRadius: C.rLg, border: '1px solid rgba(139,49,232,0.18)',
-              background: C.cardBg, padding: isMobile ? 16 : 20,
-              marginBottom: 18, position: 'relative', overflow: 'hidden',
-              boxShadow: C.shadowCard,
-            }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2,
-                background: 'linear-gradient(90deg,transparent,rgba(180,74,240,0.55),transparent)' }}/>
-              <p style={{ color: C.inkDim, fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 6, fontFamily: C.font }}>Your earning potential</p>
-              <p style={{ color: C.ink, fontWeight: 900, fontSize: isMobile ? 26 : 30, letterSpacing: '-0.03em', lineHeight: 1, fontFamily: C.font }}>{data.earn}</p>
-              <p style={{ color: C.inkDim, fontSize: 12, marginTop: 6, fontFamily: C.font }}>per month · based on creators like you</p>
-              <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-                {['3× more brand deals', 'Inbound inquiries', 'Pro first impression'].map((t, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ color: C.primary, fontSize: 12 }}>✓</span>
-                    <span style={{ color: C.inkDim, fontSize: 11, fontFamily: C.font }}>{t}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
           <ErrorMsg msg={error}/>
@@ -1067,28 +1215,27 @@ export default function AuthPage() {
         </div>
       )
 
-      /* ── 7 (creator): Social links ── */
+      /* ── 7 (creator): Social links — only for platforms picked in step 3 ── */
       case 7: if (role !== 'creator') return null; return (
         <div>
           <Kicker text="Step 7 of 8 · Social links"/>
           <h2 style={h2}>Add your social links</h2>
           <p style={sub}>Brands use these to verify your audience before reaching out.</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
-            {SOCIAL_INPUTS.map(s => (
-              <div key={s.id}>
-                {/* Label row with logo */}
+            {PLATFORMS.filter(p => data.platforms.includes(p.id)).map(p => (
+              <div key={p.id}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
                   <span style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                    {s.logo(18)}
+                    {p.logo(18)}
                   </span>
                   <span style={{
                     color: C.inkDim, fontSize: 11, fontWeight: 600,
                     letterSpacing: '0.18em', textTransform: 'uppercase', fontFamily: C.font,
-                  }}>{s.label}</span>
+                  }}>{p.label}</span>
                 </div>
-                <FocusInput value={data.links[s.id] ?? ''}
-                  onChange={v => patch({ links: { ...data.links, [s.id]: v } })}
-                  placeholder={s.ph}/>
+                <FocusInput value={data.links[p.id] ?? ''}
+                  onChange={v => patch({ links: { ...data.links, [p.id]: v } })}
+                  placeholder={p.ph}/>
               </div>
             ))}
           </div>
@@ -1144,7 +1291,6 @@ export default function AuthPage() {
   const showDots = role === 'creator' && mode === 'signup' && !shortSuccess
   if (w === 0) return null
 
-  /* ── Step 0: Role selector full-screen ── */
   if (!role) return (
     <div style={{
       minHeight: '100vh', background: C.bgPage,
@@ -1160,7 +1306,6 @@ export default function AuthPage() {
     </div>
   )
 
-  /* ── Auth + onboarding flow ── */
   return (
     <div style={{
       minHeight: '100vh', background: C.bgPage,
@@ -1170,7 +1315,6 @@ export default function AuthPage() {
     }}>
       <div style={{ width: '100%', maxWidth: maxForm }}>
 
-        {/* Logo */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
           <div style={{ width: 52, height: 52, borderRadius: C.rLg, overflow: 'hidden' }}>
             <img src="/Nex.webp" alt="Nexfluence"
@@ -1178,7 +1322,6 @@ export default function AuthPage() {
           </div>
         </div>
 
-        {/* Step nav */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <button onClick={back} aria-label="Go back" style={{
             background: 'none', border: 'none', cursor: 'pointer',
@@ -1203,7 +1346,6 @@ export default function AuthPage() {
           <div style={{ width: 28, flexShrink: 0 }}/>
         </div>
 
-        {/* Form card */}
         <div style={{
           background: '#fff', borderRadius: C.rLg,
           boxShadow: C.shadowCard, padding: formPad,

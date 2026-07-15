@@ -8,6 +8,14 @@
    • uploadAsset = URL.createObjectURL — local preview only, lost on refresh.
    • All form state lives in React state only.
 
+   ROUTE INTEGRATION (this revision):
+   • TopBar "Dashboard" → /creator-dashboard (was the wrong /dashboard/creator)
+   • TopBar "Preview"   → /preview (was the wrong /creator/preview)
+   • Logo/wordmark      → clickable, also goes to /creator-dashboard
+   • Finishing the wizard no longer just flips an internal flag — it shows
+     a real completion screen with working exits: dashboard, public
+     profile (/display), or keep customizing (drops into free-edit).
+
    STRUCTURAL ALIGNMENT WITH BRAND STUDIO:
    • VISITED_KEY = 'nex_creator_studio_visited' — same SSR-safe hydration pattern
    • Free-edit: single activeSection in DOM at a time (not a Set)
@@ -15,11 +23,12 @@
    • Unsaved-changes guard: blocks nav if activeSection is dirty
    • TopBar shows currentIsDirty, not global dirty
    • GuidedBanner "Edit freely" exits guided mode
-   • Mobile save bar: wizard mode only
-   • Dashboard link → /dashboard/creator
+   • Mobile save bar: wizard mode only (hidden once wizard is complete)
    ════════════════════════════════════════════════════════════════════ */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 const VISITED_KEY = 'nex_creator_studio_visited'
 const CARD = 'shadow-[0_1px_2px_rgba(10,6,18,0.04),0_12px_32px_-12px_rgba(139,49,232,0.16)]'
@@ -689,15 +698,15 @@ function TopBar({ dirty, saving, lastSaved, onSave }: {
   return (
     <header className="sticky top-0 z-40 border-b border-primary/10 bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
-        <div className="flex items-center gap-2.5">
+        <Link href="/creator-dashboard" className="flex items-center gap-2.5">
           <img src="/Nex.webp" alt="Nexfluence" className="h-7 w-auto" />
           <span className="hidden text-[13px] font-bold text-ink/30 sm:inline">/</span>
           <span className="hidden text-[13px] font-bold text-ink/60 sm:inline">Creator Studio</span>
-        </div>
+        </Link>
         <div className="flex items-center gap-2.5">
           <span className="hidden text-[12px] text-ink/40 sm:inline">{status}</span>
-          {/* Dashboard link — mirrors brand studio TopBar */}
-          <a href="/dashboard/creator"
+          {/* Dashboard link — real route, matches the built /creator-dashboard page */}
+          <Link href="/creator-dashboard"
             className="hidden items-center gap-1.5 rounded-lg border border-primary/15 bg-white px-4 py-2.5 text-[13px] font-bold text-ink/60 transition hover:bg-surface-sub hover:text-ink sm:flex">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
               <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/>
@@ -706,11 +715,12 @@ function TopBar({ dirty, saving, lastSaved, onSave }: {
               <rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/>
             </svg>
             Dashboard
-          </a>
-          <a href="/creator/preview" target="_blank" rel="noopener noreferrer"
+          </Link>
+          {/* Preview link — real route, matches the built /preview page */}
+          <Link href="/preview" target="_blank" rel="noopener noreferrer"
             className="hidden rounded-lg border border-primary/15 bg-white px-4 py-2.5 text-[13px] font-bold text-primary transition hover:bg-primary/[0.05] sm:inline-block">
             Preview
-          </a>
+          </Link>
           <button type="button" onClick={onSave} disabled={saving || !dirty}
             className={`rounded-lg ${GRAD_BTN} px-5 py-2.5 text-[13px] font-bold text-white shadow-[0_8px_20px_-8px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0`}>
             {saving ? 'Saving…' : 'Save changes'}
@@ -729,6 +739,50 @@ function GuidedBanner({ index, total, onExit }: { index: number; total: number; 
         <p className="mt-0.5 text-[12.5px] text-ink/55">Fill in one section at a time. Jump anywhere, or edit freely whenever you&apos;re ready.</p>
       </div>
       <button type="button" onClick={onExit} className="flex-shrink-0 text-[12.5px] font-bold text-primary hover:underline">Edit freely</button>
+    </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   Wizard completion screen — the real exit point once every section
+   has been walked through. Replaces the old dead-end that just
+   flipped into free-edit with nothing selected.
+   ════════════════════════════════════════════════════════════════════ */
+function CompletionScreen({ firstName, onDashboard, onPreview, onKeepEditing }: {
+  firstName: string; onDashboard: () => void; onPreview: () => void; onKeepEditing: () => void
+}) {
+  return (
+    <div className={`overflow-hidden rounded-2xl border border-primary/10 bg-white px-6 py-14 text-center sm:px-10 ${CARD}`}>
+      <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-magenta/10 shadow-[0_20px_60px_rgba(139,49,232,0.18)]">
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+          <defs>
+            <linearGradient id="cs-done-ck" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#8b31e8" /><stop offset="1" stopColor="#b44af0" />
+            </linearGradient>
+          </defs>
+          <path d="M7 16 L13 22 L25 10" stroke="url(#cs-done-ck)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </svg>
+      </div>
+      <h2 className="text-[22px] font-extrabold tracking-[-0.03em] text-ink sm:text-[26px]">
+        {firstName ? `Your profile is ready, ${firstName}!` : 'Your profile is ready!'}
+      </h2>
+      <p className="mx-auto mt-2 max-w-[380px] text-[13.5px] leading-relaxed text-ink/55">
+        Every section is filled in. Brands can now find you, review your work, and reach out for deals.
+      </p>
+      <div className="mx-auto mt-8 flex max-w-[320px] flex-col gap-3">
+        <button type="button" onClick={onDashboard}
+          className={`rounded-lg ${GRAD_BTN} px-6 py-3.5 text-[14px] font-bold text-white shadow-[0_8px_24px_-8px_rgba(139,49,232,0.5)] transition hover:-translate-y-0.5`}>
+          Go to my dashboard →
+        </button>
+        <button type="button" onClick={onPreview}
+          className="rounded-lg border border-primary/20 bg-white px-6 py-3.5 text-[14px] font-bold text-primary transition hover:bg-primary/[0.05]">
+          Preview my public profile
+        </button>
+        <button type="button" onClick={onKeepEditing}
+          className="text-[12.5px] font-bold text-ink/45 transition hover:text-ink/70">
+          Keep customizing my profile
+        </button>
+      </div>
     </div>
   )
 }
@@ -1019,7 +1073,10 @@ function PricingSection({ items, onAdd, onRemove, onMove, onChange }: {
    ════════════════════════════════════════════════════════════════════
    FIRST VISIT  → wizard: one section shown at a time.
                   "Save & continue" saves + advances.
-                  localStorage flag written on finish or "Edit freely".
+                  Reaching the last section shows CompletionScreen,
+                  which routes to /creator-dashboard, /display, or
+                  drops into free-edit. localStorage flag written on
+                  natural completion or "Edit freely" mid-wizard exit.
 
    RETURN VISIT → free-edit: sidebar always visible, only the active
                   section card is in the DOM.
@@ -1028,6 +1085,7 @@ function PricingSection({ items, onAdd, onRemove, onMove, onChange }: {
                   appears and the user must save first.
    ════════════════════════════════════════════════════════════════════ */
 export default function CreatorStudioPage() {
+  const router = useRouter()
   const [profile, setProfile] = useState<ProfileFormData>(createInitialProfile)
 
   /* ── Mode detection (localStorage, read after mount to avoid SSR mismatch) ── */
@@ -1042,6 +1100,9 @@ export default function CreatorStudioPage() {
 
   /* ── Wizard step ── */
   const [guidedIdx, setGuidedIdx] = useState(0)
+
+  /* ── Wizard finished — shows CompletionScreen instead of auto-exiting ── */
+  const [wizardDone, setWizardDone] = useState(false)
 
   /* ── Free-edit: which section is open (null = none) ── */
   const [activeSection, setActiveSection] = useState<SectionId | null>('basics')
@@ -1074,6 +1135,7 @@ export default function CreatorStudioPage() {
   const finishGuided = (jumpTo?: SectionId) => {
     localStorage.setItem(VISITED_KEY, '1')
     setGuided(false)
+    setWizardDone(false)
     setActiveSection(jumpTo ?? null)
     if (jumpTo) scrollTo(jumpTo)
   }
@@ -1086,9 +1148,25 @@ export default function CreatorStudioPage() {
     setSaving(false)
     setLastSaved(new Date())
     const next = guidedIdx + 1
-    if (next >= SECTION_META.length) { finishGuided(); return }
+    if (next >= SECTION_META.length) {
+      // Reached the end — show the real completion screen instead of
+      // silently flipping into an empty free-edit view.
+      localStorage.setItem(VISITED_KEY, '1')
+      setWizardDone(true)
+      return
+    }
     setGuidedIdx(next)
     scrollTo(SECTION_META[next]?.id ?? 'basics')
+  }
+
+  /* ── Completion-screen exits ── */
+  const goToDashboard    = () => router.push('/creator-dashboard')
+  const openPublicPreview = () => window.open('/display', '_blank', 'noopener,noreferrer')
+  const keepCustomizing  = () => {
+    setGuided(false)
+    setWizardDone(false)
+    setActiveSection('basics')
+    scrollTo('basics')
   }
 
   /* ─────────────────────────────────────────────────────────────────
@@ -1273,7 +1351,7 @@ export default function CreatorStudioPage() {
           {!guided && blockWarning && <UnsavedWarning />}
 
           {/* ══ WIZARD MODE — one section at a time ═══════════════════ */}
-          {guided && (() => {
+          {guided && !wizardDone && (() => {
             const s = SECTION_META[guidedIdx]!
             return (
               <>
@@ -1292,6 +1370,16 @@ export default function CreatorStudioPage() {
               </>
             )
           })()}
+
+          {/* ══ WIZARD COMPLETE — real exit point, not a dead end ══════ */}
+          {guided && wizardDone && (
+            <CompletionScreen
+              firstName={profile.basics.firstName.trim() || profile.basics.name.trim().split(' ')[0] || ''}
+              onDashboard={goToDashboard}
+              onPreview={openPublicPreview}
+              onKeepEditing={keepCustomizing}
+            />
+          )}
 
           {/* ══ FREE-EDIT MODE — only the active section in the DOM ═══ */}
           {!guided && (() => {
@@ -1325,8 +1413,8 @@ export default function CreatorStudioPage() {
         </main>
       </div>
 
-      {/* Mobile save bar — wizard mode only (mirrors brand studio) */}
-      {guided && (
+      {/* Mobile save bar — wizard mode only, hidden once the wizard is done */}
+      {guided && !wizardDone && (
         <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-primary/10 bg-white/95 px-4 py-3 backdrop-blur-xl pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden">
           <span className="text-[12px] font-semibold text-ink/45">
             {saving ? 'Saving…' : `Step ${guidedIdx + 1} of ${SECTION_META.length}`}
